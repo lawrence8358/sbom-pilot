@@ -128,11 +128,28 @@ test('pnpm12 explicitly selects trusted auth file, pnpm10 keeps ordinary usercon
   for (const version of ['10.34.2', '12.16.1']) {
     await withNpmAuthentication(project(root, 'pnpm', version), { executable: process.execPath, args: [] }, {}, { tempDirectory: join(root, 'temp'), npmCredentials: [{ registry: credentials[0].registry, username: 'user', password: PASSWORD }] }, async command => {
       const path = command.env!.NPM_CONFIG_USERCONFIG!;
-      assert.equal(command.env!.PNPM_CONFIG_NPMRC_AUTH_FILE, version.startsWith('12') ? path : undefined);
+      if (version.startsWith('12')) assert.match(await readFile(command.env!.PNPM_CONFIG_NPMRC_AUTH_FILE!, 'utf8'), /:_auth=\$\{SBOM_PILOT_NPM_/);
+      else assert.equal(command.env!.PNPM_CONFIG_NPMRC_AUTH_FILE, undefined);
       assert.ok(Object.values(command.env!).includes(Buffer.from(`user:${PASSWORD}`).toString('base64')));
       assert.match(await readFile(path, 'utf8'), /:_auth=\$\{SBOM_PILOT_NPM_/);
     });
   }
+}));
+
+test('pnpm12 preserves user-level routing/settings separately from an inherited dedicated auth file', () => fixture(async root => {
+  await mkdir(project(root).root);
+  const userconfig = join(root, 'user.npmrc'), auth = join(root, 'auth.ini');
+  const userBytes = '@public:registry=https://public.example.test/\nfetch-retries=7\n', authBytes = '//other.example.test/:_authToken=${EXISTING_TOKEN}\n';
+  await writeFile(userconfig, userBytes); await writeFile(auth, authBytes);
+  const env = { NPM_CONFIG_USERCONFIG: userconfig, PNPM_CONFIG_NPMRC_AUTH_FILE: auth, EXISTING_TOKEN: 'preserved-existing' };
+  await withNpmAuthentication(project(root, 'pnpm', '12.16.1'), { executable: process.execPath, args: [] }, env, { tempDirectory: join(root, 'temp'), npmCredentials: credentials }, async command => {
+    const user = await readFile(command.env!.NPM_CONFIG_USERCONFIG!, 'utf8'), dedicated = await readFile(command.env!.PNPM_CONFIG_NPMRC_AUTH_FILE!, 'utf8');
+    assert.ok(user.startsWith(userBytes)); assert.ok(dedicated.startsWith(authBytes));
+    assert.notEqual(command.env!.NPM_CONFIG_USERCONFIG, command.env!.PNPM_CONFIG_NPMRC_AUTH_FILE);
+    assert.equal(command.env!.EXISTING_TOKEN, 'preserved-existing');
+  });
+  assert.equal(await readFile(userconfig, 'utf8'), userBytes); assert.equal(await readFile(auth, 'utf8'), authBytes);
+  assert.deepEqual(await readdir(join(root, 'temp')), []);
 }));
 
 test('auth locates inherited child HOME settings and rejects project credential precedence/undefined Yarn placeholders precisely', () => fixture(async root => {

@@ -4,7 +4,7 @@ import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { parse } from 'yaml';
 import type { InstallOptions, JavaScriptProject, ManagerCommand } from './contracts';
-import { validateNpmCredentials, type CredentialAlias } from './npm-credentials';
+import { NpmAuthenticationError, validateNpmCredentials, type CredentialAlias } from './npm-credentials';
 
 const getEnv = (env: NodeJS.ProcessEnv, key: string) => Object.entries(env).find(([name]) => name.toLowerCase() === key.toLowerCase())?.[1];
 function setEnv(env: NodeJS.ProcessEnv, key: string, value: string): void {
@@ -128,9 +128,9 @@ export async function withNpmAuthentication(project: JavaScriptProject, command:
       setEnv(env, 'YARN_PLUGINS', [getEnv(env, 'YARN_PLUGINS'), plugin].filter(Boolean).join(';'));
     } else {
       const childHome = getEnv(env, 'HOME') ?? getEnv(env, 'USERPROFILE') ?? homedir();
-      const userconfig = (project.manager === 'pnpm' ? getEnv(env, 'PNPM_CONFIG_NPMRC_AUTH_FILE') : undefined) ?? getEnv(env, 'npm_config_userconfig') ?? join(childHome, '.npmrc');
+      const userconfig = getEnv(env, 'npm_config_userconfig') ?? join(childHome, '.npmrc');
       const original = await readOptional(resolve(project.root, userconfig));
-      const lines: string[] = [original, ''];
+      const lines: string[] = [];
       credentials.forEach((credential, index) => {
         const url = new URL(credential.registry), key = `//${url.host}${url.pathname}`;
         const secret = `${variable}_${index}`;
@@ -138,14 +138,20 @@ export async function withNpmAuthentication(project: JavaScriptProject, command:
         lines.push(`${key}:${credential.token ? '_authToken' : '_auth'}=\${${secret}}`, `${key}:always-auth=true`);
       });
       const path = join(directory, 'npmrc');
-      await writeFile(path, `${lines.join('\n')}\n`, { mode: 0o600 });
+      await writeFile(path, `${original}\n${lines.join('\n')}\n`, { mode: 0o600 });
       setEnv(env, 'NPM_CONFIG_USERCONFIG', path);
-      if (project.manager === 'pnpm' && Number(project.version.split('.')[0]) >= 11) setEnv(env, 'PNPM_CONFIG_NPMRC_AUTH_FILE', path);
+      if (project.manager === 'pnpm' && Number(project.version.split('.')[0]) >= 11) {
+        const inheritedAuth = getEnv(env, 'PNPM_CONFIG_NPMRC_AUTH_FILE');
+        const originalAuth = inheritedAuth ? await readOptional(resolve(project.root, inheritedAuth)) : original;
+        const authPath = join(directory, 'pnpm-auth.ini');
+        await writeFile(authPath, `${originalAuth}\n${lines.join('\n')}\n`, { mode: 0o600 });
+        setEnv(env, 'PNPM_CONFIG_NPMRC_AUTH_FILE', authPath);
+      }
     }
     options.log?.(`已為 ${credentials.length} 個 npm registry 準備安裝階段認證（暫存設定，來源路由沿用專案）。`);
     await action({ ...command, env });
   } catch {
-    throw new Error('私有 npm 來源認證／嚴格安裝失敗；請檢查 registry URL（含路徑）、認證權限、專案既有認證設定與鎖檔。未轉印來源或子程序內容。');
+    throw new NpmAuthenticationError();
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
