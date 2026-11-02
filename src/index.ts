@@ -1,4 +1,4 @@
-import { dtApiKeyInput, npmCredentialsInput } from './azure-secret-inputs';
+import { dtApiKeyInput, npmCredentialsInput, nugetCredentialsInput } from './azure-secret-inputs';
 import * as tl from 'azure-pipelines-task-lib/task';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -11,7 +11,7 @@ async function main(): Promise<void> {
   try {
     if (dtApiKeyInput) tl.setSecret(dtApiKeyInput);
     if (!tl.getVariable('Build.BuildId') || tl.getVariable('Release.ReleaseId')) throw new Error('此 Task 需要 Classic Build 或 YAML Build 工作；Classic Release 不支援 Build Artifact 上傳。');
-    const config = readTaskConfig(name => name === 'dtApiKey' ? dtApiKeyInput : name === 'npmCredentials' ? npmCredentialsInput : readAzureInput(name));
+    const config = readTaskConfig(name => name === 'dtApiKey' ? dtApiKeyInput : name === 'npmCredentials' ? npmCredentialsInput : name === 'nugetCredentials' ? nugetCredentialsInput : readAzureInput(name));
     const agentTemp = tl.getVariable('Agent.TempDirectory');
     if (!agentTemp) throw new Error('缺少 Agent.TempDirectory。');
     tempDirectory = await mkdtemp(join(agentTemp, 'sbom-pilot-'));

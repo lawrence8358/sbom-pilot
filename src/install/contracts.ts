@@ -1,8 +1,9 @@
 import type { ToolContext } from '../tools';
 import type { ProcessRunner } from '../process';
+import type { NuGetCredential } from '../dotnet/credentials';
 import type { NpmCredential } from './npm-credentials';
 
-export interface InstallOptions { tempDirectory?: string; log?: (message: string) => void; npmCredentials?: NpmCredential[]; sourceRoot?: string }
+export interface InstallOptions { tempDirectory?: string; log?: (message: string) => void; npmCredentials?: NpmCredential[]; nugetCredentials?: NuGetCredential[]; sourceRoot?: string }
 export interface DependencyInstaller {
   install(root: string, tools: ToolContext, run: ProcessRunner, options?: InstallOptions): Promise<void>;
 }

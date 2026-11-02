@@ -1,3 +1,4 @@
+import type { NuGetCredential } from '../dotnet/credentials';
 import { join } from 'node:path';
 import type { ToolContext } from '../tools';
 import type { ProcessRunner } from '../process';
@@ -5,7 +6,7 @@ import { discoverDotnetProjects } from '../dotnet/projects';
 import { prepareDotnetSdk } from '../dotnet/sdk';
 import { restoreDotnetProject } from '../dotnet/restore';
 
-export interface DotnetInstallOptions { tempDirectory?: string; log?: (message: string) => void; excludes?: string[] }
+export interface DotnetInstallOptions { tempDirectory?: string; log?: (message: string) => void; excludes?: string[]; nugetCredentials?: NuGetCredential[] }
 
 export const dotnetInstaller = {
   async install(root: string, tools: ToolContext, run: ProcessRunner, options: DotnetInstallOptions = {}): Promise<void> {
@@ -20,7 +21,7 @@ export const dotnetInstaller = {
     const assets = new Set<string>();
     for (const project of projects) {
       const sdk = await prepareDotnetSdk(project.directory, run, { cacheDirectory, tempDirectory: join(tempDirectory, 'dotnet'), env: originalEnv, log: options.log });
-      for (const restored of await restoreDotnetProject(project.path, sdk, run, join(tempDirectory, 'dotnet'))) assets.add(restored.assetsPath);
+      for (const restored of await restoreDotnetProject(project.path, sdk, run, join(tempDirectory, 'dotnet'), options.nugetCredentials)) assets.add(restored.assetsPath);
       scanEnv ??= sdk.env;
       options.log?.(`.NET 還原完成（SDK ${sdk.version}）；已驗證 project.assets.json。`);
     }

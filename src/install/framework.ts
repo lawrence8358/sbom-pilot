@@ -23,11 +23,11 @@ export const frameworkInstaller = {
     for (const project of projects) {
       if (project.sdkStyle) {
         const sdk = await prepareDotnetSdk(project.directory, run, { cacheDirectory: env.AGENT_TOOLSDIRECTORY ?? join(temp, 'tools'), tempDirectory: join(temp, 'dotnet'), env, log: options.log });
-        const restored = await restoreDotnetProject(project.path, sdk, run, join(temp, 'dotnet'));
+        const restored = await restoreDotnetProject(project.path, sdk, run, join(temp, 'dotnet'), options.nugetCredentials);
         restored.forEach(item => assets.add(item.assetsPath));
         tools.env = { ...tools.env, ...sdk.env };
       } else {
-        const restored = await restoreFrameworkProject(project.path, root, msbuild!, run, join(temp, 'framework'));
+        const restored = await restoreFrameworkProject(project.path, root, msbuild!, run, join(temp, 'framework'), options.nugetCredentials);
         restored.assets.forEach(item => assets.add(item.assetsPath));
         restored.packageFiles.forEach(path => packageFiles.add(path));
       }

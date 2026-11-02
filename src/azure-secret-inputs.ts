@@ -2,6 +2,7 @@
 // values into its vault during module initialization. Capture only in memory;
 // never call getInput for secrets, because that method logs their raw values.
 export const dtApiKeyInput = process.env.INPUT_DTAPIKEY;
+export const nugetCredentialsInput = process.env.INPUT_NUGETCREDENTIALS;
 export const npmCredentialsInput = process.env.INPUT_NPMCREDENTIALS;
 export const agentNetworkCredentials = {
   proxyUsername: process.env.AGENT_PROXYUSERNAME ?? process.env.SECRET_AGENT_PROXYUSERNAME,
@@ -12,10 +13,10 @@ export const agentNetworkCredentials = {
 const networkMasks = [agentNetworkCredentials.proxyUsername, agentNetworkCredentials.proxyPassword, agentNetworkCredentials.clientCertPassword];
 // Mask the complete input and useful substrings/encodings before importing the SDK.
 // Invalid JSON is reported later through a constant error, never a parser excerpt.
-if (npmCredentialsInput) {
-  networkMasks.push(npmCredentialsInput);
+for (const credentialInput of [npmCredentialsInput, nugetCredentialsInput]) if (credentialInput) {
+  networkMasks.push(credentialInput);
   try {
-    const entries = JSON.parse(npmCredentialsInput);
+    const entries = JSON.parse(credentialInput);
     if (Array.isArray(entries)) for (const entry of entries) {
       for (const value of [entry?.token, entry?.username, entry?.password]) if (typeof value === 'string') networkMasks.push(value);
       if (typeof entry?.password === 'string') networkMasks.push(Buffer.from(entry.password).toString('base64'));
