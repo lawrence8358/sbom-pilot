@@ -2,6 +2,10 @@
 
 ## Start here
 
+CURRENT: Ticket10 integrated at `7f81211b4d73b7f73885c1afb18f57790f2caeec`; product matches verified `b5e8ee1`, typecheck/95 tests passed. Tickets01–11 are integrated. Only ticket12 is active in `../.sbom-pilot-worktrees/12-final-delivery`, branch `ticket/12-final-delivery`. Current HANDOFF and implementation-state take precedence over historical notes below. Final Standards/Spec reviews remain unstarted.
+
+## Historical milestones and preserved constraints
+
 Ticket10 candidate `b5e8ee140ba52978c4da76aebc3a5e0e8fce4efc` is complete and clean; merger is next as the sole agent. Windows four-format and Linux .NET Core real private/public feed smoke passed; both platforms passed95 tests. Typecheck/build/devVSIX/shipped Node20/24 masking passed. Preserve root recovery documents and verify merged product before dispatch12. Worker checkpoint10 has exact commands, hashes and cleanup evidence.
 
 Urgent quota handoff was saved at `7ba0797`; user continuation resumed and completed09. Ticket09 integrated at `b79f7ca`: typecheck/91 tests passed, product tree matches verified `bd1c483`; Windows7/Linux4 real auth scenarios and package checks passed. Ticket10 is now the sole active slice. Preserve InstallOptions.sourceRoot through wrappers and first secret import order. Current Git/state/worker checkpoint is authoritative.
