@@ -2,7 +2,7 @@
 
 在 Azure Pipelines 加入一個 **SBOM Pilot — Generate & Upload SBOM** Task，即可準備工具並還原專案依賴，產生 CycloneDX 1.6 JSON，並要求 Agent 發佈名稱為 `SBOM` 的 Build Artifact。
 
-本階段提供 Vue/npm、pnpm 單專案／workspace、SDK-style .NET Core 與選用的 Dependency-Track（DT）上傳，使用公開 npm/NuGet 來源。Yarn、傳統 .NET Framework、私有來源認證及合併交付產品將於後續版本交付。`--required-only` 固定啟用，代表 cdxgen 的 required scope 篩選，不能視為已逐項核對實際部署成品。
+本階段提供 Vue/npm、pnpm 與 Yarn Classic／現代 Yarn 專案及 workspace、SDK-style .NET Core 與選用的 Dependency-Track（DT）上傳，使用公開 npm/NuGet 來源。傳統 .NET Framework、私有來源認證及合併交付產品將於後續版本交付。`--required-only` 固定啟用，代表 cdxgen 的 required scope 篩選，不能視為已逐項核對實際部署成品。Yarn workspace 實測會保留部分被上游標為 required 的開發依賴，詳見 [Yarn 支援及限制](docs/yarn.md)。
 
 ## 前置條件及支援範圍
 
@@ -12,13 +12,15 @@
 | Agent OS | Windows / Linux x64、arm64 為設計目標；目前實測紀錄見開發文件 |
 | Task handler | Agent 需具備 `Node20_1`；manifest 最低 Agent `3.232.1` 是 handler 門檻，不代表所有 Server 與該 Agent 配對已驗證 |
 | 掃描工具 | 自動準備最新符合 `24.x` 的 Node；獨立安裝固定 `@cdxgen/cdxgen@13.6.0`，不使用全域 cdxgen |
-| npm／pnpm | 優先使用 `packageManager` 精確版本；不同於內建 npm 的版本由 Task 隔離準備；無宣告使用固定 fallback，詳見[管理器說明](docs/package-managers.md) |
+| npm／pnpm／Yarn | 優先使用 `packageManager` 精確版本及有效的 Yarn 專案執行檔；隔離準備工具，無宣告使用固定 fallback，詳見[管理器說明](docs/package-managers.md) |
 | 網路 | Agent 可存取 nodejs.org、npm registry 與專案依賴／授權資訊來源；首次執行需要下載 |
 | Server / Services | 使用兩者皆提供的 Build Artifact logging command；尚待真實 Server / Services 安裝與端到端驗證，未宣稱特定最低 Server 支援 |
 
-Vue 模式需提交 manifest 與且僅一種管理器的 lockfile：npm 使用 `package-lock.json` 或 `npm-shrinkwrap.json`，pnpm 使用 `pnpm-lock.yaml`。Task 執行 `npm ci` 或 `pnpm install --frozen-lockfile`；缺少或不同步的 lockfile 會失敗，不會自動產生或修正。Repo 的來源設定與所選管理器版本的安裝腳本規則仍生效；本階段不提供秘密認證欄位。原生套件所需編譯工具仍需 Agent 提供。.NET 的還原與選用鎖檔政策見下方.NET Core 模式。
+Vue 模式需提交 manifest 與且僅一種管理器的 lockfile：npm 使用 `package-lock.json` 或 `npm-shrinkwrap.json`，pnpm 使用 `pnpm-lock.yaml`，Yarn 使用 `yarn.lock`。Task 執行對應管理器的嚴格安裝；缺少或不同步的 lockfile 會失敗，不會自動產生或修正。Repo 的來源設定與所選管理器版本的安裝腳本規則仍生效；本階段不提供秘密認證欄位。原生套件所需編譯工具仍需 Agent 提供。.NET Core 的還原與選用鎖檔政策見下方 .NET Core 模式。
 
 pnpm workspace 請指定包含 `pnpm-workspace.yaml` 與鎖檔的共同根目錄。可直接使用[可執行範例](examples/pnpm-workspace/package.json)，YAML 將 `projectPath` 設為 `$(Build.SourcesDirectory)/examples/pnpm-workspace`；不需額外 Corepack、pnpm 或 install Task。版本與衝突診斷見[管理器說明](docs/package-managers.md)。
+
+Yarn workspace 也指定共同根目錄；[Classic 範例](examples/yarn-classic-workspace/package.json)使用 node_modules，[現代 Yarn 範例](examples/yarn-modern-workspace/package.json)預設 PnP，亦實測 node-modules 佈局。Task 保留 `.yarnrc`／`.yarnrc.yml`，不需另外加入 Corepack 或 Yarn install Task。
 
 原生下載目前使用 Node HTTPS fetch；尚未驗證 Agent Proxy／自訂 CA，企業網路環境請先驗證可達性，詳細限制見 [開發說明](README-Dev.md)。
 
@@ -49,7 +51,7 @@ steps:
 
 ## Classic Build 快速開始
 
-在 Classic Build 編輯器選擇 Agent job → Add task，搜尋 **SBOM Pilot**，設定「開發環境」為 Vue（npm／pnpm），專案路徑為包含 lockfile 的專案或 workspace 根目錄，保持「推送到 DT」關閉後儲存並執行。不需另加 NodeTool、npm、pnpm 或 cdxgen Task。
+在 Classic Build 編輯器選擇 Agent job → Add task，搜尋 **SBOM Pilot**，設定「開發環境」為 Vue（npm／pnpm／Yarn），專案路徑為包含 lockfile 的專案或 workspace 根目錄，保持「推送到 DT」關閉後儲存並執行。不需另加 NodeTool、套件安裝或 cdxgen Task。
 
 工作成功且 Agent 完成上傳後，在 Build 結果的成品頁選擇 `SBOM`，下載 `bom.json`。上傳由 Agent 非同步執行；Task 日誌的「已排入佇列」不代表伺服器已完成接收，上傳失敗會由 Agent 回報工作失敗。
 
@@ -57,7 +59,7 @@ steps:
 
 | 欄位（YAML） | 預設 | 說明 |
 | --- | --- | --- |
-| `environment` | `vue` | `vue`（Vue/npm／pnpm，依宣告與 lockfile 辨識）或 `dotnet`（.NET Core） |
+| `environment` | `vue` | `vue`（Vue/npm／pnpm／Yarn，依宣告與 lockfile 辨識）或 `dotnet`（.NET Core） |
 | `projectPath` | `$(Build.SourcesDirectory)` | 專案根目錄 |
 | `nodeVersion` | `24.x` | 最新符合 semver 範圍的 Node，必須 >=24 |
 | `excludes` | 見下列規則 | 相對根目錄 glob，逗號分隔，保留花括號內逗號；明確設定空字串代表不加自訂排除 |

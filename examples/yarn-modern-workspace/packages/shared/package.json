@@ -1,0 +1,8 @@
+{
+  "name": "@example/shared",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "dependencies": { "is-odd": "3.0.1" },
+  "devDependencies": { "chalk": "5.3.0" }
+}
