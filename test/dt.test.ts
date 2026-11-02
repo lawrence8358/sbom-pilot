@@ -163,7 +163,7 @@ test('self-signed TLS is rejected by default and explicit skip applies only to D
 }));
 test('actual bundled debug entrypoint registers API key without SDK input-value logging', () => fixture(async root => {
   const bundle = resolve('.test-build/dt-entrypoint.js');
-  await build({ entryPoints: ['src/index.ts'], bundle: true, platform: 'node', target: 'node20', format: 'cjs', outfile: bundle, external: ['azure-pipelines-task-lib', 'azure-pipelines-tool-lib'] });
+  await build({ entryPoints: ['src/index.ts'], bundle: true, platform: 'node', target: 'node20', format: 'cjs', outfile: bundle, external: ['azure-pipelines-task-lib', 'azure-pipelines-tool-lib'], alias: { 'jsonc-parser': 'jsonc-parser/lib/esm/main.js' } });
   const result = spawnSync(process.execPath, [bundle], { env: { ...process.env, SYSTEM_DEBUG: 'true', BUILD_BUILDID: '1', AGENT_TEMPDIRECTORY: root, INPUT_DTAPIKEY: KEY, INPUT_UPLOADTODT: 'true', INPUT_DTPROJECTUUID: PROJECT, INPUT_ENVIRONMENT: 'unsupported', INPUT_PROJECTPATH: root }, encoding: 'utf8' });
   const lines = `${result.stdout}${result.stderr}`.split(/\r?\n/);
   const keyLines = lines.filter(line => line.includes(KEY));

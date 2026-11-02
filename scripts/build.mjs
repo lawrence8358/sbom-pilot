@@ -6,7 +6,9 @@ const check = spawnSync(process.execPath, ['node_modules/typescript/bin/tsc', '-
 if (check.status !== 0) process.exit(check.status ?? 1);
 await rm('dist', { recursive: true, force: true });
 await mkdir('dist', { recursive: true });
-const bundled = await build({ entryPoints: ['src/index.ts'], bundle: true, platform: 'node', target: 'node20', format: 'cjs', outfile: 'dist/index.js', external: ['azure-pipelines-task-lib', 'azure-pipelines-tool-lib'], metafile: true });
+// jsonc-parser's UMD entry passes require through a factory, hiding relative
+// imports from the bundler. Its published ESM entry bundles those imports safely.
+const bundled = await build({ entryPoints: ['src/index.ts'], bundle: true, platform: 'node', target: 'node20', format: 'cjs', outfile: 'dist/index.js', external: ['azure-pipelines-task-lib', 'azure-pipelines-tool-lib'], alias: { 'jsonc-parser': 'jsonc-parser/lib/esm/main.js' }, metafile: true });
 await cp('src/task.json', 'dist/task.json');
 await cp('src/schemas', 'dist/schemas', { recursive: true });
 await cp('LICENSE', 'dist/LICENSE');

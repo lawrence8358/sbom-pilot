@@ -60,7 +60,7 @@ export function readTaskConfig(read: InputReader): TaskConfig {
 }
 export async function validateConfig(config: TaskConfig): Promise<TaskConfig> {
   if (!['win32', 'linux'].includes(process.platform)) throw new Error('目前僅支援 Windows 與 Linux Agent。');
-  if (config.environment !== 'vue') throw new Error('此版本僅提供 Vue/npm 模式；其他模式尚未交付。');
+  if (!['vue', 'dotnet'].includes(config.environment)) throw new Error('此版本提供 Vue 與現代 .NET 模式；其他模式尚未交付。');
   for (const name of ['fetchLicense', 'noCache', 'uploadToDt'] as const) {
     if (typeof config[name] !== 'boolean') throw new Error(`參數 ${name} 必須是布林值。`);
   }

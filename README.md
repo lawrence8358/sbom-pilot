@@ -1,8 +1,8 @@
 # SBOM Pilot
 
-在 Azure Pipelines 加入一個 **SBOM Pilot — Generate & Upload SBOM** Task，即可準備 Node.js 與 cdxgen、依 npm／pnpm lockfile 安裝依賴，產生 CycloneDX 1.6 JSON，並要求 Agent 發佈名稱為 `SBOM` 的 Build Artifact。
+在 Azure Pipelines 加入一個 **SBOM Pilot — Generate & Upload SBOM** Task，即可準備工具並還原專案依賴，產生 CycloneDX 1.6 JSON，並要求 Agent 發佈名稱為 `SBOM` 的 Build Artifact。
 
-本階段提供 Vue/npm、pnpm 單專案／workspace、公開 npm 來源與選用的 Dependency-Track（DT）上傳。Yarn、.NET、私有來源認證及合併交付產品將於後續版本交付。`--required-only` 固定啟用，代表 cdxgen 的 required scope 篩選，不能視為已逐項核對實際部署成品。
+本階段提供 Vue/npm、pnpm 單專案／workspace、SDK-style 現代 .NET 與選用的 Dependency-Track（DT）上傳，使用公開 npm/NuGet 來源。Yarn、傳統 .NET Framework、私有來源認證及合併交付產品將於後續版本交付。`--required-only` 固定啟用，代表 cdxgen 的 required scope 篩選，不能視為已逐項核對實際部署成品。
 
 ## 前置條件及支援範圍
 
@@ -16,7 +16,7 @@
 | 網路 | Agent 可存取 nodejs.org、npm registry 與專案依賴／授權資訊來源；首次執行需要下載 |
 | Server / Services | 使用兩者皆提供的 Build Artifact logging command；尚待真實 Server / Services 安裝與端到端驗證，未宣稱特定最低 Server 支援 |
 
-專案需提交 manifest 與且僅一種管理器的 lockfile：npm 使用 `package-lock.json` 或 `npm-shrinkwrap.json`，pnpm 使用 `pnpm-lock.yaml`。Task 執行 `npm ci` 或 `pnpm install --frozen-lockfile`；缺少或不同步的 lockfile 會失敗，不會自動產生或修正。Repo 的來源設定與所選管理器版本的安裝腳本規則仍生效；本階段不提供秘密認證欄位。原生套件所需編譯工具仍需 Agent 提供。
+Vue 模式需提交 manifest 與且僅一種管理器的 lockfile：npm 使用 `package-lock.json` 或 `npm-shrinkwrap.json`，pnpm 使用 `pnpm-lock.yaml`。Task 執行 `npm ci` 或 `pnpm install --frozen-lockfile`；缺少或不同步的 lockfile 會失敗，不會自動產生或修正。Repo 的來源設定與所選管理器版本的安裝腳本規則仍生效；本階段不提供秘密認證欄位。原生套件所需編譯工具仍需 Agent 提供。.NET 的還原與選用鎖檔政策見下方現代 .NET 模式。
 
 pnpm workspace 請指定包含 `pnpm-workspace.yaml` 與鎖檔的共同根目錄。可直接使用[可執行範例](examples/pnpm-workspace/package.json)，YAML 將 `projectPath` 設為 `$(Build.SourcesDirectory)/examples/pnpm-workspace`；不需額外 Corepack、pnpm 或 install Task。版本與衝突診斷見[管理器說明](docs/package-managers.md)。
 
@@ -57,7 +57,7 @@ steps:
 
 | 欄位（YAML） | 預設 | 說明 |
 | --- | --- | --- |
-| `environment` | `vue` | Vue/npm 或 pnpm；依宣告與 lockfile 辨識 |
+| `environment` | `vue` | `vue`（Vue/npm／pnpm，依宣告與 lockfile 辨識）或 `dotnet`（.NET Core／現代 .NET） |
 | `projectPath` | `$(Build.SourcesDirectory)` | 專案根目錄 |
 | `nodeVersion` | `24.x` | 最新符合 semver 範圍的 Node，必須 >=24 |
 | `excludes` | 見下列規則 | 相對根目錄 glob，逗號分隔，保留花括號內逗號；明確設定空字串代表不加自訂排除 |
@@ -120,3 +120,31 @@ DT 上傳失敗時仍要求 Agent 發佈有效 `SBOM` 成品，最後 Task 失�
 - **DT TLS 失敗**：預設要求有效憑證；進階略過檢查只對 DT 生效。未完成自訂 CA／Proxy 實測前，請先在測試環境驗證連線。
 
 MIT License · Copyright © 2026 Lawrence Shen。第三方授權見 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。
+
+## 現代 .NET 模式
+
+在 Classic Build 選擇「.NET Core／現代 .NET」，專案路徑指向包含 SDK-style `.csproj`、`.fsproj` 或 `.vbproj` 的目錄；YAML 使用同一 Task：
+
+```yaml
+steps:
+  - task: SbomPilot@0
+    inputs:
+      environment: dotnet
+      projectPath: '$(Build.SourcesDirectory)'
+      specVersion: '1.6'
+      uploadToDt: false
+```
+
+Task 從每個專案的實際還原目錄向上尋找 `global.json`，支援註解及完整 `sdk.version`，由 .NET host 套用 `rollForward` 與 `allowPrerelease`。沒有 SDK 版本宣告時採固定 SDK **10.0.101**，不從 TargetFramework 猜測 SDK feature band。建議在 Repo 提交 `global.json` 以固定專案政策：
+
+```json
+{ "sdk": { "version": "10.0.101", "rollForward": "disable" } }
+```
+
+相容 SDK 已安裝時驗證後使用；缺少時以 Microsoft 官方 `dotnet-install` 腳本安裝至 Task 工具快取，設定子程序的 PATH／DOTNET_ROOT，不需要額外 UseDotNet 或 restore Task。Agent 仍須具備 SDK 所需原生程式庫、Windows PowerShell 或 Linux bash，並能存取 dot.net、builds.dotnet.microsoft.com 與有效 NuGet 來源。腳本不會安裝 Visual Studio workloads。`global.json sdk.paths` 目前會明確拒絕；跨專案 SDK 政策、特殊 workloads 或自訂 SDK 無法解析時，請依錯誤檢查專案格式及 Agent 條件。
+
+依賴還原使用 SDK 內建 NuGet，保留分層 `NuGet.Config`。Task 先以 NuGet 還原圖取得實際輸出及 lockfile 路徑，再執行 `dotnet restore`；已有 lockfile 才啟用 locked mode 並驗證內容不變。沒有選用 NuGet 鎖檔的合法專案可正常執行，不需要 npm lockfile。每個專案及其 ProjectReference 必須有有效 `project.assets.json`，否則停止，不將只有直接套件的結果當作完整依賴清單。
+
+`.NET` 有一項必要的排除規則轉換：預設 `**/obj/**` 送給掃描器時轉為 `**/obj/!(project.assets.json)`，繼續排除編譯產物，保留經還原驗證的依賴資料。欄位預設值不變；其他自訂 glob 不會改寫。自訂規則若遮蔽必要 assets，或還原資料位於掃描根目錄外，Task 會失敗並要求調整。排除整個非交付專案時，請使用相對該專案目錄的規則。
+
+Windows x64 已以 SDK 6.0.428、9.0.316、10.0.101 實測公開 NuGet、間接依賴、關係及 CycloneDX 1.6；Linux .NET、實際 Server／Services 安裝及原生成品上傳仍待獨立驗證。詳見 [開發紀錄](README-Dev.md)。傳統非 SDK-style 專案目前不適用此模式。
