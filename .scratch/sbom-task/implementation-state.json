@@ -6,7 +6,7 @@
   "dispatchPolicy": { "maxConcurrentSubagents": 1, "requireVerifiedIntegrationBeforeNextTicket": true },
   "integratedTickets": ["01", "02", "03", "04", "05", "06", "08", "11"],
   "activeWorktrees": [
-    { "ticket": "07", "phase": "implementing", "branch": "ticket/07-combined", "worktree": "../.sbom-pilot-worktrees/07-combined", "checkpoint": ".scratch/sbom-task/checkpoints/07.md" }
+    { "ticket": "07", "phase": "integrating", "candidateCommit": "99a359f", "branch": "ticket/07-combined", "worktree": "../.sbom-pilot-worktrees/07-combined", "checkpoint": ".scratch/sbom-task/checkpoints/07.md" }
   ],
   "reviewStatus": "not-started",
   "externalValidation": ["live Azure DevOps Services/Server installation and artifact download", "real public Publisher ID confirmation", "public repository URL (no remote exists)", "upstream nodejs-file-downloader4.13.0 full ISC notice missing; public packaging gated"],
