@@ -1,7 +1,7 @@
 import { access, readFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { valid } from 'semver';
-import { parse } from 'yaml';
+import { parse, parseAllDocuments } from 'yaml';
 import type { JavaScriptManager, JavaScriptProject } from './contracts';
 
 export const NPM_FALLBACK_VERSION = '11.19.1';
@@ -59,12 +59,18 @@ export async function inspectJavaScriptProject(requested: string): Promise<JavaS
   let version = declared?.version;
   if (!version && lock.manager === 'npm') version = NPM_FALLBACK_VERSION;
   if (lock.manager === 'pnpm') {
-    let lockVersion;
-    try { lockVersion = String(parse(await readFile(join(root, lock.file), 'utf8'))?.lockfileVersion); }
+    let lockVersion, documentCount;
+    try {
+      const documents = parseAllDocuments(await readFile(join(root, lock.file), 'utf8'));
+      if (!documents.length || documents.some(document => document.errors.length)) throw new Error();
+      const versions = documents.map(document => String(document.toJSON()?.lockfileVersion));
+      if (new Set(versions).size !== 1) throw new Error();
+      lockVersion = versions[0]; documentCount = documents.length;
+    }
     catch { throw new Error('pnpm-lock.yaml 不是有效 YAML。'); }
     if (lockVersion === 'undefined') throw new Error('pnpm lockfile 缺少 lockfileVersion。');
     if (!version) {
-      if (lockVersion !== '9.0' && lockVersion !== '9') throw new Error('此 pnpm lockfile 格式沒有已驗證的 fallback；請以 packageManager 宣告精確 pnpm 版本。');
+      if (documentCount !== 1 || (lockVersion !== '9.0' && lockVersion !== '9')) throw new Error('此 pnpm lockfile 格式沒有已驗證的 fallback；請以 packageManager 宣告精確 pnpm 版本。');
       version = PNPM_FALLBACK_VERSION;
     }
   }

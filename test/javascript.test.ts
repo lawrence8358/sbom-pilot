@@ -8,6 +8,7 @@ import { inspectJavaScriptProject, PNPM_FALLBACK_VERSION } from '../src/install/
 import { javascriptInstaller } from '../src/install/javascript';
 import type { ToolContext } from '../src/tools';
 import type { ProcessRunner, Command } from '../src/process';
+import { validateSbom } from '../src/validation';
 
 const tools: ToolContext = { node: process.execPath, npmCli: 'bundled-npm.js', cdxgenCli: 'cdxgen.js', nodeVersion: '24.22.1', cdxgenVersion: '13.6.0', env: { TEST_PRESERVED: 'yes' } };
 async function fixture(action: (root: string, temp: string) => Promise<void>) {
@@ -54,6 +55,14 @@ test('unknown pnpm lock fallback and missing lock fail rather than upgrading for
   await assert.rejects(inspectJavaScriptProject(root), /fallback/);
   await rm(join(root, 'pnpm-lock.yaml'));
   await assert.rejects(inspectJavaScriptProject(root), /lockfile/);
+}));
+
+test('pnpm 12 multi-document lock requires explicit manager declaration', () => fixture(async root => {
+  await project(root, 'pnpm@12.16.1');
+  await writeFile(join(root, 'pnpm-lock.yaml'), "---\nlockfileVersion: '9.0'\nimporters: {}\n---\nlockfileVersion: '9.0'\nimporters: {}\n");
+  assert.equal((await inspectJavaScriptProject(root)).version, '12.16.1');
+  await writeFile(join(root, 'package.json'), '{}');
+  await assert.rejects(inspectJavaScriptProject(root), /fallback/);
 }));
 
 function fakeManager(root: string, version: string, manager: 'pnpm' | 'npm', native: boolean, calls: Command[], failInstall = false): ProcessRunner {
@@ -128,4 +137,16 @@ test('script-mutated lockfile fails even when manager exits successfully', () =>
     if (command.cwd === root && command.args.includes('--frozen-lockfile')) await writeFile(join(root, 'pnpm-lock.yaml'), 'modified');
     return result;
   }, { tempDirectory: temp }), /修改了 lockfile/);
+}));
+
+test('SBOM accepts git+https and Unicode IRI references while rejecting malformed ASCII URI syntax', () => fixture(async root => {
+  const path = join(root, 'bom.json');
+  for (const url of ['git+https://github.com/vuejs/core.git', 'https://例子.测试/路径']) {
+    await writeFile(path, JSON.stringify({ bomFormat: 'CycloneDX', specVersion: '1.6', components: [{ type: 'library', name: 'fixture', externalReferences: [{ type: 'vcs', url }] }] }));
+    await validateSbom(path, '1.6');
+  }
+  for (const url of ['https://exa mple.org', 'https://example.org/%zz']) {
+    await writeFile(path, JSON.stringify({ bomFormat: 'CycloneDX', specVersion: '1.6', components: [{ type: 'library', name: 'fixture', externalReferences: [{ type: 'vcs', url }] }] }));
+    await assert.rejects(validateSbom(path, '1.6'), /Schema/);
+  }
 }));
