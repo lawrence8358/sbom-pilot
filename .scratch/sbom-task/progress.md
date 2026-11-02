@@ -7,11 +7,11 @@ The user authorized implementation on a local branch, with no remote push or PR.
 
 | Ticket | Progress | Evidence |
 | --- | --- | --- |
-| 01 | In progress | Isolated implementer worktree |
-| 02 | Waiting for 01 | |
-| 03 | Waiting for 01 | |
+| 01 | Implemented; local verification passed | a543dc9 / merge f8abe50; 10 tests; build/dev VSIX; real Node24.22.2 + cdxgen13.6.0 Vue smoke, 23 components, lock unchanged |
+| 02 | In progress | Isolated implementer worktree |
+| 03 | In progress | Isolated implementer worktree |
 | 04 | Waiting for 01 | |
-| 05 | Waiting for 01 | |
+| 05 | In progress | Isolated implementer worktree |
 | 06 | Waiting for 05 | |
 | 07 | Waiting for 02, 03, 04, 05 | |
 | 08 | Waiting for 01 | |
