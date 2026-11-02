@@ -16,7 +16,7 @@
   "runsOn": [
     "Agent"
   ],
-  "minimumAgentVersion": "3.232.1",
+  "minimumAgentVersion": "3.238.0",
   "groups": [
     {
       "name": "advanced",
@@ -43,7 +43,7 @@
       "label": "Node.js 版本",
       "required": true,
       "defaultValue": "24.x",
-      "helpMarkDown": "下載最新符合範圍的版本；cdxgen 需要 Node >=24。Task handler 使用獨立的 Node20_1。"
+      "helpMarkDown": "下載最新符合範圍的版本；cdxgen 需要 Node >=24。Task handler 使用 Agent 的 Node20_1 或 Node24，分別管理。"
     },
     {
       "name": "projectPath",
@@ -139,6 +139,12 @@
   "execution": {
     "Node20_1": {
       "target": "index.js"
+    },
+    "Node24": {
+      "target": "index.js"
     }
-  }
+  },
+  "visibility": [
+    "Build"
+  ]
 }

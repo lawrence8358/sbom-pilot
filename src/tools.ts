@@ -5,6 +5,8 @@ import { satisfies, valid, validRange, rcompare } from 'semver';
 import * as toolLib from 'azure-pipelines-tool-lib/tool';
 import type { ProcessRunner } from './process';
 import { validateToolOptions, validateCdxgenPackage, parseCdxgenVersion, validateCdxgenHelp } from './tool-options';
+import { downloadBytes } from './network/http';
+import { childNetworkEnvironment } from './network/settings';
 export { CDXGEN_VERSION } from './tool-options';
 
 export interface ToolContext {
@@ -23,16 +25,7 @@ export interface ToolRequest { nodeVersion: string; cdxgenVersion: string; tempD
 export type ToolPreparer = (request: ToolRequest, run: ProcessRunner, log: (message: string) => void) => Promise<ToolContext>;
 
 export async function fetchBytes(url: string): Promise<Buffer> {
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      const response = await fetch(url, { signal: AbortSignal.timeout(120_000) });
-      if (!response.ok) throw new Error('HTTP download failed');
-      return Buffer.from(await response.arrayBuffer());
-    } catch {
-      if (attempt === 2) throw new Error('工具下載失敗；請檢查 Agent 網路、Proxy 與下載來源。');
-    }
-  }
-  throw new Error('工具下載失敗。');
+  return downloadBytes(url);
 }
 export function selectNodeVersion(versions: string[], range: string): string {
   if (!validRange(range)) throw new Error('Node.js 版本必須是有效的 semver 範圍。');
@@ -61,10 +54,10 @@ export const prepareTools: ToolPreparer = async (request, run, log) => {
   }
   const node = join(nodeRoot, process.platform === 'win32' ? 'node.exe' : 'bin/node');
   const npmCli = join(nodeRoot, process.platform === 'win32' ? 'node_modules/npm/bin/npm-cli.js' : 'lib/node_modules/npm/bin/npm-cli.js');
-  const env = { ...process.env, PATH: `${dirname(node)}${delimiter}${process.env.PATH ?? ''}` };
+  const env = await childNetworkEnvironment({ ...process.env, PATH: `${dirname(node)}${delimiter}${process.env.PATH ?? ''}` }, request.tempDirectory);
   const actualNode = (await run({ executable: node, args: ['--version'], cwd: request.tempDirectory, env, timeoutMs: 30_000 })).stdout.trim();
   if (actualNode !== `v${nodeVersion}`) throw new Error('實際 Node.js runtime 版本與選定版本不符；請檢查 Agent 工具快取。');
-  log(`Node.js ${nodeVersion}（掃描工具 runtime；Task handler 使用獨立 Node20_1）。`);
+  log(`Node.js ${nodeVersion}（掃描工具 runtime；Task handler Node ${process.versions.node}，分別管理）。`);
   // Isolated installation: never use an arbitrary global cdxgen or write into the repo.
   // A fresh install avoids trusting an incomplete tool cache after cancelled jobs.
   const cdxgenRoot = join(request.tempDirectory, 'cdxgen');

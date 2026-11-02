@@ -1,6 +1,6 @@
 # 開發與驗證
 
-作者 Lawrence Shen；MIT 授權。維護環境使用 Node >=24（測試機 Node 24.22.1 / npm 11.19.1），Task bundle 目標為 Node 20，由 `Node20_1` handler 執行。掃描用 Node >=24 由 Task 獨立準備，兩者版本不得混為一談。
+作者 Lawrence Shen；MIT 授權。維護環境使用 Node >=24（測試機 Node 24.22.1 / npm 11.19.1），Task bundle 目標為 Node20，同一入口提供 `Node20_1` 與 `Node24` handler。掃描用 Node >=24 由 Task 獨立準備，兩者版本不得混為一談。
 
 ```powershell
 npm ci
@@ -11,6 +11,7 @@ npm run test:options-smoke
 npm run test:smoke:pnpm
 npm run test:smoke:yarn
 npm run package:dev
+npm run test:package
 ```
 
 `npm test` 使用 Node 內建 test runner，驗證 schema、階段失敗、npm lockfile、掃描旗標與子程序秘密輸出抑制。`test:smoke` 下載實際 Node/cdxgen、建立公開 Vue/npm 範例、執行 npm ci、產生真實 SBOM 並驗證 Vue 存在、開發套件 chalk 不在 required-only 結果中，lockfile SHA-256 未變。資料位於忽略的 `.smoke/`；只模擬成品 adapter，沒有冒充 Azure Server 端到端發佈。
@@ -24,6 +25,12 @@ npm run package:release
 ```
 
 請勿把範例佔位值用於公開發佈。打包不會推送或發佈 Marketplace。`package.json`、`src/task.json`、`vss-extension.json` 的版本需同步修改；Task major 變更影響 YAML `@0` 使用方式。
+
+`test:package` 直接檢查已產生的 dist 與實際 VSIX，複製／解壓到 Repo 之外，驗證入口啟動、秘密遮罩、manifest、runtime 授權清單及告示路徑；兩者 handler 位元組必須一致。可指定多個執行檔：`node scripts/verify-package.mjs --node <absolute-node20-path> --node <absolute-node24-path>`。Windows 開發驗證可先執行 `npm test`、`node scripts/acquire-handler.mjs 20`，下載有官方 SHA-256 校驗的 Node20；這不會替真實 Agent 安裝 handler。
+
+建置從 esbuild metafile 與實際 SDK dependency tree 產生 `dist/licenses/manifest.json`，涵蓋 YAML、jsonc-parser、國際格式驗證、Proxy agent 及所有 runtime 依賴。上游缺少完整告示時保留原始 metadata 並標記 `upstreamNoticeMissing`；正式打包會拒絕未解決項目。詳見 [第三方資源](THIRD-PARTY-NOTICES.md)。
+
+ticket11 最終本機驗證：Windows Node24完整67/67測試；Windows實際 dist／VSIX 在 Node20.20.2、24.22.1 啟動與告示檢查通過。Linux bookworm Node24.22.2 的 fresh npm ci、67/67測試、建置、打包與套件檢查通過；Node20.20.2 另通過16項HTTP／DT／網路／UTF-8子程序測試與實際套件檢查。runtime清單共106筆（含巢狀版本），18筆為bundle；只剩nodejs-file-downloader4.13.0的原始ISC完整告示未取得。`npm audit --omit=dev`記錄3個moderate條目，均來自task-lib/tool-lib的minimatch上游相依，無相容修正版；沒有high/critical，未強制覆寫至會破壞SDK API的major。
 
 ## 模組
 
@@ -70,8 +77,8 @@ workspace smoke 同時揭露 ajv-formats-draft2019 的 IRI scheme 白名單誤�
 - ticket08 本機驗證：真實 loopback HTTP／HTTPS server 涵蓋接受上傳、401不重試、503／429有限重試、總請求逾時、不跟隨redirect、無效接受token／過大回應、憑證預設拒絕／單次略過；workflow DT失敗仍交付同一檔案給artifactadapter；實際 esbuild bundle 在 `SYSTEM_DEBUG=true` 下驗證秘密先註冊遮罩且沒有 SDK `dtApiKey=` debug輸出。這些是本機協定與adapter證據，不代表真實DT匯入或Azure成品已驗證。
 - [CycloneDX 1.6 schema](https://github.com/CycloneDX/specification/tree/1.6/schema) 隨套件附 Apache-2.0 授權。
 - [Build Artifact logging command](https://learn.microsoft.com/en-us/azure/devops/pipelines/scripts/logging-commands?view=azure-devops#upload-upload-an-artifact) 由 Agent 非同步執行；[Agent StepsRunner](https://github.com/microsoft/azure-pipelines-agent/blob/v3.238.0/src/Agent.Worker/StepsRunner.cs) 等待 async commands 並合併失敗結果，handler 不宣稱同步上傳完成。
-- 尚待：實際 VSIX 安裝、Classic/YAML、Server/Services、Linux 與 arm64、真正 Agent 成品失敗傳播、企業 Proxy/CA。manifest 最低 Agent 不代表 Server 配對已驗證。
-- 工具下載使用原生 fetch，尚未套用 Azure Agent ProxyUrl/CA 設定。npm 保留 Agent 與 Repo 設定，但本階段未交付 Task 管理私有來源認證。來源認證不得放 CLI arguments，也不得把含秘密的 child stdout/stderr 寫到日誌。
+- 尚待：實際 VSIX 安裝、Classic/YAML、Server/Services、arm64、真正 Agent 成品失敗傳播與企業 Proxy/CA 完整流程。Windows/Linux 本機 runtime／協定／封裝驗證已完成；manifest 最低 Agent 不代表 Server 配對已驗證。完整矩陣與手動步驟見 [相容性](docs/compatibility.md)。
+- 工具下載與 DT 共用 `src/network/http.ts`，套用 Agent Proxy/CA/client certificate、總請求逾時及回應大小界限；DT 不跟隨 redirect，下載最多五次且禁止 HTTPS 降級。子工具保留 Repo 來源設定並接收 Proxy／CA 環境，但尚未交付 Task 管理私有來源認證。來源認證不得放 CLI arguments，也不得把含秘密的 child stdout/stderr 寫到日誌。
 
 ## .NET Core：開發與驗證
 
