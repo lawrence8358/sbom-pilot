@@ -23,9 +23,10 @@
 
 ## 下一步：12
 
-- 工單 12 的實際路徑請由 issues 目錄列出。
+- 工單 `issues/12-integrated-public-release.md`。
 - worktree `D:/Project/Git/.sbom-pilot-worktrees/12-final-delivery`，分支 `ticket/12-final-delivery`。
 - 先讀該 worktree checkpoint12、Git log/status；若 checkpoint 尚未建立，表示剛派工，不能重置既有變更。
+- 12 中途提交 `c03b79d` 已保存最終解包 VSIX 的 Windows 各模式／私有來源／DT 失敗仍有有效成品／成品 adapter 故障證據，以及 Linux 無 SDK 冷取得 Node＋官方 SDK＋私有合併／DT 接受上傳證據。98 項測試已通過；runtime-only SDK 封裝為 25 個具真實告示的相依，已移除未使用 downloader／tool-lib。這仍是候選分支，尚未整合，文件／最後套件檢查還在進行。
 - 最終套件流程回歸、Linux 冷 SDK 取得、完整文件與公開交付準備。評估移除僅用於 Node 快取／解壓的 azure-pipelines-tool-lib，解決其 nodejs-file-downloader4.13.0 缺完整 ISC 告示的公開打包阻擋；保留版本／checksum／跨平台／完成標記驗證，不能捏造告示或關閉 gate。
 - 保留 sourceRoot／實體暫存邊界、secret module 首先載入、obj/assets 例外、Framework nupkg 驗證、jsonc-parser ESM alias、DT 失敗仍交付有效成品及 UTF8 串流修正。
 
