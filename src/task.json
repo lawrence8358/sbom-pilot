@@ -123,6 +123,15 @@
       "helpMarkDown": "選填 Secret Pipeline Variable 參照，例如 $(npmCredentials)。值為 JSON 清單，每筆提供 registry URL 與 token 或 username/password；Repo 使用認證變數佔位時，以 environment 明訂變數名與認證欄位別名。沿用 Repo 來源與 scope 設定，詳見 README 的私有 npm 認證。"
     },
     {
+      "name": "nugetCredentials",
+      "type": "multiLine",
+      "label": "私有 NuGet 來源認證",
+      "required": false,
+      "defaultValue": "",
+      "groupName": "advanced",
+      "helpMarkDown": "選填 Secret Pipeline Variable 參照，例如 $(nugetCredentials)。JSON 清單每筆提供 source（有效來源名稱，大小寫相符）、url（完整來源 URL）、username、password（可用 PAT）。沿用既有 NuGet.Config、停用來源及來源映射；同一還原範圍內同名異址會拒絕，詳見 README 的私有 NuGet 認證。"
+    },
+    {
       "name": "cdxgenVersion",
       "type": "string",
       "label": "cdxgen 版本",

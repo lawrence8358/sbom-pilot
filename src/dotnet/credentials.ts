@@ -58,5 +58,6 @@ export async function withNuGetCredentials<T>(credentials: NuGetCredential[] | u
     if (matched.has(entry)) env[key] = `Username=${entry.username};Password=${entry.password};ValidAuthenticationTypes=Basic`;
   }
   try { return await action(env); }
+  catch { throw new Error(`NuGet 認證來源 ${[...matched].map(entry => entry.source).join(', ') || '（未匹配）'} 還原失敗；請檢查來源 URL、Basic 帳密／PAT 權限、連線及 SDK／lockfile 一致性。原始輸出不會轉印。`); }
   finally { for (const entry of values) delete env[`NuGetPackageSourceCredentials_${entry.source}`]; }
 }

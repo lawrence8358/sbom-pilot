@@ -31,7 +31,7 @@ test('NuGet credentials exist only in the restore child; public sources and prox
       if (fails) throw new Error('restore failed');
       return 'done';
     });
-    if (fails) await assert.rejects(result, /restore failed/); else assert.equal(await result, 'done');
+    if (fails) await assert.rejects(result, /NuGet 認證來源 Private 還原失敗/); else assert.equal(await result, 'done');
     assert.equal(child?.NuGetPackageSourceCredentials_Private, undefined);
     assert.equal(env.NuGetPackageSourceCredentials_Private, 'stale');
   }

@@ -2,7 +2,7 @@
 
 在 Azure Pipelines 加入一個 **SBOM Pilot — Generate & Upload SBOM** Task，即可準備工具並還原專案依賴，產生 CycloneDX 1.6 JSON，並要求 Agent 發佈名稱為 `SBOM` 的 Build Artifact。
 
-本階段提供 Vue/npm、pnpm 與 Yarn Classic／現代 Yarn 專案及 workspace、SDK-style .NET Core、Windows .NET Framework、.NET Core 前後端合併及選用的 Dependency-Track（DT）上傳，使用公開／私有 npm 來源及公開 NuGet 來源。私有 NuGet 認證將於後續版本交付。`--required-only` 固定啟用，代表 cdxgen 的 required scope 篩選，不能視為已逐項核對實際部署成品。Yarn workspace 實測會保留部分被上游標為 required 的開發依賴，詳見 [Yarn 支援及限制](docs/yarn.md)。
+本階段提供 Vue/npm、pnpm 與 Yarn Classic／現代 Yarn 專案及 workspace、SDK-style .NET Core、Windows .NET Framework、.NET Core 前後端合併及選用的 Dependency-Track（DT）上傳，使用公開／私有 npm 與 NuGet 來源。私有 NuGet 以選填 Secret Pipeline Variable 提供，詳見[認證格式與來源隔離](docs/nuget-auth.md)。`--required-only` 固定啟用，代表 cdxgen 的 required scope 篩選，不能視為已逐項核對實際部署成品。Yarn workspace 實測會保留部分被上游標為 required 的開發依賴，詳見 [Yarn 支援及限制](docs/yarn.md)。
 
 ## 前置條件及支援範圍
 
@@ -71,6 +71,7 @@ steps:
 | `skipDtTlsCertificateCheck` | `false` | 啟用 DT 時的進階選項；僅略過 DT HTTPS 憑證驗證 |
 | `cdxgenVersion` | `13.6.0` | 進階精確版本覆寫，限 `@cdxgen/cdxgen` 13.x 穩定版；留空使用預設。實際套件版本、Node engines 與必要 CLI 選項會驗證，其他 major／預發版會於工具下載前失敗 |
 | `npmCredentials` | 空白 | 選填秘密 JSON：各 registry 的 token 或 username/password，及明確的認證變數映射；Vue／combined 適用，詳見[格式與範例](docs/npm-auth.md) |
+| `nugetCredentials` | 空白 | 選填秘密 JSON：每筆 source、url、username、password；.NET Core／.NET Framework／combined 適用，詳見[私有 NuGet 認證](docs/nuget-auth.md) |
 | `fetchLicense` | `true` | `FETCH_LICENSE`；可能需要額外網路存取 |
 | `noCache` | `true` | `CDXGEN_NO_CACHE`；不影響 npm 或 Node 工具快取 |
 
@@ -165,7 +166,7 @@ Task 從每個專案的實際還原目錄向上尋找 `global.json`，支援註�
 
 相容 SDK 已安裝時驗證後使用；缺少時以 Microsoft 官方 `dotnet-install` 腳本安裝至 Task 工具快取，設定子程序的 PATH／DOTNET_ROOT，不需要額外 UseDotNet 或 restore Task。Agent 仍須具備 SDK 所需原生程式庫、Windows PowerShell 或 Linux bash，並能存取 dot.net、builds.dotnet.microsoft.com 與有效 NuGet 來源。腳本不會安裝 Visual Studio workloads。`global.json sdk.paths` 目前會明確拒絕；跨專案 SDK 政策、特殊 workloads 或自訂 SDK 無法解析時，請依錯誤檢查專案格式及 Agent 條件。
 
-依賴還原使用 SDK 內建 NuGet，保留分層 `NuGet.Config`。Task 先以 NuGet 還原圖取得實際輸出及 lockfile 路徑，再執行 `dotnet restore`；已有 lockfile 才啟用 locked mode 並驗證內容不變。沒有選用 NuGet 鎖檔的合法專案可正常執行，不需要 npm lockfile。每個專案及其 ProjectReference 必須有有效 `project.assets.json`，否則停止，不將只有直接套件的結果當作完整依賴清單。
+依賴還原使用 SDK 內建 NuGet，保留分層 `NuGet.Config`。選用私有來源時填入 `nugetCredentials: '$(nugetCredentials)'`，不需額外 Authenticate Task 或 Service Connection；公開來源可並存。Task 先以 NuGet 還原圖取得實際輸出及 lockfile 路徑，再執行 `dotnet restore`；已有 lockfile 才啟用 locked mode 並驗證內容不變。沒有選用 NuGet 鎖檔的合法專案可正常執行，不需要 npm lockfile。每個專案及其 ProjectReference 必須有有效 `project.assets.json`，否則停止，不將只有直接套件的結果當作完整依賴清單。
 
 `.NET` 有一項必要的排除規則轉換：預設 `**/obj/**` 送給掃描器時轉為 `**/obj/!(project.assets.json)`，繼續排除編譯產物，保留經還原驗證的依賴資料。欄位預設值不變；其他自訂 glob 不會改寫。自訂規則若遮蔽必要 assets，或還原資料位於掃描根目錄外，Task 會失敗並要求調整。排除整個非交付專案時，請使用相對該專案目錄的規則。
 
