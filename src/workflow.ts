@@ -6,6 +6,7 @@ import { npmInstaller, type DependencyInstaller } from './install/npm';
 import { generateSbom, type SbomGenerator } from './scan';
 import { validateSbom, type SbomValidator, type ValidatedSbom } from './validation';
 import { runProcess, type ProcessRunner } from './process';
+import { uploadToDependencyTrack } from './dt/upload';
 
 export type ArtifactPublisher = (sbom: ValidatedSbom) => Promise<void>;
 export type SbomUploader = (sbom: ValidatedSbom) => Promise<void>;
@@ -38,10 +39,11 @@ export async function runWorkflow(input: TaskConfig, tempDirectory: string, serv
   await stage('SBOM 產生', () => (services.generate ?? generateSbom)({ config, tools, outputPath }, run));
   const sbom = await stage('SBOM 驗證', () => (services.validate ?? validateSbom)(outputPath, config.specVersion));
   services.log(`CycloneDX ${config.specVersion} 驗證通過；組件數：${sbom.componentCount}。`);
-  // DT uploader and package-manager adapters plug in here in later tickets.
   let uploadError: unknown;
-  if (config.uploadToDt && services.upload) {
-    try { await stage('DT 上傳', () => services.upload!(sbom)); } catch (error) { uploadError = error; }
+  if (config.uploadToDt) {
+    try {
+      await stage('DT 上傳', () => services.upload ? services.upload(sbom) : uploadToDependencyTrack(sbom, config.dt!, services.log));
+    } catch (error) { uploadError = error; }
   }
   await stage('成品發佈', () => services.publish(sbom));
   if (uploadError) throw uploadError;
