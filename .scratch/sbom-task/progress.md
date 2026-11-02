@@ -9,12 +9,12 @@ The user authorized implementation on a local branch, with no remote push or PR.
 | --- | --- | --- |
 | 01 | Implemented; local verification passed | a543dc9 / merge f8abe50; 10 tests; build/dev VSIX; real Node24.22.2 + cdxgen13.6.0 Vue smoke, 23 components, lock unchanged |
 | 02 | Implemented; local verification passed | c3bc8ad / merge 313200f; 15 tests; real options smoke 26 vs23 components; Ajv8.20; build/dev VSIX |
-| 03 | In progress | Isolated implementer worktree |
-| 04 | Waiting for 01 | |
-| 05 | In progress | Isolated implementer worktree |
+| 03 | Implemented; local verification passed | b7cc991 / merge e96721b; 26 integrated tests; real pnpm10 workspace/pnpm12 native/npm10 declared-version smokes |
+| 04 | In progress | Isolated implementer worktree |
+| 05 | Ready to merge | 293d5a5; real SDK6/9/10 and official SDK download smokes; dependency metadata exclusion fix |
 | 06 | Waiting for 05 | |
 | 07 | Waiting for 02, 03, 04, 05 | |
-| 08 | In progress | Isolated implementer worktree |
+| 08 | Ready to merge | f5ca0d6; 25 branch tests incl real local HTTP/TLS, debug secret masking and failed-upload artifact preservation |
 | 09 | Waiting for 03, 04 | |
 | 10 | Waiting for 06 | |
 | 11 | Waiting for 01 | Actual Services/Server installation needs live environments; source declarations alone are not proof |
