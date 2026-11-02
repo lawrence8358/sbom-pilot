@@ -2,7 +2,7 @@
 
 ## Start here
 
-Urgent quota handoff was saved at `7ba0797`; user continuation resumed09 from `d4dc049`. Ticket09 is now complete in its worktree at `bd1c483a054f7ffa7b94e90966bee0ecb3279a98`, awaiting merge. 91 tests/typecheck/build/devVSIX/isolated package checks passed; real Windows7/Linux4 private auth scenarios passed. Next merge/verify, not restart. Preserve InstallOptions.sourceRoot through installer wrappers and first secret import order. Current Git/state/worker checkpoint is authoritative.
+Urgent quota handoff was saved at `7ba0797`; user continuation resumed and completed09. Ticket09 integrated at `b79f7ca`: typecheck/91 tests passed, product tree matches verified `bd1c483`; Windows7/Linux4 real auth scenarios and package checks passed. Ticket10 is now the sole active slice. Preserve InstallOptions.sourceRoot through wrappers and first secret import order. Current Git/state/worker checkpoint is authoritative.
 
 Run `node scripts/resume.mjs` in the integration worktree, then read `implementation-state.json` and the target worker checkpoint in its own worktree. Git HEAD/status are authoritative when this summary is older. Resume existing work; no remote writes or PR.
 
@@ -12,13 +12,14 @@ Run `node scripts/resume.mjs` in the integration worktree, then read `implementa
 - Integration branch: `feature/sbom-pilot` in `D:/Project/Git/sbom-pilot`.
 - Ticket 01 code: `a543dc9`; merged by merger in `f8abe50`.
 - Recovery workflow/dispatch manifest/read-only resume inspector: `caa7f3c`.
-- Tickets 01–08/11 are integrated. Latest combined verification: typecheck and76tests passed at `972bb96`; product tree is identical to ticket07's verified build/devVSIX/test:package at `99a359f`. Current HEAD and active leases must be read from Git and implementation-state.json.
+- Tickets 01–09/11 are integrated. Latest combined verification: typecheck and91tests passed at `b79f7ca`; product tree is identical to ticket09's verified build/devVSIX/test:package at `bd1c483`. Current HEAD and active leases must be read from Git and implementation-state.json.
 - Serial execution is the user's latest direction: at most one subagent, including implementation, merge and review. Finish verified integration before starting another ticket.
 - Ticket 04 Yarn is integrated in `330425d`: typecheck, 54 tests, build and developer VSIX passed. Its real Classic/PnP/node_modules workspace smoke passed before interruption; recovered process exit0 and final evidence are in checkpoint04. No need to repeat unchanged smoke.
 - Ticket 06 Framework is integrated at `ba15e11`; typecheck and61tests passed after conflict-free merge. Real Windows three-format/Unicode/edge smoke and build/devVSIX passed on the identical product tree at `a2d5c63`.
 - Ticket 11 integrated at `3e4d1aa`: Windows/Linux Node24 67 tests and packaged dist/VSIX checks passed; Node20 shipped checks and16network/DT/process tests passed. UTF-8 split-chunk fix included. Own checkpoint11 records exact images, results and retained Docker volume.
 - Ticket07 integrated at `972bb96`: 76 tests/typecheck/build/devVSIX/test:package passed; six real Windows scenarios passed; real Linux SDK10.0.101 restore + pnpm combined30/standalone dotnet6 components passed with edges, single scan/artifact and unchanged locks. Exact Docker commands/digests/evidence in docs/combined.md and checkpoint07.
-- Ticket09 is the sole active slice, isolated `../.sbom-pilot-worktrees/09-npm-auth`, branch `ticket/09-npm-auth`. Implement real private npm/pnpm/Yarn credentials, secret-safe temporary settings, success/failure/cleanup and actual private-package restore+scan;10 remains queued.
+- Ticket09 is integrated; actual CLI proof includes temporary modern Yarn auth plugin, explicit placeholders before manager init, no provisioning/scan/DT credential injection, inherited-config isolation and outside-Git/physical/common-root temp guards. See checkpoint09/docs/npm-auth.md. No repeated unchanged real smokes.
+- Ticket10 is sole active slice, isolated `../.sbom-pilot-worktrees/10-nuget-auth`, branch `ticket/10-nuget-auth`. Read ticket10/05/06 restore seams and complete private NuGet authentication;12 follows.
 - Latest user asked how Linux was tested and explicitly offered Docker. Explained that their local Docker is already used for Node20/24 bookworm container checks, not a real Azure Agent. Linux .NET restore/scan and final combined product smoke still need verification in subsequent tickets.
 - Attribution inventory is complete, but upstream nodejs-file-downloader4.13.0 has ISC metadata without full notice. Public packaging is deliberately gated; inspect checkpoint11/notices before final release work. Do not invent copyright/license text.
 - Ticket12 follow-ups: Linux07 uses an image with SDK preinstalled, so cold Linux SDK acquisition script remains untested; exercise that path using Docker. Investigate resolving the public attribution gate by removing unused azure-pipelines-tool-lib download dependency if practical: root currently uses tool-lib only for findLocalTool/extractZip-or-Tar/cacheDir; preserve cross-platform verified acquisition/cache behavior and notices if replacing these helpers. Do not invent missing upstream license text or suppress the gate without a real resolution.
@@ -37,7 +38,7 @@ Run `node scripts/resume.mjs` in the integration worktree, then read `implementa
 
 ## Remaining graph and integration
 
-- Code integrated:01–08/11. Sole active ticket:09.10 is ready but queued;12 follows09/10. The resume inspector recomputes the actual unassigned frontier from ticket edges and state.
+- Code integrated:01–09/11. Sole active ticket:10;12 follows10. The resume inspector recomputes the actual unassigned frontier from ticket edges and state.
 - Once a worker has a final commit, run the merger as the sole subagent. Root should not mutate integration simultaneously. Preserve all config/workflow/manifest behavior, terminology corrections and serial dispatch policy across retained branches; resolve package-lock from merged package manifests and rerun checks if conflict requires regeneration.
 -03 added generic JS installer dispatch and test discovery;05 added .NET Core dispatch;08 added conditional DT. Subsequent workflow/config/manifest edits must preserve all three. jsonc-parser needs its published ESM entry alias in both actual build and bundle tests to avoid a real UMD startup failure found during integration.
 - After integration, update `integratedTickets` and active leases, progress/evidence, and recompute frontier. Save checkpoints before any new long-running task.
