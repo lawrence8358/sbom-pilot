@@ -57,7 +57,7 @@ async function main() {
   for (const [scope, name, dependencies] of [['public', 'helper', {}], ['private', 'demo', { '@public/helper': '1.0.0' }], ['basic', 'demo', { '@public/helper': '1.0.0' }]]) {
     const directory = join(base, 'package-sources', scope);
     await mkdir(directory, { recursive: true });
-    const manifest = { name: `@${scope}/${name}`, version: '1.0.0', license: 'MIT', main: 'index.js', dependencies };
+    const manifest = { name: `@${scope}/${name}`, version: '1.0.0', license: 'MIT', main: 'index.js', files: ['index.js'], dependencies };
     await writeFile(join(directory, 'package.json'), JSON.stringify(manifest));
     await writeFile(join(directory, 'index.js'), scope === 'public' ? 'module.exports = 42;\n' : "module.exports = require('@public/helper');\n");
     const packed = JSON.parse((await runProcess({ executable: tools.node, args: [tools.npmCli, 'pack', '--json', '--ignore-scripts'], cwd: directory, env: tools.env })).stdout)[0];
@@ -110,7 +110,7 @@ async function main() {
       // routing belongs in project .npmrc or native global rc/config.yaml.
       const npmrc = `@private:registry=${origin}/private/\n@basic:registry=${origin}/basic/\n${name === 'pnpm12' ? `@public:registry=${origin}/public/\n` : ''}${scopedKey('private')}:_authToken=\${NPM_TOKEN}\n${scopedKey('basic')}:username=\${FEED_USER}\n${scopedKey('basic')}:_password=\${FEED_PASSWORD_B64}\nfetch-retries=0\n`;
       if (modern) {
-        await writeFile(join(project, '.yarnrc.yml'), stringify({ nodeLinker: name === 'yarn-pnp' ? 'pnp' : 'node-modules', enableGlobalCache: false, enableMirror: false, cacheFolder: join(cache, 'yarn'), unsafeHttpWhitelist: ['127.0.0.1'], npmRegistries: { [`${origin}/private/`]: { npmAuthToken: '${NPM_TOKEN:-}', npmAlwaysAuth: false } }, npmScopes: { private: { npmRegistryServer: `${origin}/private/`, npmAuthToken: 'stale-project-token', npmAlwaysAuth: false }, basic: { npmRegistryServer: `${origin}/basic/`, npmAuthIdent: '${FEED_IDENT}', npmAlwaysAuth: false }, public: { npmRegistryServer: `${origin}/public/` } } }));
+        await writeFile(join(project, '.yarnrc.yml'), stringify({ nodeLinker: name === 'yarn-pnp' ? 'pnp' : 'node-modules', enableGlobalCache: false, enableMirror: false, globalFolder: join(cache, 'yarn-global'), cacheFolder: join(cache, 'yarn'), unsafeHttpWhitelist: ['127.0.0.1'], npmRegistries: { [`${origin}/private/`]: { npmAuthToken: '${NPM_TOKEN:-}', npmAlwaysAuth: false } }, npmScopes: { private: { npmRegistryServer: `${origin}/private/`, npmAuthToken: 'stale-project-token', npmAlwaysAuth: false }, basic: { npmRegistryServer: `${origin}/basic/`, npmAuthIdent: '${FEED_IDENT}', npmAlwaysAuth: false }, public: { npmRegistryServer: `${origin}/public/` } } }));
       } else await writeFile(join(project, '.npmrc'), npmrc);
       if (manager === 'pnpm') await writeFile(join(project, 'pnpm-workspace.yaml'), stringify({ packages: ['packages/*'], storeDir: join(cache, 'pnpm'), minimumReleaseAge: 0 }));
       const originalUserconfig = join(state, 'user.npmrc'), originalAuth = join(state, 'auth.ini');

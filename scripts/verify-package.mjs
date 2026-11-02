@@ -34,9 +34,11 @@ try {
     for (const item of licenses) await readFile(join(dirname(entry), item.licenseFile));
     for (const binary of nodes) {
       const key = 'synthetic-shipped-package-key';
+      const npmToken = 'synthetic-shipped-npm-token', npmPassword = 'synthetic-shipped-npm-password';
+      const npmCredentials = JSON.stringify([{ registry: 'https://private.example.test/', token: npmToken }, { registry: 'https://basic.example.test/', username: 'fixture-user', password: npmPassword }]);
       const result = spawnSync(binary, [entry], { cwd: root, encoding: 'utf8', env: {
         ...process.env, SYSTEM_DEBUG: 'true', BUILD_BUILDID: '1', RELEASE_RELEASEID: '', AGENT_TEMPDIRECTORY: root,
-        INPUT_ENVIRONMENT: 'unsupported', INPUT_PROJECTPATH: root, INPUT_UPLOADTODT: 'true', INPUT_DTAPIKEY: key,
+        INPUT_ENVIRONMENT: 'unsupported', INPUT_PROJECTPATH: root, INPUT_UPLOADTODT: 'true', INPUT_DTAPIKEY: key, INPUT_NPMCREDENTIALS: npmCredentials,
         INPUT_DTPROJECTUUID: 'd40ce445-3566-49d5-bd8d-2601d73cf0d4',
       } });
       const output = `${result.stdout || ''}${result.stderr || ''}`;
@@ -44,6 +46,12 @@ try {
       assert.match(output, /參數驗證/); assert.doesNotMatch(output, /Cannot find module|SyntaxError|Unhandled/);
       const secrets = output.split(/\r?\n/).filter(line => line.includes(key));
       assert.equal(secrets.length, 1); assert.match(secrets[0], /^##vso\[task.setsecret\]/);
+      const lines = output.split(/\r?\n/), firstDebug = lines.findIndex(line => line.includes('task.debug'));
+      for (const secret of [npmToken, npmPassword, `fixture-user:${npmPassword}`, Buffer.from(npmPassword).toString('base64'), Buffer.from(`fixture-user:${npmPassword}`).toString('base64')]) {
+        const matches = lines.map((line, index) => ({ line, index })).filter(item => item.line.includes(secret));
+        assert.ok(matches.length && matches.every(item => item.index < firstDebug && item.line.startsWith('##vso[task.setsecret]')), 'Shipped npm credentials must be registered before SDK debug only');
+      }
+      assert.doesNotMatch(output, /npmCredentials=/);
       const version = spawnSync(binary, ['--version'], { encoding: 'utf8' }).stdout.trim();
       console.log(`SHIPPED PASS ${entry.includes(`${sep}vsix${sep}`) ? 'VSIX' : 'dist'} ${process.platform}/${process.arch} ${version}; startup, secret mask, manifest and licenses`);
     }

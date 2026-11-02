@@ -2,7 +2,7 @@
 
 在 Azure Pipelines 加入一個 **SBOM Pilot — Generate & Upload SBOM** Task，即可準備工具並還原專案依賴，產生 CycloneDX 1.6 JSON，並要求 Agent 發佈名稱為 `SBOM` 的 Build Artifact。
 
-本階段提供 Vue/npm、pnpm 與 Yarn Classic／現代 Yarn 專案及 workspace、SDK-style .NET Core、Windows .NET Framework、.NET Core 前後端合併及選用的 Dependency-Track（DT）上傳，使用公開 npm/NuGet 來源。私有來源認證將於後續版本交付。`--required-only` 固定啟用，代表 cdxgen 的 required scope 篩選，不能視為已逐項核對實際部署成品。Yarn workspace 實測會保留部分被上游標為 required 的開發依賴，詳見 [Yarn 支援及限制](docs/yarn.md)。
+本階段提供 Vue/npm、pnpm 與 Yarn Classic／現代 Yarn 專案及 workspace、SDK-style .NET Core、Windows .NET Framework、.NET Core 前後端合併及選用的 Dependency-Track（DT）上傳，使用公開／私有 npm 來源及公開 NuGet 來源。私有 NuGet 認證將於後續版本交付。`--required-only` 固定啟用，代表 cdxgen 的 required scope 篩選，不能視為已逐項核對實際部署成品。Yarn workspace 實測會保留部分被上游標為 required 的開發依賴，詳見 [Yarn 支援及限制](docs/yarn.md)。
 
 ## 前置條件及支援範圍
 
@@ -16,7 +16,7 @@
 | 網路 | Agent 可存取 nodejs.org、npm registry 與專案依賴／授權資訊來源；首次執行需要下載 |
 | Server / Services | 使用兩者皆提供的 Build Artifact logging command；尚待真實 Server / Services 安裝與端到端驗證，未宣稱特定最低 Server 支援 |
 
-Vue 模式需提交 manifest 與且僅一種管理器的 lockfile：npm 使用 `package-lock.json` 或 `npm-shrinkwrap.json`，pnpm 使用 `pnpm-lock.yaml`，Yarn 使用 `yarn.lock`。Task 執行對應管理器的嚴格安裝；缺少或不同步的 lockfile 會失敗，不會自動產生或修正。Repo 的來源設定與所選管理器版本的安裝腳本規則仍生效；本階段不提供秘密認證欄位。原生套件所需編譯工具仍需 Agent 提供。.NET Core 的還原與選用鎖檔政策見下方 .NET Core 模式。
+Vue 模式需提交 manifest 與且僅一種管理器的 lockfile：npm 使用 `package-lock.json` 或 `npm-shrinkwrap.json`，pnpm 使用 `pnpm-lock.yaml`，Yarn 使用 `yarn.lock`。Task 執行對應管理器的嚴格安裝；缺少或不同步的 lockfile 會失敗，不會自動產生或修正。Repo 的來源設定與所選管理器版本的安裝腳本規則仍生效；私有來源可由 Secret Pipeline Variable 傳入選填的 `npmCredentials`，不需另外 Authenticate Task，詳見[私有 npm 認證](docs/npm-auth.md)。原生套件所需編譯工具仍需 Agent 提供。.NET Core 的還原與選用鎖檔政策見下方 .NET Core 模式。
 
 pnpm workspace 請指定包含 `pnpm-workspace.yaml` 與鎖檔的共同根目錄。可直接使用[可執行範例](examples/pnpm-workspace/package.json)，YAML 將 `projectPath` 設為 `$(Build.SourcesDirectory)/examples/pnpm-workspace`；不需額外 Corepack、pnpm 或 install Task。版本與衝突診斷見[管理器說明](docs/package-managers.md)。
 
@@ -70,6 +70,7 @@ steps:
 | `dtApiKey` | 無 | 啟用 DT 時必填；由 Secret Pipeline Variable 傳入 |
 | `skipDtTlsCertificateCheck` | `false` | 啟用 DT 時的進階選項；僅略過 DT HTTPS 憑證驗證 |
 | `cdxgenVersion` | `13.6.0` | 進階精確版本覆寫，限 `@cdxgen/cdxgen` 13.x 穩定版；留空使用預設。實際套件版本、Node engines 與必要 CLI 選項會驗證，其他 major／預發版會於工具下載前失敗 |
+| `npmCredentials` | 空白 | 選填秘密 JSON：各 registry 的 token 或 username/password，及明確的認證變數映射；Vue／combined 適用，詳見[格式與範例](docs/npm-auth.md) |
 | `fetchLicense` | `true` | `FETCH_LICENSE`；可能需要額外網路存取 |
 | `noCache` | `true` | `CDXGEN_NO_CACHE`；不影響 npm 或 Node 工具快取 |
 

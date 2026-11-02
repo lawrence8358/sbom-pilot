@@ -114,6 +114,15 @@
       "helpMarkDown": "只作用於 DT HTTPS 連線，預設驗證憑證。"
     },
     {
+      "name": "npmCredentials",
+      "type": "multiLine",
+      "label": "私有 npm 來源認證",
+      "required": false,
+      "defaultValue": "",
+      "groupName": "advanced",
+      "helpMarkDown": "選填 Secret Pipeline Variable 參照，例如 $(npmCredentials)。值為 JSON 清單，每筆提供 registry URL 與 token 或 username/password；Repo 使用認證變數佔位時，以 environment 明訂變數名與認證欄位別名。沿用 Repo 來源與 scope 設定，詳見 README 的私有 npm 認證。"
+    },
+    {
       "name": "cdxgenVersion",
       "type": "string",
       "label": "cdxgen 版本",
