@@ -37,14 +37,14 @@ test('npm uses ci, preserves lockfile and suppresses credential-bearing errors',
   await writeFile(join(root, 'package-lock.json'), '{"lockfileVersion":3}');
   let args: string[] = [];
   const run: ProcessRunner = async command => {
-    if (command.args.includes('--version')) return { stdout: '11.0.0', stderr: '' };
+    if (command.args.includes('--version')) return { stdout: '11.19.1', stderr: '' };
     args = command.args; return { stdout: '', stderr: '' };
   };
   await npmInstaller.install(root, tools, run);
   assert.equal(args[1], 'ci');
   assert.equal(await readFile(join(root, 'package-lock.json'), 'utf8'), '{"lockfileVersion":3}');
   await assert.rejects(npmInstaller.install(root, tools, async command => {
-    if (command.args.includes('--version')) return { stdout: '11.0.0', stderr: '' };
+    if (command.args.includes('--version')) return { stdout: '11.19.1', stderr: '' };
     throw new Error('https://user:SECRET@example.invalid');
   }), error => error instanceof Error && !error.message.includes('SECRET') && /npm ci/.test(error.message));
 }));

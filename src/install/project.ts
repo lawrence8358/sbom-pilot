@@ -41,6 +41,9 @@ export async function inspectJavaScriptProject(requested: string): Promise<JavaS
   const candidates: [string, JavaScriptManager | 'unsupported'][] = [
     ['package-lock.json', 'npm'], ['npm-shrinkwrap.json', 'npm'], ['pnpm-lock.yaml', 'pnpm'], ['yarn.lock', 'yarn'], ['bun.lock', 'unsupported'], ['bun.lockb', 'unsupported'],
   ];
+  for (let child = resolve(requested); child !== root; child = dirname(child)) {
+    if ((await Promise.all(candidates.map(([file]) => exists(join(child, file))))).some(Boolean)) throw new Error('workspace 子目錄具有獨立 lockfile；請先統一 workspace 根目錄的鎖定資訊。');
+  }
   const locks = (await Promise.all(candidates.map(async ([file, manager]) => ({ file, manager, present: await exists(join(root, file)) })))).filter(lock => lock.present);
   if (locks.length !== 1) throw new Error('必須有且僅有一份 lockfile；偵測到缺少或其他套件管理器的競爭 lockfile。');
   const lock = locks[0];
@@ -50,8 +53,8 @@ export async function inspectJavaScriptProject(requested: string): Promise<JavaS
     if (lock.manager !== 'pnpm') throw new Error('pnpm workspace 與其他套件管理器 lockfile 互相矛盾。');
     try {
       const workspace = parse(await readFile(join(root, 'pnpm-workspace.yaml'), 'utf8'));
-      if (!workspace || !Array.isArray(workspace.packages) || !workspace.packages.every((entry: unknown) => typeof entry === 'string')) throw new Error();
-    } catch { throw new Error('pnpm-workspace.yaml 必須是有效 YAML，並宣告 packages 路徑清單。'); }
+      if (workspace !== null && (typeof workspace !== 'object' || Array.isArray(workspace) || (workspace.packages !== undefined && (!Array.isArray(workspace.packages) || !workspace.packages.every((entry: unknown) => typeof entry === 'string'))))) throw new Error();
+    } catch { throw new Error('pnpm-workspace.yaml 必須是有效 YAML；packages 若有設定，必須是路徑清單。'); }
   }
   let version = declared?.version;
   if (!version && lock.manager === 'npm') version = NPM_FALLBACK_VERSION;
