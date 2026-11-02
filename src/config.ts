@@ -60,7 +60,7 @@ export function readTaskConfig(read: InputReader): TaskConfig {
 }
 export async function validateConfig(config: TaskConfig): Promise<TaskConfig> {
   if (!['win32', 'linux'].includes(process.platform)) throw new Error('目前僅支援 Windows 與 Linux Agent。');
-  if (!['vue', 'dotnet', 'netframework'].includes(config.environment)) throw new Error('此版本提供 Vue、.NET Core 與 .NET Framework 模式；其他模式尚未交付。');
+  if (!['vue', 'dotnet', 'netframework', 'combined'].includes(config.environment)) throw new Error('此版本提供 Vue、.NET Core、.NET Framework 與 .NET Core 前後端合併模式。');
   if (config.environment === 'netframework' && process.platform !== 'win32') throw new Error('.NET Framework 模式僅支援 Windows Agent。');
   for (const name of ['fetchLicense', 'noCache', 'uploadToDt'] as const) {
     if (typeof config[name] !== 'boolean') throw new Error(`參數 ${name} 必須是布林值。`);

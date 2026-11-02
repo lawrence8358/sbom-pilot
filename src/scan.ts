@@ -10,11 +10,12 @@ export type SbomGenerator = (request: ScanRequest, run: ProcessRunner) => Promis
 export function scanExcludes(request: ScanRequest): string[] {
   // obj holds both unwanted build output and the verified NuGet dependency graph.
   // Keep only this graph readable; excluding it silently reduces cdxgen to direct refs.
-  return request.config.excludes.map(pattern => (request.config.environment === 'dotnet' || request.tools.dotnetAssets?.length) && pattern === '**/obj/**'
+  return request.config.excludes.map(pattern => (['dotnet', 'combined'].includes(request.config.environment) || request.tools.dotnetAssets?.length) && pattern === '**/obj/**'
     ? '**/obj/!(project.assets.json)' : pattern);
 }
 export function scanArguments(request: ScanRequest): string[] {
-  return [request.tools.cdxgenCli, request.config.projectPath, '-r', '-t', ['dotnet', 'netframework'].includes(request.config.environment) ? 'dotnet' : 'js',
+  const types = request.config.environment === 'combined' ? ['dotnet', 'js'] : [['dotnet', 'netframework'].includes(request.config.environment) ? 'dotnet' : 'js'];
+  return [request.tools.cdxgenCli, request.config.projectPath, '-r', ...types.flatMap(type => ['-t', type]),
     '--required-only', '--spec-version', request.config.specVersion, '--install-deps', 'false',
     ...scanExcludes(request).flatMap(pattern => ['--exclude', pattern]), '-o', request.outputPath];
 }
