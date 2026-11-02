@@ -2,7 +2,7 @@ import type { ToolContext } from '../tools';
 import type { ProcessRunner } from '../process';
 import type { NpmCredential } from './npm-credentials';
 
-export interface InstallOptions { tempDirectory?: string; log?: (message: string) => void; npmCredentials?: NpmCredential[] }
+export interface InstallOptions { tempDirectory?: string; log?: (message: string) => void; npmCredentials?: NpmCredential[]; sourceRoot?: string }
 export interface DependencyInstaller {
   install(root: string, tools: ToolContext, run: ProcessRunner, options?: InstallOptions): Promise<void>;
 }

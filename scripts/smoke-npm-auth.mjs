@@ -94,6 +94,10 @@ async function main() {
       await rm(project, { recursive: true, force: true });
       await rm(state, { recursive: true, force: true });
       await mkdir(join(project, 'packages/web'), { recursive: true }); await mkdir(state, { recursive: true });
+      // A standalone fixture repository boundary, independent of this development repo.
+      await mkdir(join(project, '.git/objects'), { recursive: true }); await mkdir(join(project, '.git/refs/heads'), { recursive: true });
+      await writeFile(join(project, '.git/HEAD'), 'ref: refs/heads/main\n');
+      await writeFile(join(project, '.git/config'), '[core]\nrepositoryformatversion = 0\nbare = false\n');
       const manager = name.startsWith('pnpm') ? 'pnpm' : name.startsWith('yarn') ? 'yarn' : 'npm';
       const version = name === 'pnpm10' ? '10.34.2' : name === 'pnpm12' ? '12.16.1' : name === 'yarn-classic' ? '1.22.22' : manager === 'yarn' ? '4.18.1' : '11.19.1';
       const modern = manager === 'yarn' && version !== '1.22.22';
@@ -116,7 +120,11 @@ async function main() {
       const originalUserconfig = join(state, 'user.npmrc'), originalAuth = join(state, 'auth.ini');
       await writeFile(originalUserconfig, `@public:registry=${origin}/public/\nfetch-retries=0\n`);
       await writeFile(originalAuth, '# Separate trusted auth file, no registry routing\n');
-      const scopedTools = { ...tools, env: { ...tools.env, NPM_CONFIG_USERCONFIG: originalUserconfig, ...(name === 'pnpm12' ? { PNPM_CONFIG_NPMRC_AUTH_FILE: originalAuth } : {}), NPM_CONFIG_CACHE: join(cache, 'npm'), YARN_CACHE_FOLDER: join(cache, 'classic') } };
+      const scopedEnv = { ...tools.env };
+      // npm run injects lowercase npm_config_* keys. Avoid constructing a child
+      // env with a conflicting uppercase fixture override (Linux/Windows differ).
+      for (const key of Object.keys(scopedEnv)) if (['npm_config_userconfig', 'pnpm_config_npmrc_auth_file', 'npm_config_cache', 'yarn_cache_folder'].includes(key.toLowerCase())) delete scopedEnv[key];
+      const scopedTools = { ...tools, env: { ...scopedEnv, NPM_CONFIG_USERCONFIG: originalUserconfig, ...(name === 'pnpm12' ? { PNPM_CONFIG_NPMRC_AUTH_FILE: originalAuth } : {}), NPM_CONFIG_CACHE: join(cache, 'npm'), YARN_CACHE_FOLDER: join(cache, 'classic') } };
       // Modern Yarn rejects Classic-only env options, so keep its cache path in RC.
       if (modern) delete scopedTools.env.YARN_CACHE_FOLDER;
       const selected = { root: project, manager, version, reason: 'declaration', lockPath, ...(manager === 'yarn' ? { yarn: { generation: modern ? 'modern' : 'classic' } } : {}) };

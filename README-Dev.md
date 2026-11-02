@@ -143,7 +143,7 @@ Microsoft 來源：[NuGet/MSBuild restore](https://learn.microsoft.com/en-us/nug
 
 使用者介面與 SecretVariable 範例見 [npm-auth.md](docs/npm-auth.md)。`npm-credentials.ts` 負責格式／映射驗證與衍生值；`npm-auth.ts` 檢查 source/auth-slot 對應、保留分層設定，在 repo 外建立可清理的 userconfig 或 Yarn plugin。JS installer 先準備管理器，再讓專案版本／config 初始化與 install 取得明確映射；工具準備、scanner、.NET Core 與 DT 沿用原 ToolContext.env。
 
-`npm test` 現為88項（原76項加12項認證回歸），涵蓋來源隔離、Base64、父環境與不同 userconfig/authfile、Yarn fallback、temp cleanup及實際 bundled pre-SDK secret masking。`npm run test:smoke:npm-auth` 用本機合成 registry 與真正套件下載驗證 npm11.19.1、pnpm10.34.2／native12.16.1、Classic1.22.22、Yarn4.18.1 PnP／node-modules及私有前端＋.NET Core 合併產品。
+`npm test` 現為91項（原76項加15項認證回歸），涵蓋來源隔離、Base64、父環境與不同 userconfig/authfile、Yarn fallback、temp cleanup及實際 bundled pre-SDK secret masking。`npm run test:smoke:npm-auth` 用本機合成 registry 與真正套件下載驗證 npm11.19.1、pnpm10.34.2／native12.16.1、Classic1.22.22、Yarn4.18.1 PnP／node-modules及私有前端＋.NET Core 合併產品。
 
 2026-11-03 Windows x64 已分段完成真實矩陣：npm4、pnpm10/12各3、Classic/PnP/node-modules各4、combined10個有效組件。每種情境有Bearer與Basic私有套件→公開套件依賴邊、官方1.6Schema、一次scan/localartifact、明確placeholder、wrong/missing安裝失敗、設定／鎖檔不變及清理／秘密檢查；合併另有Logging→Abstractions後端邊。Node24.22.2/cdxgen13.6.0，hostNode24.22.1。完整最終重跑與額外平台結果以checkpoint09最新紀錄為準。
 

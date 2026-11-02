@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { access, mkdtemp, mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -6,7 +6,11 @@ import { parse } from 'yaml';
 import type { InstallOptions, JavaScriptProject, ManagerCommand } from './contracts';
 import { NpmAuthenticationError, validateNpmCredentials, type CredentialAlias } from './npm-credentials';
 
-const getEnv = (env: NodeJS.ProcessEnv, key: string) => Object.entries(env).find(([name]) => name.toLowerCase() === key.toLowerCase())?.[1];
+const getEnv = (env: NodeJS.ProcessEnv, key: string) => {
+  const matches = Object.entries(env).filter(([name]) => name.toLowerCase() === key.toLowerCase()).map(([, value]) => value);
+  if (new Set(matches).size > 1) throw new Error('認證相關環境設定含大小寫重複且不同的值；請保留單一設定，避免來源設定被覆蓋。');
+  return matches[0];
+};
 function setEnv(env: NodeJS.ProcessEnv, key: string, value: string): void {
   for (const name of Object.keys(env)) if (name.toLowerCase() === key.toLowerCase()) delete env[name];
   env[key] = value;
@@ -15,6 +19,14 @@ async function readOptional(path: string): Promise<string> {
   try { return await readFile(path, 'utf8'); }
   catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return ''; throw error; }
 }
+async function repositoryBoundary(projectRoot: string): Promise<string> {
+  for (let directory = resolve(projectRoot);; directory = dirname(directory)) {
+    try { await access(join(directory, '.git')); return await realpath(directory); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw new NpmAuthenticationError('temp'); }
+    if (dirname(directory) === directory) return realpath(projectRoot);
+  }
+}
+const contains = (root: string, path: string) => { const value = relative(root, path); return value === '' || (!/^\.\.(?:[\\/]|$)/.test(value) && !isAbsolute(value)); };
 
 /** Existing higher-priority credentials cannot be silently replaced by a user RC. */
 export async function checkProjectAuthentication(project: JavaScriptProject, env: NodeJS.ProcessEnv, options: InstallOptions): Promise<void> {
@@ -133,9 +145,11 @@ export async function withNpmAuthentication(project: JavaScriptProject, command:
   if (!options.npmCredentials?.length) { await action(command); return; }
   const credentials = validateNpmCredentials(options.npmCredentials);
   const base = resolve(options.tempDirectory ?? tmpdir());
-  const inside = relative(resolve(project.root), base);
-  if (inside === '' || (!/^\.\.(?:[\\/]|$)/.test(inside) && !isAbsolute(inside))) throw new Error('npm 認證暫存目錄必須位於專案外。');
+  const boundaries = [await repositoryBoundary(project.root), await realpath(options.sourceRoot ?? project.root)];
+  if (boundaries.some(boundary => contains(boundary, base))) throw new NpmAuthenticationError('temp');
   await mkdir(base, { recursive: true });
+  const physical = await realpath(base);
+  if (boundaries.some(boundary => contains(boundary, physical))) throw new NpmAuthenticationError('temp');
   const directory = await mkdtemp(join(base, 'sbom-npm-auth-'));
   try {
     const env = { ...(command.env ?? inheritedEnv) };

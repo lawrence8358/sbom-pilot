@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { runInNewContext } from 'node:vm';
@@ -175,6 +175,13 @@ test('pnpm12 preserves user-level routing/settings separately from an inherited 
   assert.deepEqual(await readdir(join(root, 'temp')), []);
 }));
 
+test('conflicting case variants of inherited userconfig are rejected instead of silently discarding one', () => fixture(async root => {
+  await mkdir(project(root).root);
+  const userconfig = join(root, 'user.npmrc'); await writeFile(userconfig, 'fetch-retries=3\n');
+  await assert.rejects(checkProjectAuthentication(project(root), { NPM_CONFIG_USERCONFIG: userconfig, npm_config_userconfig: join(root, 'other.npmrc') }, { npmCredentials: credentials }), /大小寫重複/);
+  await checkProjectAuthentication(project(root), { NPM_CONFIG_USERCONFIG: userconfig, npm_config_userconfig: userconfig }, { npmCredentials: credentials });
+}));
+
 test('auth locates inherited child HOME settings and rejects project credential precedence/undefined Yarn placeholders precisely', () => fixture(async root => {
   await mkdir(project(root).root);
   const childHome = join(root, 'child-home');
@@ -224,6 +231,23 @@ test('auth files cannot be placed inside project and no-credential route creates
   const command = { executable: process.execPath, args: [] };
   await withNpmAuthentication(project(root), command, {}, {}, async actual => { assert.equal(actual, command); calls++; });
   assert.equal(calls, 1);
+}));
+
+test('auth temp must stay outside the owning Git repo and cannot follow a symlink back into source', () => fixture(async root => {
+  const repo = join(root, 'repo'); await mkdir(join(repo, '.git'), { recursive: true });
+  await mkdir(join(repo, 'frontend'));
+  const selected = { ...project(root), root: join(repo, 'frontend') }, command = { executable: process.execPath, args: [] };
+  await assert.rejects(withNpmAuthentication(selected, command, {}, { npmCredentials: credentials, tempDirectory: join(repo, 'task-temp') }, async () => {}), /Repo／專案外/);
+  const link = join(root, 'outside-link'); await symlink(repo, link, process.platform === 'win32' ? 'junction' : 'dir');
+  await assert.rejects(withNpmAuthentication(selected, command, {}, { npmCredentials: credentials, tempDirectory: link }, async () => {}), /Repo／專案外/);
+  assert.deepEqual(await readdir(repo), ['.git', 'frontend']);
+}));
+
+test('standalone non-Git combined source root excludes frontend sibling temp directories', () => fixture(async root => {
+  const sourceRoot = join(root, 'product'); await mkdir(join(sourceRoot, 'frontend'), { recursive: true });
+  const selected = { ...project(root), root: join(sourceRoot, 'frontend') };
+  await assert.rejects(withNpmAuthentication(selected, { executable: process.execPath, args: [] }, {}, { npmCredentials: credentials, sourceRoot, tempDirectory: join(sourceRoot, 'temp') }, async () => {}), /Repo／專案外/);
+  assert.deepEqual(await readdir(sourceRoot), ['frontend']);
 }));
 
 test('actual bundled entrypoint masks JSON and credential encodings before SDK debug, never reads secret input', () => fixture(async root => {

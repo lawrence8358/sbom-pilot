@@ -1,7 +1,7 @@
 export type CredentialAlias = 'token' | 'username' | 'password' | 'passwordBase64' | 'basic' | 'basicBase64';
 export type NpmCredential = ({ registry: string; token: string; username?: never; password?: never } | { registry: string; username: string; password: string; token?: never }) & { environment?: Record<string, CredentialAlias> };
 export class NpmAuthenticationError extends Error {
-  constructor() { super('私有 npm 來源認證／嚴格安裝失敗；請檢查 registry URL（含路徑）、認證權限、專案既有認證設定與鎖檔。未轉印來源或子程序內容。'); }
+  constructor(reason: 'install' | 'temp' = 'install') { super(reason === 'temp' ? 'npm 認證暫存目錄必須位於 Repo／專案外；請檢查 Agent.TempDirectory。' : '私有 npm 來源認證／嚴格安裝失敗；請檢查 registry URL（含路徑）、認證權限、專案既有認證設定與鎖檔。未轉印來源或子程序內容。'); }
 }
 
 export function credentialValue(credential: NpmCredential, alias: CredentialAlias): string {
