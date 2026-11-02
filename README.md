@@ -10,7 +10,7 @@
 | --- | --- |
 | Pipeline | Classic Build、YAML Build；不支援 Classic Release |
 | Agent OS | Windows / Linux x64、arm64 為設計目標；目前實測紀錄見開發文件 |
-| Task handler | Agent 需具備 `Node20_1`；manifest 最低 Agent `3.232.1` 是 handler 門檻，不代表所有 Server 與該 Agent 配對已驗證 |
+| Task handler | 同一入口提供 `Node20_1`／`Node24`，bundle 目標為 Node20；manifest 最低 Agent `3.238.0` 是保守候選門檻，尚非真實 Server 相容性保證 |
 | 掃描工具 | 自動準備最新符合 `24.x` 的 Node；獨立安裝固定 `@cdxgen/cdxgen@13.6.0`，不使用全域 cdxgen |
 | npm／pnpm／Yarn | 優先使用 `packageManager` 精確版本及有效的 Yarn 專案執行檔；隔離準備工具，無宣告使用固定 fallback，詳見[管理器說明](docs/package-managers.md) |
 | 網路 | Agent 可存取 nodejs.org、npm registry 與專案依賴／授權資訊來源；首次執行需要下載 |
@@ -22,7 +22,7 @@ pnpm workspace 請指定包含 `pnpm-workspace.yaml` 與鎖檔的共同根目錄
 
 Yarn workspace 也指定共同根目錄；[Classic 範例](examples/yarn-classic-workspace/package.json)使用 node_modules，[現代 Yarn 範例](examples/yarn-modern-workspace/package.json)預設 PnP，亦實測 node-modules 佈局。Task 保留 `.yarnrc`／`.yarnrc.yml`，不需另外加入 Corepack 或 Yarn install Task。
 
-原生下載目前使用 Node HTTPS fetch；尚未驗證 Agent Proxy／自訂 CA，企業網路環境請先驗證可達性，詳細限制見 [開發說明](README-Dev.md)。
+工具下載與 DT 連線會套用 Agent Proxy／CA 設定，並有請求逾時與回應大小界限；子工具透過環境變數取得 Proxy 與 CA。Agent 的 regex bypass 與子工具的 `NO_PROXY` 規則不同，Windows NuGet 仍需系統信任憑證；企業環境完整流程仍待實測。詳見[相容矩陣與驗收步驟](docs/compatibility.md)。
 
 ## 安裝
 
@@ -109,7 +109,7 @@ Task 用 HTTP PUT 將已驗證 SBOM 的原始位元組以 Base64 傳至 `/api/v1
 
 每次請求最多 30 秒，暫時網路錯誤及 HTTP 408、429、500、502、503、504 最多嘗試三次；401／403 等錯誤不重試，不跟隨重新導向。重試可能再次提交已被 DT 接受但回應遺失的 SBOM。日誌不包含 Key、token 或伺服器回應內容。
 
-DT 上傳失敗時仍要求 Agent 發佈有效 `SBOM` 成品，最後 Task 失敗。成品上傳由 Agent 非同步執行，仍需檢查工作結果及成品頁。TLS 預設驗證；略過選項只作用於 DT，不更改 Node/npm/cdxgen 連線的 TLS 設定。企業 Proxy／自訂 CA 的共同傳輸支援仍待整合驗證。
+DT 上傳失敗時仍要求 Agent 發佈有效 `SBOM` 成品，最後 Task 失敗。成品上傳由 Agent 非同步執行，仍需檢查工作結果及成品頁。TLS 預設驗證；略過選項只作用於 DT 目的連線，不更改 Proxy、Node/npm/cdxgen 的 TLS 設定。企業 Proxy／自訂 CA 的完整 Pipeline 驗證仍待完成。
 
 ## 疑難排解
 

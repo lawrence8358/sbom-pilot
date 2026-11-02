@@ -19,9 +19,12 @@ export const runProcess: ProcessRunner = (command) => new Promise((resolve, reje
   });
   let stdout = '', stderr = '';
   const limit = 4 * 1024 * 1024;
-  const append = (current: string, chunk: Buffer) => (current + chunk.toString()).slice(-limit);
-  child.stdout.on('data', (data: Buffer) => { stdout = append(stdout, data); });
-  child.stderr.on('data', (data: Buffer) => { stderr = append(stderr, data); });
+  // Stream decoding preserves partial UTF-8 sequences across pipe data events.
+  child.stdout.setEncoding('utf8');
+  child.stderr.setEncoding('utf8');
+  const append = (current: string, chunk: string) => (current + chunk).slice(-limit);
+  child.stdout.on('data', (data: string) => { stdout = append(stdout, data); });
+  child.stderr.on('data', (data: string) => { stderr = append(stderr, data); });
   const timeout = setTimeout(() => {
     if (process.platform === 'win32' && child.pid) {
       spawn('taskkill.exe', ['/pid', String(child.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });

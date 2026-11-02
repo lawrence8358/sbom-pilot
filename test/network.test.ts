@@ -55,7 +55,16 @@ test('native custom CA validates HTTPS directly and through proxy without global
   await listen(httpsServer({ key, cert }, (_request, response) => response.end('trusted')), async target => {
     await assert.rejects(get(target), /TLS 憑證/);
     assert.equal((await get(target, { caFile: certFile })).body.toString(), 'trusted');
-    await listen(proxy, async proxyUrl => { assert.equal((await get(target, { proxyUrl, caFile: certFile })).body.toString(), 'trusted'); });
+    await listen(proxy, async proxyUrl => {
+      assert.equal((await get(target, { proxyUrl, caFile: certFile })).body.toString(), 'trusted');
+      await assert.rejects(get(target, { proxyUrl }), /TLS 憑證/);
+      assert.equal((await get(target, { proxyUrl }, false)).body.toString(), 'trusted');
+    });
+    const secureProxy = httpsServer({ key, cert });
+    await listen(secureProxy, async proxyUrl => {
+      // A DT target exception must never disable TLS verification of the proxy.
+      await assert.rejects(get(target, { proxyUrl }, false), /TLS 憑證/);
+    }, true);
     await assert.rejects(get(target), /TLS 憑證/);
   }, true);
   assert.equal(process.env.NODE_TLS_REJECT_UNAUTHORIZED, before);
