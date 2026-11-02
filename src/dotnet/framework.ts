@@ -3,12 +3,14 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import type { ProcessRunner } from '../process';
 import type { RestoreProject } from './restore';
+import { withNuGetCredentials, type NuGetCredential } from './credentials';
+import { withFrameworkSourceReader } from './sources';
 import { evaluateFrameworkProject, verifyFrameworkTargets, type MSBuildTool } from './msbuild';
 
 const exists = async (path: string) => access(path).then(() => true, () => false);
 const hash = async (path: string) => createHash('sha256').update(await readFile(path)).digest('hex');
 interface GraphRestore {
-  projectPath: string; projectStyle: string; outputPath?: string; configFilePaths?: string[];
+  projectPath: string; projectStyle: string; outputPath?: string; configFilePaths?: string[]; sources?: Record<string, unknown>;
   packagesConfigPath?: string; restoreLockProperties?: { nuGetLockFilePath?: string };
 }
 export interface FrameworkRestoreResult { assets: RestoreProject[]; packageFiles: string[] }
@@ -87,7 +89,7 @@ async function packageFiles(metadata: GraphRestore, projectDirectory: string, so
 }
 
 /** Public/private feeds share this route: pass credentials only through tool.env. */
-export async function restoreFrameworkProject(projectPath: string, root: string, tool: MSBuildTool, run: ProcessRunner, tempDirectory: string): Promise<FrameworkRestoreResult> {
+export async function restoreFrameworkProject(projectPath: string, root: string, tool: MSBuildTool, run: ProcessRunner, tempDirectory: string, credentials?: NuGetCredential[]): Promise<FrameworkRestoreResult> {
   const cwd = dirname(projectPath);
   const properties = await evaluateFrameworkProject(projectPath, tool, run, cwd);
   const solutionDirectory = properties.RestoreSolutionDirectory || await findSolutionDirectory(projectPath, root);
@@ -121,8 +123,12 @@ export async function restoreFrameworkProject(projectPath: string, root: string,
   const preserved = [...new Set([...configs.filter(path => /\.config$/i.test(path)), ...assets.filter(project => project.hasLock).map(project => project.lockPath)])];
   const hashes = await Promise.all(preserved.map(async path => [path, await hash(path)] as const));
   try {
-    await run({ executable: tool.executable, args: [projectPath, '-target:Restore', '-nologo', '-verbosity:quiet', ...common, ...(assets.some(project => project.hasLock) ? ['-p:RestoreLockedMode=true'] : [])], cwd, env: tool.env });
-  } catch { throw new Error('MSBuild/NuGet 還原失敗；請檢查來源／認證／連線、既有 lockfile 一致性、packages.config 套件版本及專案所需 workloads。未轉印可能含認證的原始輸出。'); }
+    const restore = (env: NodeJS.ProcessEnv) => run({ executable: tool.executable, args: [projectPath, '-target:Restore', '-nologo', '-verbosity:quiet', ...common, ...(assets.some(project => project.hasLock) ? ['-p:RestoreLockedMode=true'] : [])], cwd, env });
+    if (credentials?.length) await withFrameworkSourceReader(properties.NuGetRestoreTargets, tool, run, tempDirectory, read => withNuGetCredentials(credentials, metadata, read, tool.env, restore));
+    else await restore(tool.env);
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('NuGet 認證')) throw error;
+    throw new Error('MSBuild/NuGet 還原失敗；請檢查來源／認證／連線、既有 lockfile 一致性、packages.config 套件版本及專案所需 workloads。未轉印可能含認證的原始輸出。'); }
   finally {
     for (const [path, before] of hashes) if (!await exists(path) || await hash(path) !== before) throw new Error('還原修改了既有 packages.config 或 NuGet lockfile；請修正專案鎖定資訊後重試。');
   }

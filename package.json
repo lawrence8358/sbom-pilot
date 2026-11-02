@@ -20,7 +20,8 @@
     "test:smoke:framework": "node scripts/smoke-framework.mjs",
     "test:smoke:yarn": "node scripts/smoke-yarn.mjs",
     "package:dev": "npm run build && node scripts/package.mjs --local",
-    "package:release": "npm run build && node scripts/package.mjs"
+    "package:release": "npm run build && node scripts/package.mjs",
+    "test:smoke:nuget-auth": "node scripts/smoke-nuget-auth.mjs"
   },
   "dependencies": {
     "ajv": "8.20.0",

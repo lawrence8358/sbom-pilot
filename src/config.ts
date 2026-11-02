@@ -3,6 +3,8 @@ import { CDXGEN_VERSION, SUPPORTED_SPEC_VERSIONS, validateToolOptions } from './
 import { DEFAULT_DT_URL, validateDtConfig, type DtConfig } from './dt/config';
 import { parseNpmCredentials, validateNpmCredentials, type NpmCredential } from './install/npm-credentials';
 
+import { parseNuGetCredentials, validateNuGetCredentials, type NuGetCredential } from './dotnet/credentials';
+
 export const DEFAULT_EXCLUDES = '**/_Design{,Front}/**,**/bin/**,**/obj/**,**/node_modules/**,**/dist/**';
 export interface TaskConfig {
   environment: string;
@@ -16,6 +18,7 @@ export interface TaskConfig {
   uploadToDt: boolean;
   dt?: DtConfig;
   npmCredentials?: NpmCredential[];
+  nugetCredentials?: NuGetCredential[];
 }
 export function parseExcludes(value: string): string[] {
   const result: string[] = [];
@@ -59,6 +62,7 @@ export function readTaskConfig(read: InputReader): TaskConfig {
     fetchLicense: boolean('fetchLicense', true), noCache: boolean('noCache', true), uploadToDt,
     dt: uploadToDt ? validateDtConfig({ apiUrl: text('dtApiUrl', DEFAULT_DT_URL), projectUuid: text('dtProjectUuid'), apiKey: text('dtApiKey'), skipTlsCertificateCheck: boolean('skipDtTlsCertificateCheck', false) }) : undefined,
     npmCredentials: parseNpmCredentials(read('npmCredentials')),
+    nugetCredentials: parseNuGetCredentials(read('nugetCredentials')),
   };
 }
 export async function validateConfig(config: TaskConfig): Promise<TaskConfig> {
@@ -73,5 +77,5 @@ export async function validateConfig(config: TaskConfig): Promise<TaskConfig> {
   if (!Array.isArray(config.excludes) || config.excludes.some(value => typeof value !== 'string' || value.includes('\0'))) throw new Error('排除規則必須是 glob 字串清單。');
   const projectPath = await realpath(config.projectPath);
   if (!(await stat(projectPath)).isDirectory()) throw new Error('專案路徑必須是目錄。');
-  return { ...config, projectPath, dt: config.uploadToDt ? validateDtConfig(config.dt) : undefined, npmCredentials: config.npmCredentials === undefined ? undefined : validateNpmCredentials(config.npmCredentials) };
+  return { ...config, projectPath, dt: config.uploadToDt ? validateDtConfig(config.dt) : undefined, nugetCredentials: config.nugetCredentials === undefined ? undefined : validateNuGetCredentials(config.nugetCredentials), npmCredentials: config.npmCredentials === undefined ? undefined : validateNpmCredentials(config.npmCredentials) };
 }
