@@ -7,11 +7,14 @@ import type { ToolContext } from '../tools';
 import type { ProcessRunner } from '../process';
 import type { InstallOptions, JavaScriptProject, ManagerCommand } from './contracts';
 
-export async function withPackageManager(project: JavaScriptProject, tools: ToolContext, run: ProcessRunner, options: InstallOptions, action: (command: ManagerCommand) => Promise<void>): Promise<void> {
+export async function withPackageManager(project: JavaScriptProject, tools: ToolContext, run: ProcessRunner, options: InstallOptions & { projectEnvironment?: NodeJS.ProcessEnv }, action: (command: ManagerCommand) => Promise<void>): Promise<void> {
   let directory: string | undefined;
   try {
     const modernYarn = project.manager === 'yarn' && project.yarn?.generation === 'modern';
-    const managerEnv = project.manager === 'yarn' ? { ...tools.env, YARN_IGNORE_PATH: '1' } : tools.env;
+    // Only the verified project command/config initialization receives explicit
+    // placeholder mappings. Provisioning below retains the original tool env.
+    const projectEnv = options.projectEnvironment ?? tools.env;
+    const managerEnv = project.manager === 'yarn' ? { ...projectEnv, YARN_IGNORE_PATH: '1' } : projectEnv;
     const verifyBinaryHash = async (path: string) => {
       if (!project.integrity) return;
       const [algorithm, expected] = project.integrity.split('-');
@@ -31,10 +34,10 @@ export async function withPackageManager(project: JavaScriptProject, tools: Tool
       return;
     }
     if (project.manager === 'npm' && !project.integrity) {
-      const actual = (await run({ executable: tools.node, args: [tools.npmCli, '--version'], cwd: project.root, env: tools.env })).stdout.trim();
+      const actual = (await run({ executable: tools.node, args: [tools.npmCli, '--version'], cwd: project.root, env: managerEnv })).stdout.trim();
       if (actual === project.version) {
         options.log?.(`npm ${actual}（${project.reason === 'declaration' ? '專案宣告' : '固定 fallback'}）。`);
-        await action({ executable: tools.node, args: [tools.npmCli] });
+        await action({ executable: tools.node, args: [tools.npmCli], env: managerEnv, version: actual });
         return;
       }
     }

@@ -19,7 +19,7 @@ if (npmCredentialsInput) {
     if (Array.isArray(entries)) for (const entry of entries) {
       for (const value of [entry?.token, entry?.username, entry?.password]) if (typeof value === 'string') networkMasks.push(value);
       if (typeof entry?.password === 'string') networkMasks.push(Buffer.from(entry.password).toString('base64'));
-      if (typeof entry?.username === 'string' && typeof entry?.password === 'string') networkMasks.push(Buffer.from(`${entry.username}:${entry.password}`).toString('base64'));
+      if (typeof entry?.username === 'string' && typeof entry?.password === 'string') networkMasks.push(`${entry.username}:${entry.password}`, Buffer.from(`${entry.username}:${entry.password}`).toString('base64'));
     }
   } catch { /* safe validation later */ }
 }

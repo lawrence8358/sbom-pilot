@@ -6,9 +6,12 @@ import { join, resolve } from 'node:path';
 import { runInNewContext } from 'node:vm';
 import { spawnSync } from 'node:child_process';
 import { build } from 'esbuild';
-import { parseNpmCredentials } from '../src/install/npm-credentials';
+import { parseNpmCredentials, projectCredentialEnvironment, type NpmCredential } from '../src/install/npm-credentials';
 import { checkProjectAuthentication, withNpmAuthentication } from '../src/install/npm-auth';
 import type { JavaScriptProject } from '../src/install/contracts';
+import { installJavaScriptProject } from '../src/install/javascript';
+import type { ProcessRunner } from '../src/process';
+import type { ToolContext } from '../src/tools';
 
 const TOKEN = 'synthetic-private-registry-token', PASSWORD = 'synthetic-private-password';
 const credentials = [{ registry: 'https://registry.example.test/team/', token: TOKEN }];
@@ -27,6 +30,73 @@ test('npm credentials validate exact URL identities and token/basic forms with s
     assert.throws(() => parseNpmCredentials(input), error => error instanceof Error && !error.message.includes(TOKEN) && !error.message.includes(PASSWORD));
   }
 });
+
+test('explicit environment aliases validate credential forms, collisions and process controls without mutating inherited env', () => {
+  const input = [...credentials.map(credential => ({ ...credential, environment: { NODE_AUTH_TOKEN: 'token' } })), { registry: 'https://basic.example.test/', username: 'user', password: PASSWORD, environment: { FEED_PASSWORD: 'password', FEED_PASSWORD_B64: 'passwordBase64', FEED_IDENT: 'basic', FEED_AUTH_B64: 'basicBase64' } }];
+  const parsed = parseNpmCredentials(JSON.stringify(input))!;
+  const inherited = { NODE_AUTH_TOKEN: 'old', PATH: 'preserved' }, actual = projectCredentialEnvironment(inherited, parsed);
+  assert.equal(actual.NODE_AUTH_TOKEN, TOKEN);
+  assert.equal(actual.FEED_PASSWORD, PASSWORD);
+  assert.equal(actual.FEED_PASSWORD_B64, Buffer.from(PASSWORD).toString('base64'));
+  assert.equal(actual.FEED_IDENT, `user:${PASSWORD}`);
+  assert.equal(actual.FEED_AUTH_B64, Buffer.from(`user:${PASSWORD}`).toString('base64'));
+  assert.deepEqual(inherited, { NODE_AUTH_TOKEN: 'old', PATH: 'preserved' });
+  for (const environment of [{ NODE_OPTIONS: 'token' }, { PATH: 'token' }, { NPM_CONFIG_REGISTRY: 'token' }, { YARN_NPM_AUTH_TOKEN: 'token' }, { FEED_TOKEN: 'password' }, { FEED_TOKEN: 'invented' }]) assert.throws(() => parseNpmCredentials(JSON.stringify([{ ...credentials[0], environment }])));
+  assert.throws(() => parseNpmCredentials(JSON.stringify([input[0], { ...input[1], environment: { NODE_AUTH_TOKEN: 'password' } }])));
+});
+
+test('mapped project placeholders work only at their matching source/auth slot; unrelated routing and global auth are rejected', () => fixture(async root => {
+  await mkdir(project(root).root);
+  const mapped: NpmCredential[] = [{ ...credentials[0], environment: { NODE_AUTH_TOKEN: 'token' } }];
+  const env = projectCredentialEnvironment({}, mapped), options = { npmCredentials: mapped };
+  await writeFile(join(project(root).root, '.npmrc'), '//registry.example.test/team/:_authToken=${NODE_AUTH_TOKEN}\n');
+  await checkProjectAuthentication(project(root), env, options);
+  await checkProjectAuthentication(project(root, 'pnpm', '10.34.2'), env, options);
+  await checkProjectAuthentication(project(root, 'yarn', '1.22.22'), env, options);
+  for (const rc of ['//unrelated.example.test/:_authToken=${NODE_AUTH_TOKEN}', 'registry=https://unrelated.example.test/${NODE_AUTH_TOKEN}', '//registry.example.test/team/:_password=${NODE_AUTH_TOKEN}']) {
+    await writeFile(join(project(root).root, '.npmrc'), rc);
+    await assert.rejects(checkProjectAuthentication(project(root), env, options), /無法安全對應/);
+  }
+  const rc = 'npmScopes:\n  private:\n    npmRegistryServer: https://registry.example.test/team/\n    npmAuthToken: ${NODE_AUTH_TOKEN}\n';
+  await writeFile(join(project(root).root, '.yarnrc.yml'), rc);
+  await checkProjectAuthentication(project(root, 'yarn', '4.18.1'), env, options);
+  await writeFile(join(project(root).root, '.yarnrc.yml'), rc.replace('https://registry.example.test/team/', 'https://unrelated.example.test/'));
+  await assert.rejects(checkProjectAuthentication(project(root, 'yarn', '4.18.1'), env, options), /無法安全對應/);
+  await writeFile(join(project(root).root, '.yarnrc.yml'), 'npmAuthToken: ${NODE_AUTH_TOKEN}\n');
+  await assert.rejects(checkProjectAuthentication(project(root, 'yarn', '4.18.1'), env, options), /無法安全對應/);
+}));
+
+test('placeholder mappings precede manager config/version init and install, while binary provisioning keeps original tool env', () => fixture(async root => {
+  const selected = project(root, 'yarn', '4.18.1');
+  await mkdir(selected.root);
+  selected.lockPath = join(selected.root, 'yarn.lock');
+  await writeFile(selected.lockPath, '__metadata:\n  version: 10\n');
+  await writeFile(join(selected.root, '.yarnrc.yml'), 'npmScopes:\n  private:\n    npmRegistryServer: https://registry.example.test/team/\n    npmAuthToken: ${NODE_AUTH_TOKEN}\n');
+  const tools: ToolContext = { node: process.execPath, npmCli: 'npm-cli.js', cdxgenCli: '', nodeVersion: '24.22.2', cdxgenVersion: '13.6.0', env: { PRESERVED: 'yes' } };
+  let provisions = 0, versions = 0, installs = 0;
+  const run: ProcessRunner = async command => {
+    assert.ok(command.args.every(argument => !argument.includes(TOKEN)));
+    if (command.cwd !== selected.root) {
+      provisions++;
+      assert.equal(command.env?.NODE_AUTH_TOKEN, undefined);
+      if (command.args.includes('ci')) {
+        const packageRoot = join(command.cwd, 'node_modules/@yarnpkg/cli-dist');
+        await mkdir(join(packageRoot, 'bin'), { recursive: true });
+        await writeFile(join(packageRoot, 'package.json'), JSON.stringify({ version: '4.18.1', bin: { yarn: 'bin/yarn.js' } }));
+        await writeFile(join(packageRoot, 'bin/yarn.js'), 'fixture binary');
+      }
+    } else {
+      assert.equal(command.env?.NODE_AUTH_TOKEN, TOKEN);
+      if (command.args.includes('--version')) versions++;
+      else { installs++; assert.ok(command.env?.YARN_PLUGINS); }
+    }
+    return { stdout: command.args.includes('--version') ? '4.18.1' : '', stderr: '' };
+  };
+  await installJavaScriptProject(selected, tools, run, { tempDirectory: join(root, 'temp'), npmCredentials: [{ ...credentials[0], environment: { NODE_AUTH_TOKEN: 'token' } }] });
+  assert.ok(provisions >= 2); assert.equal(versions, 1); assert.equal(installs, 1);
+  assert.equal(tools.env.NODE_AUTH_TOKEN, undefined);
+  assert.deepEqual(await readdir(join(root, 'temp')), []);
+}));
 
 test('temporary scoped npm auth preserves user settings and parent env, cleans after success and failure', () => fixture(async root => {
   await mkdir(project(root).root);
@@ -122,7 +192,7 @@ test('actual bundled entrypoint masks JSON and credential encodings before SDK d
   await build({ entryPoints: ['src/index.ts'], bundle: true, platform: 'node', target: 'node20', format: 'cjs', outfile: bundle, external: ['azure-pipelines-task-lib', 'azure-pipelines-tool-lib'], alias: { 'jsonc-parser': 'jsonc-parser/lib/esm/main.js' } });
   const result = spawnSync(process.execPath, [bundle], { env: { ...process.env, SYSTEM_DEBUG: 'true', BUILD_BUILDID: '1', AGENT_TEMPDIRECTORY: root, INPUT_NPMCREDENTIALS: input, INPUT_ENVIRONMENT: 'unsupported', INPUT_PROJECTPATH: root }, encoding: 'utf8' });
   const lines = `${result.stdout}${result.stderr}`.split(/\r?\n/), debug = lines.findIndex(line => line.includes('task.debug'));
-  for (const value of [TOKEN, PASSWORD, Buffer.from(PASSWORD).toString('base64'), Buffer.from(`synthetic-user:${PASSWORD}`).toString('base64')]) {
+  for (const value of [TOKEN, PASSWORD, `synthetic-user:${PASSWORD}`, Buffer.from(PASSWORD).toString('base64'), Buffer.from(`synthetic-user:${PASSWORD}`).toString('base64')]) {
     const matches = lines.map((line, index) => ({ line, index })).filter(item => item.line.includes(value));
     assert.ok(matches.length);
     assert.ok(matches.every(item => item.index < debug && item.line.startsWith('##vso[task.setsecret]')));
