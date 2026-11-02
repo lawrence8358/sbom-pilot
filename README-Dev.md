@@ -9,6 +9,7 @@ npm run build
 npm run test:smoke
 npm run test:options-smoke
 npm run test:smoke:pnpm
+npm run test:smoke:yarn
 npm run package:dev
 ```
 
@@ -36,10 +37,11 @@ npm run package:release
 | `src/process.ts` | `ProcessRunner(Command)`，無 shell、執行逾時、抑制來源秘密輸出 |
 | `src/tools.ts` | `ToolContext`、Node 解析／SHA-256 校驗／快取、隔離 cdxgen 準備 |
 | `src/install/contracts.ts` | `DependencyInstaller`；第四個 options 提供暫存目錄與 logger，保留原有三參數注入 |
-| `src/install/javascript.ts` | npm／pnpm 預設分派、鎖檔內容檢查；可注入 Yarn adapter |
+| `src/install/javascript.ts` | npm／pnpm／Yarn 預設分派、鎖檔內容檢查與可注入 adapter |
 | `src/install/project.ts` | 宣告／鎖檔／pnpm workspace 辨識與固定 fallback |
 | `src/install/manager.ts` | 隔離準備精確版本、封裝雜湊與 Node engine 驗證、JS／原生 bin 啟動、清理 |
 | `src/install/npm.ts`、`pnpm.ts` | npm ci／pnpm frozen 安裝；不額外改變專案腳本政策 |
+| `src/install/yarn-project.ts`、`yarn.ts` | Yarn 世代／專案入口／fallback 辨識，Classic frozen+integrity 與現代 immutable |
 | `src/scan.ts` | CLI 參數與掃描，禁止重複 install |
 | `src/validation.ts` | 官方 Schema 驗證後回傳 `ValidatedSbom` |
 | `src/dt/config.ts` | 僅啟用時驗證 URL／UUID／Key／TLS 選項 |
@@ -57,6 +59,10 @@ npm run package:release
 
 workspace smoke 同時揭露 ajv-formats-draft2019 的 IRI scheme 白名單誤拒合法 `git+https`。handler 對 ASCII IRI-reference 使用 URI-reference 語法驗證，Unicode 則保留原國際格式驗證器；官方 Schema 未修改。回歸測試接受 git+https／Unicode URL，並拒絕 ASCII URL 的空白及無效百分號編碼。
 
+2026-11-02 ticket 04：`npm test` 35/35 通過。`npm run test:smoke:yarn` 實測 Classic 1.22.22 node_modules、Yarn 4.18.1 PnP／node-modules，皆以 Node 24.22.2／cdxgen 13.6.0 產生官方 1.6 Schema 有效的 6 組件 SBOM；workspace 與間接依賴圖、實際模組載入、專案腳本、鎖檔／設定不變、錯誤 manifest 失敗均驗證。Corepack Classic SHA-1 封裝、現代 SHA-224 CLI 及本機 yarnPath 亦有真實驗證。上游 required scope 會保留 workspace 開發專用 chalk，此限制詳見 [Yarn 說明](docs/yarn.md)，沒有另做排除或宣稱開發依賴全面消失。
+
+`test:smoke:yarn -- --refresh-fixtures` 是維護者明確更新範例鎖檔的模式，在 `.smoke/` 隔離撰寫後將 lockfile 複製回範例；正常 smoke 與 Task 都只使用提交的鎖檔，不更新它們。新增依賴／設定後請檢查並提交範例鎖檔；不要把大型快取或專案安裝結果加入版本庫。
+
 ## 來源與已知驗證邊界
 
 - npm registry 實際查證 `@cdxgen/cdxgen@13.6.0` 可取得，engines Node >=24、CLI `bin/cdxgen.js`。原始碼：[固定 tag](https://github.com/cdxgen/cdxgen/tree/v13.6.0)。
@@ -67,7 +73,7 @@ workspace smoke 同時揭露 ajv-formats-draft2019 的 IRI scheme 白名單誤�
 - 尚待：實際 VSIX 安裝、Classic/YAML、Server/Services、Linux 與 arm64、真正 Agent 成品失敗傳播、企業 Proxy/CA。manifest 最低 Agent 不代表 Server 配對已驗證。
 - 工具下載使用原生 fetch，尚未套用 Azure Agent ProxyUrl/CA 設定。npm 保留 Agent 與 Repo 設定，但本階段未交付 Task 管理私有來源認證。來源認證不得放 CLI arguments，也不得把含秘密的 child stdout/stderr 寫到日誌。
 
-## 現代 .NET：開發與驗證
+## .NET Core：開發與驗證
 
 `src/dotnet/projects.ts` 辨識 SDK-style 專案並保留排除規則；`sdk.ts` 讀取 JSONC `global.json`、驗證 host 選擇及使用官方腳本準備缺少的 SDK；`restore.ts` 透過 NuGet `GenerateRestoreGraphFile` 評估匯入屬性中的 outputPath/nuGetLockFilePath，執行 restore 並驗證 lockfile/依賴資料。`src/install/dotnet.ts` 是 workflow adapter。
 
@@ -96,3 +102,26 @@ npm run test:smoke:dotnet
 Windows x64 亦以缺少可用 host 的子程序環境實測：從 https://dot.net/v1/dotnet-install.ps1 取得 Microsoft 官方腳本，下載 SDK 10.0.101 至 Task 自有快取，驗證 `.complete` 與 `dotnet --version`，再以該 SDK 完成真實 restore／SBOM。這項測試不安裝全域工具，也不修改機器 PATH。
 
 尚未驗證：Linux .NET 執行、arm64、真正 Azure DevOps VSIX 安裝及 Artifact 發佈、企業 Proxy／自訂 CA、特殊 workloads／自訂 SDK 與私有 NuGet。
+
+## .NET Framework：開發與驗證
+
+使用說明與格式矩陣見 [Framework 文件](docs/framework.md)。本版支援底線為 Visual Studio MSBuild >=17.8；其原因是使用公開的 structured property evaluation，而非聲稱 MSBuild 從該版才支援 packages.config。
+
+`src/dotnet/msbuild.ts` 尋找及驗證 Agent 的 MSBuild、評估專案所需 targets 與 reference assemblies。`src/dotnet/framework.ts` 透過相同 NuGet restore graph 判斷 PackageReference／PackagesConfig，讀取實際 outputPath、lockfile、config 路徑，並使用已安裝的 NuGet.Configuration／NuGet.Versioning 解析有效 repositoryPath 與套件檔名。暫存 PowerShell helper 明確使用 UTF-8，不把完整還原圖或含秘密的工具輸出送到日誌。
+
+```powershell
+npm test
+npm run test:smoke:framework
+npm run build
+npm run package:dev
+```
+
+新增七項 Framework 測試；與已整合的 .NET Core、Yarn、DT 測試合計 61 項通過。真實 smoke 不編造 Azure 發佈證據，只以本機 artifact adapter 接收經嚴格 1.6 Schema 驗證的檔案。
+
+2026-11-02 Windows x64 實測：Visual Studio 2022 Enterprise MSBuild 17.14.51（原始工具版本 17.14.51.32402）、SDK-style net48 使用 SDK 10.0.101、Node 24.22.2、cdxgen 13.6.0。SDK-style net48、非 SDK-style PackageReference、packages.config 每個流程皆產生 14 個組件，保有 Microsoft.Extensions.Logging → Microsoft.Extensions.Logging.Abstractions 的明確依賴邊。驗證 NuGet.Config、csproj、packages.config、既有 lockfile 的 SHA-256 不變；非 SDK 專案 stale lock 失敗且不發佈。packages.config 使用 Unicode 專案目錄與相對 repositoryPath；另以真實 MSBuild 確認只有明確 repositoryPath、沒有 solution 的還原亦可執行。缺少 MSBuild 與缺少 Import workload targets 都在發佈前失敗。
+
+可重用的私有來源接點：`restoreFrameworkProject(projectPath, root, MSBuildTool, run, tempDirectory)` 接收 `MSBuildTool.env`，回傳 `{ assets: RestoreProject[], packageFiles: string[] }`。`frameworkInstaller.install(root, tools, run, options)` 保留 child-only 認證環境，並將驗證後的 `dotnetAssets`／`dotnetPackageFiles` 傳給共用掃描器。認證功能應注入該環境，不用 RestoreConfigFile 取代 Repo 設定。套件／設定／lockfile 的檔案檢查不能因包裝 installer 而繞過。
+
+本機精簡證據位於忽略的 `.smoke/framework/evidence.json`，包含各格式版本、組件數與 SBOM hash。此驗證不等於所有 Visual Studio workloads 已支援；Linux Framework 為不適用，arm64 與實際 Services／Server 安裝、Classic UI、成品下載仍待外部驗證。
+
+Microsoft 來源：[NuGet/MSBuild restore](https://learn.microsoft.com/en-us/nuget/reference/msbuild-targets#restoring-packagereference-and-packagesconfig-projects-with-msbuild)、[repositoryPath](https://learn.microsoft.com/en-us/nuget/reference/nuget-config-file#config-section)、[vswhere 尋找 MSBuild](https://github.com/microsoft/vswhere/wiki/Find-MSBuild)。

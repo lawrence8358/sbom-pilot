@@ -18,6 +18,8 @@ export interface ToolContext {
   env: NodeJS.ProcessEnv;
   /** Verified restore inputs that cdxgen must be able to read for dependency edges. */
   dotnetAssets?: string[];
+  /** Verified packages.config and restored nupkg inputs for traditional projects. */
+  dotnetPackageFiles?: string[];
 }
 export interface ToolRequest { nodeVersion: string; cdxgenVersion: string; tempDirectory: string }
 export type ToolPreparer = (request: ToolRequest, run: ProcessRunner, log: (message: string) => void) => Promise<ToolContext>;

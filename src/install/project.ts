@@ -3,6 +3,7 @@ import { dirname, join, resolve } from 'node:path';
 import { valid } from 'semver';
 import { parse, parseAllDocuments } from 'yaml';
 import type { JavaScriptManager, JavaScriptProject } from './contracts';
+import { inspectYarnProject } from './yarn-project';
 
 export const NPM_FALLBACK_VERSION = '11.19.1';
 export const PNPM_FALLBACK_VERSION = '10.34.2';
@@ -14,10 +15,10 @@ async function declaration(root: string): Promise<{ manager: JavaScriptManager; 
   try { manifest = JSON.parse(await readFile(join(root, 'package.json'), 'utf8')); }
   catch { throw new Error('package.json 不是有效 JSON。'); }
   if (manifest.packageManager === undefined) return;
-  const match = typeof manifest.packageManager === 'string' && manifest.packageManager.match(/^(npm|pnpm|yarn)@(\d+\.\d+\.\d+(?:-[\w.-]+)?)(?:\+(sha(?:224|256|384|512))\.([a-fA-F0-9]+))?$/);
+  const match = typeof manifest.packageManager === 'string' && manifest.packageManager.match(/^(npm|pnpm|yarn)@(\d+\.\d+\.\d+(?:-[\w.-]+)?)(?:\+(sha(?:1|224|256|384|512))\.([a-fA-F0-9]+))?$/);
   if (!match || !valid(match[2])) throw new Error('packageManager 必須宣告 npm、pnpm 或 Yarn 的精確 semver 版本；不接受範圍或自訂 URL。');
   const integrity = match[3] ? `${match[3]}-${Buffer.from(match[4], 'hex').toString('base64')}` : undefined;
-  if (match[3] && match[4].length !== Number(match[3].slice(3)) / 4) throw new Error('packageManager 的完整性雜湊長度不正確。');
+  if (match[3] && match[4].length !== (match[3] === 'sha1' ? 40 : Number(match[3].slice(3)) / 4)) throw new Error('packageManager 的完整性雜湊長度不正確。');
   return { manager: match[1] as JavaScriptManager, version: match[2], integrity };
 }
 
@@ -25,6 +26,12 @@ async function workspaceRoot(requested: string): Promise<string> {
   let current = resolve(requested);
   while (true) {
     if (await exists(join(current, 'pnpm-workspace.yaml'))) return current;
+    if (await exists(join(current, 'yarn.lock')) && await exists(join(current, 'package.json'))) {
+      let manifest;
+      try { manifest = JSON.parse(await readFile(join(current, 'package.json'), 'utf8')); }
+      catch { throw new Error('package.json 不是有效 JSON。'); }
+      if (Array.isArray(manifest.workspaces) || Array.isArray(manifest.workspaces?.packages)) return current;
+    }
     if (await exists(join(current, '.git')) || dirname(current) === current) return resolve(requested);
     current = dirname(current);
   }
@@ -74,6 +81,9 @@ export async function inspectJavaScriptProject(requested: string): Promise<JavaS
       version = PNPM_FALLBACK_VERSION;
     }
   }
-  if (!version) throw new Error('Yarn adapter 尚未交付；請使用已支援的套件管理器。');
+  if (lock.manager === 'yarn') {
+    return { root, manager: 'yarn', ...(await inspectYarnProject(root, declared?.version)), integrity: declared?.integrity, lockPath: join(root, lock.file) };
+  }
+  if (!version) throw new Error('無法決定套件管理器版本。');
   return { root, manager: lock.manager, version, reason: declared ? 'declaration' : 'fallback', integrity: declared?.integrity, lockPath: join(root, lock.file) };
 }

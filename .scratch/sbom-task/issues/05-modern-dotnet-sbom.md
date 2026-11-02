@@ -1,13 +1,13 @@
-# 05: 現代 .NET 專案完成還原與 SBOM 流程
+# 05: .NET Core 專案完成還原與 SBOM 流程
 
 Status: ready-for-agent
 Blocked by: 01
 
-**What to build:** 使用者選擇 .NET Core／現代 .NET 模式後，單一 Task 自行準備相容的一般 SDK/NuGet 工具，還原公開依賴，產生交付產品的 SBOM 並發佈成品。
+**What to build:** 使用者選擇 .NET Core 模式後，單一 Task 自行準備相容的一般 SDK/NuGet 工具，還原公開依賴，產生交付產品的 SBOM 並發佈成品。
 
 ## Acceptance criteria
 
-- [ ] Task 介面與 YAML 可選現代 .NET 模式，並使用共同的參數驗證、掃描、SBOM 驗證及成品發佈流程。
+- [ ] Task 介面與 YAML 可選.NET Core 模式，並使用共同的參數驗證、掃描、SBOM 驗證及成品發佈流程。
 - [ ] 遵循專案的 SDK 版本宣告及專案格式，準備相容 SDK/NuGet 工具並完成還原；不能唯一決定還原方式或版本時指出原因及可採取的修正。
 - [ ] 代表性專案的直接與可取得間接依賴進入 SBOM；安裝階段與掃描階段分工，不將缺少還原資料的結果誤判為完整依賴清單。
 - [ ] 已有 NuGet lockfile 時遵循其鎖定資訊；未選用該機制的合法專案不會因沒有 lockfile 被誤拒，也不要求 npm 類型的鎖檔。

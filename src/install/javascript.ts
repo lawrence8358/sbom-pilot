@@ -7,8 +7,9 @@ import { inspectJavaScriptProject } from './project';
 import { withPackageManager } from './manager';
 import { npmAdapter } from './npm';
 import { pnpmAdapter } from './pnpm';
+import { yarnAdapter } from './yarn';
 
-export async function installJavaScriptProject(project: JavaScriptProject, tools: ToolContext, run: ProcessRunner, options: InstallOptions = {}, adapters: Partial<Record<JavaScriptManager, JavaScriptAdapter>> = { npm: npmAdapter, pnpm: pnpmAdapter }): Promise<void> {
+export async function installJavaScriptProject(project: JavaScriptProject, tools: ToolContext, run: ProcessRunner, options: InstallOptions = {}, adapters: Partial<Record<JavaScriptManager, JavaScriptAdapter>> = { npm: npmAdapter, pnpm: pnpmAdapter, yarn: yarnAdapter }): Promise<void> {
   const adapter = adapters[project.manager];
   if (!adapter) throw new Error('此套件管理器 adapter 尚未交付。');
   const digest = async () => createHash('sha256').update(await readFile(project.lockPath)).digest('hex');

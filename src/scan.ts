@@ -14,15 +14,15 @@ export function scanExcludes(request: ScanRequest): string[] {
     ? '**/obj/!(project.assets.json)' : pattern);
 }
 export function scanArguments(request: ScanRequest): string[] {
-  return [request.tools.cdxgenCli, request.config.projectPath, '-r', '-t', request.config.environment === 'dotnet' ? 'dotnet' : 'js',
+  return [request.tools.cdxgenCli, request.config.projectPath, '-r', '-t', ['dotnet', 'netframework'].includes(request.config.environment) ? 'dotnet' : 'js',
     '--required-only', '--spec-version', request.config.specVersion, '--install-deps', 'false',
     ...scanExcludes(request).flatMap(pattern => ['--exclude', pattern]), '-o', request.outputPath];
 }
 export const generateSbom: SbomGenerator = async (request, run) => {
-  if (request.tools.dotnetAssets?.length) {
-    const inputs = request.tools.dotnetAssets.map(path => relative(request.config.projectPath, path).replaceAll('\\', '/'));
+  if (request.tools.dotnetAssets?.length || request.tools.dotnetPackageFiles?.length) {
+    const inputs = [...(request.tools.dotnetAssets ?? []), ...(request.tools.dotnetPackageFiles ?? [])].map(path => relative(request.config.projectPath, path).replaceAll('\\', '/'));
     if (inputs.some(path => path === '..' || path.startsWith('../') || isAbsolute(path))) throw new Error('.NET 還原資料位於掃描根目錄外；請將專案及其還原輸出納入共同根目錄，避免遺漏間接依賴。');
-    if (match(inputs, scanExcludes(request), undefined, { nobrace: false, dot: true, nocase: process.platform === 'win32' }).length) throw new Error('排除規則遮蔽必要的 .NET project.assets.json；請保留還原資料可讀，才能產生間接依賴及關係。');
+    if (match(inputs, scanExcludes(request), undefined, { nobrace: false, dot: true, nocase: process.platform === 'win32' }).length) throw new Error('排除規則遮蔽必要的 .NET project.assets.json／packages.config／nupkg；請保留還原資料可讀，才能產生間接依賴及關係。');
   }
   await rm(request.outputPath, { force: true });
   await run({ executable: request.tools.node, args: scanArguments(request), cwd: request.config.projectPath,

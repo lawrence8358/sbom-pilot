@@ -5,6 +5,7 @@ import { prepareTools, type ToolPreparer } from './tools';
 import type { DependencyInstaller } from './install/contracts';
 import { javascriptInstaller } from './install/javascript';
 import { dotnetInstaller } from './install/dotnet';
+import { frameworkInstaller } from './install/framework';
 import { generateSbom, type SbomGenerator } from './scan';
 import { validateSbom, type SbomValidator, type ValidatedSbom } from './validation';
 import { runProcess, type ProcessRunner } from './process';
@@ -39,7 +40,9 @@ export async function runWorkflow(input: TaskConfig, tempDirectory: string, serv
     ? services.installer.install(config.projectPath, tools, run, { tempDirectory, log: services.log })
     : config.environment === 'dotnet'
       ? dotnetInstaller.install(config.projectPath, tools, run, { tempDirectory, log: services.log, excludes: config.excludes })
-      : javascriptInstaller.install(config.projectPath, tools, run, { tempDirectory, log: services.log }));
+      : config.environment === 'netframework'
+        ? frameworkInstaller.install(config.projectPath, tools, run, { tempDirectory, log: services.log, excludes: config.excludes })
+        : javascriptInstaller.install(config.projectPath, tools, run, { tempDirectory, log: services.log }));
   const outputPath = join(tempDirectory, 'sbom', 'bom.json');
   await mkdir(join(tempDirectory, 'sbom'), { recursive: true });
   await stage('SBOM 產生', () => (services.generate ?? generateSbom)({ config, tools, outputPath }, run));

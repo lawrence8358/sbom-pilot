@@ -30,12 +30,13 @@ console.log(`Integration: ${state.integrationBranch}; actual branch: ${git(['bra
 console.log(`HEAD: ${git(['log', '-1', '--format=%h %s']) ?? 'unavailable'}`);
 console.log(`Review base: ${state.reviewBase}; no remote writes: ${state.noRemoteWrites}`);
 console.log(`Integrated: ${[...integrated].join(', ') || 'none'}`);
+console.log(`Dispatch limit: ${state.dispatchPolicy?.maxConcurrentSubagents ?? 'unspecified'} subagent(s); one verified integration before next slice: ${state.dispatchPolicy?.requireVerifiedIntegrationBeforeNextTicket ?? false}`);
 console.log(`Unassigned frontier: ${ready.map(ticket => ticket.id).join(', ') || 'none'}`);
 const rootStatus = git(['status', '--short']);
 console.log(`Integration worktree: ${rootStatus ? `has changes\n${rootStatus}` : 'clean'}`);
 for (const worker of state.activeWorktrees) {
   const path = actualWorktrees.get(worker.branch) ?? resolve(root, worker.worktree);
-  console.log(`\nTicket ${worker.ticket}: ${worker.branch}\nWorktree: ${path}`);
+  console.log(`\nTicket ${worker.ticket}: ${worker.branch}; phase: ${worker.phase ?? 'unspecified'}\nWorktree: ${path}`);
   if (!existsSync(path)) { console.log('Worktree missing: inspect retained branch and recreate without overwriting WIP.'); continue; }
   console.log(`HEAD: ${git(['log', '-1', '--format=%h %s'], path) ?? 'unavailable'}`);
   const status = git(['status', '--short'], path);

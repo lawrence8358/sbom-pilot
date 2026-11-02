@@ -11,7 +11,7 @@ export const dotnetInstaller = {
   async install(root: string, tools: ToolContext, run: ProcessRunner, options: DotnetInstallOptions = {}): Promise<void> {
     const projects = await discoverDotnetProjects(root, options.excludes);
     if (!projects.length) throw new Error('找不到 .csproj/.fsproj/.vbproj；請指定包含 SDK-style .NET 專案的根目錄。');
-    if (projects.some(project => !project.sdkStyle)) throw new Error('現代 .NET 模式包含傳統或無法辨識的專案格式；請使用 .NET Framework 模式或將專案轉為 SDK-style。');
+    if (projects.some(project => !project.sdkStyle)) throw new Error('.NET Core 模式包含傳統或無法辨識的專案格式；請使用 .NET Framework 模式或將專案轉為 SDK-style。');
     const tempDirectory = options.tempDirectory ?? tools.env.AGENT_TEMPDIRECTORY;
     if (!tempDirectory) throw new Error('.NET 工具準備需要 Task 暫存目錄。');
     const cacheDirectory = tools.env.AGENT_TOOLSDIRECTORY ?? join(tempDirectory, 'tools');
