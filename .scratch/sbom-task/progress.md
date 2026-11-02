@@ -12,14 +12,18 @@ The user authorized implementation on a local branch, with no remote push or PR.
 | 03 | Implemented; local verification passed | b7cc991 / merge e96721b; 26 integrated tests; real pnpm10 workspace/pnpm12 native/npm10 declared-version smokes |
 | 04 | In progress | Isolated implementer worktree |
 | 05 | Implemented; local verification passed | 293d5a5 / merge bedcdf8; real SDK6/9/10 and official SDK download smokes; 45 integrated tests; dependency metadata exclusion fix |
-| 06 | In progress | Isolated implementer worktree |
+| 06 | Parked; WIP, not verified complete | 940ff8b preserves code/tests; Framework real smoke and focused tests remain |
 | 07 | Waiting for 02, 03, 04, 05 | |
 | 08 | Implemented; local verification passed | f5ca0d6 / merge dc92ec8; real local HTTP/TLS, debug secret masking and failed-upload artifact preservation |
 | 09 | Waiting for 03, 04 | |
 | 10 | Waiting for 06 | |
-| 11 | In progress | Local host/runtime/proxy validation; actual Services/Server installation still needs live environments |
+| 11 | Parked; WIP, not verified complete | 25a2a09 preserves network tests/verifier; worker reported50 tests, final shipped-artifact checks remain; live Azure unverified |
 | 12 | Waiting for 07, 08, 09, 10, 11 | Public metadata needs real identifiers; no remote URL has been supplied |
 
 ## Validation policy
 
 Record commands and their actual outcomes. Local automated tests, local real-tool smoke runs, and live Azure DevOps or DT validation are distinct evidence. Do not mark live installation or platform checks as passed when those environments are unavailable.
+
+## Dispatch policy
+
+User requested serial work after quota interruptions: at most one subagent (implementation, merge or review) at a time.04 is the only active slice;06/11 are parked. Do not start the next slice until the current one is committed, integrated and verified. Unintegrated WIP is preserved and never counted as a completed ticket.

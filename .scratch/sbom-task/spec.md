@@ -43,7 +43,7 @@ Status: ready-for-agent
 
 | 欄位 | 必填／顯示條件 | 預設與行為 |
 | --- | --- | --- |
-| 開發環境 | 必填，下拉選單 | .NET Framework、.NET Core／現代 .NET、Vue、.NET Core 前後端合併；類型設計保留擴充空間 |
+| 開發環境 | 必填，下拉選單 | .NET Framework、.NET Core、Vue、.NET Core 前後端合併；類型設計保留擴充空間 |
 | Node.js 版本 | 必填，一律顯示 | `24.x`；取得最新符合範圍的版本，並記錄實際版本 |
 | 專案路徑 | 必填，一律顯示 | 供掃描的專案根目錄；合併模式為同時包含前後端的共同根目錄，可使用 `$(Build.SourcesDirectory)` |
 | 排除規則 | 選填，一律顯示 | 同一欄位接受逗號分隔的 glob；預填下列共通排除規則；保留花括號內的逗號 |
@@ -115,7 +115,7 @@ Status: ready-for-agent
 1. 一個已安裝的 Task 可由 Classic Build 介面及 YAML 使用；開發環境下拉選單包含四種類型，條件欄位符合參數表。
 2. 一般工具尚未預裝、但具備必要 Agent runtime 與下載來源的環境，可由單一 Task 準備工具及依賴，不要求額外安裝或認證 Task；傳統工具鏈遵循 Q6。
 3. npm、pnpm、Yarn 各至少一個有效範例能還原並產生 SBOM；缺少 lockfile、manifest 不一致、管理器資訊矛盾時能清楚失敗。合法的傳統 .NET 專案不會因缺少 npm 或 NuGet 的選用 lockfile 被誤拒。
-4. .NET Framework、現代 .NET、Vue 及合併專案各有代表性輸入；合併範例以單次遞迴掃描在同一份 SBOM 中產生前後端組件與可取得的依賴關係。
+4. .NET Framework、.NET Core、Vue 及合併專案各有代表性輸入；合併範例以單次遞迴掃描在同一份 SBOM 中產生前後端組件與可取得的依賴關係。
 5. 以固定 cdxgen 版本驗證 required scope 篩選及排除規則；`**/_Design{,Front}/**` 不會因逗號分隔被破壞。不能將工具的 scope 篩選結果宣稱為已對實際部署成品完成逐項核對。
 6. 關閉 DT 時仍成功產生及發佈 SBOM，且不要求 API URL、Project UUID 或 API Key。啟用時正確驗證三項必填設定。
 7. DT 接受上傳後即可完成，不等待背景匯入或弱點分析；連線、認證或 HTTP 失敗時 Task 失敗，有效 SBOM 仍可從成品下載。

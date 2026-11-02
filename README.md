@@ -2,7 +2,7 @@
 
 在 Azure Pipelines 加入一個 **SBOM Pilot — Generate & Upload SBOM** Task，即可準備工具並還原專案依賴，產生 CycloneDX 1.6 JSON，並要求 Agent 發佈名稱為 `SBOM` 的 Build Artifact。
 
-本階段提供 Vue/npm、pnpm 單專案／workspace、SDK-style 現代 .NET 與選用的 Dependency-Track（DT）上傳，使用公開 npm/NuGet 來源。Yarn、傳統 .NET Framework、私有來源認證及合併交付產品將於後續版本交付。`--required-only` 固定啟用，代表 cdxgen 的 required scope 篩選，不能視為已逐項核對實際部署成品。
+本階段提供 Vue/npm、pnpm 單專案／workspace、SDK-style .NET Core 與選用的 Dependency-Track（DT）上傳，使用公開 npm/NuGet 來源。Yarn、傳統 .NET Framework、私有來源認證及合併交付產品將於後續版本交付。`--required-only` 固定啟用，代表 cdxgen 的 required scope 篩選，不能視為已逐項核對實際部署成品。
 
 ## 前置條件及支援範圍
 
@@ -16,7 +16,7 @@
 | 網路 | Agent 可存取 nodejs.org、npm registry 與專案依賴／授權資訊來源；首次執行需要下載 |
 | Server / Services | 使用兩者皆提供的 Build Artifact logging command；尚待真實 Server / Services 安裝與端到端驗證，未宣稱特定最低 Server 支援 |
 
-Vue 模式需提交 manifest 與且僅一種管理器的 lockfile：npm 使用 `package-lock.json` 或 `npm-shrinkwrap.json`，pnpm 使用 `pnpm-lock.yaml`。Task 執行 `npm ci` 或 `pnpm install --frozen-lockfile`；缺少或不同步的 lockfile 會失敗，不會自動產生或修正。Repo 的來源設定與所選管理器版本的安裝腳本規則仍生效；本階段不提供秘密認證欄位。原生套件所需編譯工具仍需 Agent 提供。.NET 的還原與選用鎖檔政策見下方現代 .NET 模式。
+Vue 模式需提交 manifest 與且僅一種管理器的 lockfile：npm 使用 `package-lock.json` 或 `npm-shrinkwrap.json`，pnpm 使用 `pnpm-lock.yaml`。Task 執行 `npm ci` 或 `pnpm install --frozen-lockfile`；缺少或不同步的 lockfile 會失敗，不會自動產生或修正。Repo 的來源設定與所選管理器版本的安裝腳本規則仍生效；本階段不提供秘密認證欄位。原生套件所需編譯工具仍需 Agent 提供。.NET 的還原與選用鎖檔政策見下方.NET Core 模式。
 
 pnpm workspace 請指定包含 `pnpm-workspace.yaml` 與鎖檔的共同根目錄。可直接使用[可執行範例](examples/pnpm-workspace/package.json)，YAML 將 `projectPath` 設為 `$(Build.SourcesDirectory)/examples/pnpm-workspace`；不需額外 Corepack、pnpm 或 install Task。版本與衝突診斷見[管理器說明](docs/package-managers.md)。
 
@@ -57,7 +57,7 @@ steps:
 
 | 欄位（YAML） | 預設 | 說明 |
 | --- | --- | --- |
-| `environment` | `vue` | `vue`（Vue/npm／pnpm，依宣告與 lockfile 辨識）或 `dotnet`（.NET Core／現代 .NET） |
+| `environment` | `vue` | `vue`（Vue/npm／pnpm，依宣告與 lockfile 辨識）或 `dotnet`（.NET Core） |
 | `projectPath` | `$(Build.SourcesDirectory)` | 專案根目錄 |
 | `nodeVersion` | `24.x` | 最新符合 semver 範圍的 Node，必須 >=24 |
 | `excludes` | 見下列規則 | 相對根目錄 glob，逗號分隔，保留花括號內逗號；明確設定空字串代表不加自訂排除 |
@@ -121,9 +121,9 @@ DT 上傳失敗時仍要求 Agent 發佈有效 `SBOM` 成品，最後 Task 失�
 
 MIT License · Copyright © 2026 Lawrence Shen。第三方授權見 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。
 
-## 現代 .NET 模式
+## .NET Core 模式
 
-在 Classic Build 選擇「.NET Core／現代 .NET」，專案路徑指向包含 SDK-style `.csproj`、`.fsproj` 或 `.vbproj` 的目錄；YAML 使用同一 Task：
+在 Classic Build 選擇「.NET Core」，專案路徑指向包含 SDK-style `.csproj`、`.fsproj` 或 `.vbproj` 的目錄；YAML 使用同一 Task：
 
 ```yaml
 steps:

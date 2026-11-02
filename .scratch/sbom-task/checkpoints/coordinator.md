@@ -11,8 +11,9 @@ Run `node scripts/resume.mjs` in the integration worktree, then read `implementa
 - Ticket 01 code: `a543dc9`; merged by merger in `f8abe50`.
 - Recovery workflow/dispatch manifest/read-only resume inspector: `caa7f3c`.
 - Tickets 02/03/05/08 are now integrated. Latest combined verification:45 tests, build and developer VSIX passed at merge `bedcdf8`. Current HEAD and active leases must be read from Git and implementation-state.json.
-- Ticket 04 Yarn is in progress in its retained worktree; it already has code and checkpoint commits. Ticket 06 Framework and ticket 11 compatibility/network are in progress in their own worktrees. Read their latest checkpoints before resuming.
-- Workers were resumed after the user's explicit continue instruction. Agent IDs/conversations can be replaced; branches/worktrees/checkpoints retain the work.
+- Serial execution is the user's latest direction: at most one subagent, including implementation, merge and review. Finish verified integration before starting another ticket.
+- Ticket 04 Yarn is the sole active slice, preserved at `7818d89`. Ticket 06 Framework (`940ff8b`) and ticket 11 compatibility/network (`25a2a09`) are parked with clean committed WIP. Read each checkpoint in its own worktree before resuming.
+- Agent IDs/conversations can be replaced; branches/worktrees/checkpoints retain the work. Product terminology follows the original requirement: .NET Core.
 
 ## Validation already performed
 
@@ -27,9 +28,9 @@ Run `node scripts/resume.mjs` in the integration worktree, then read `implementa
 
 ## Remaining graph and integration
 
-- Code integrated:01/02/03/05/08. Active worktrees:04/06/11.07 and09 follow04,10 follows06,12 follows07/09/10/11. The resume inspector recomputes the actual unassigned frontier from ticket edges and state.
-- Once a worker has final commit, use a merger subagent to merge into integration. Root should not mutate integration simultaneously. Preserve all config/workflow/manifest behavior across parallel branches; resolve package-lock from merged package manifests and rerun checks if conflict requires regeneration.
--03 added generic JS installer dispatch and test discovery;05 added modern.NET dispatch;08 added conditional DT. Subsequent workflow/config/manifest edits must preserve all three. jsonc-parser needs its published ESM entry alias in both actual build and bundle tests to avoid a real UMD startup failure found during integration.
+- Code integrated:01/02/03/05/08. Sole active ticket:04; parked:06/11.07 and09 follow04,10 follows06,12 follows07/09/10/11. The resume inspector recomputes the actual unassigned frontier from ticket edges and state.
+- Once a worker has a final commit, run the merger as the sole subagent. Root should not mutate integration simultaneously. Preserve all config/workflow/manifest behavior, terminology corrections and serial dispatch policy across retained branches; resolve package-lock from merged package manifests and rerun checks if conflict requires regeneration.
+-03 added generic JS installer dispatch and test discovery;05 added .NET Core dispatch;08 added conditional DT. Subsequent workflow/config/manifest edits must preserve all three. jsonc-parser needs its published ESM entry alias in both actual build and bundle tests to avoid a real UMD startup failure found during integration.
 - After integration, update `integratedTickets` and active leases, progress/evidence, and recompute frontier. Save checkpoints before any new long-running task.
 - Final Standards/Spec review has NOT started. Must run both against `e3a5bf6...HEAD`, fix findings in an isolated implementer worktree, verify and commit.
 

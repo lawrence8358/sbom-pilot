@@ -3,7 +3,7 @@
   "id": "ae7d525c-a209-48e5-8f3e-17b24500b7b5",
   "name": "SbomPilot",
   "friendlyName": "SBOM Pilot — Generate & Upload SBOM",
-  "description": "準備工具與專案依賴，產生 CycloneDX SBOM 並發佈 Build Artifact。支援 Vue/npm／pnpm 與現代 .NET，可選擇上傳 DT。",
+  "description": "準備工具與專案依賴，產生 CycloneDX SBOM 並發佈 Build Artifact。支援 Vue/npm／pnpm 與 .NET Core，可選擇上傳 DT。",
   "helpMarkDown": "請參閱 Extension README 的前置條件與限制。",
   "category": "Utility",
   "author": "Lawrence Shen",
@@ -33,7 +33,7 @@
       "defaultValue": "vue",
       "options": {
         "vue": "Vue（npm／pnpm）",
-        "dotnet": ".NET Core／現代 .NET"
+        "dotnet": ".NET Core"
       }
     },
     {

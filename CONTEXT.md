@@ -15,3 +15,7 @@ _Avoid_: 弱點報告（弱點分析結果並非軟體組成清單）
 **DT 專案**：
 Dependency-Track 中以 Project UUID 識別、接收交付產品 SBOM 的專案紀錄。
 _Avoid_: 掃描路徑（掃描路徑是原始碼位置，並非 DT 專案）
+
+**.NET Core 專案**：
+原始需求中用來稱呼 .NET Core 後端交付產品的專案分類，與 .NET Framework 分類區分。
+_Avoid_: 現代 .NET
