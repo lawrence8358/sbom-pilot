@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
-import { acquireNodeCache, nodePaths, validateNodeTar } from '../src/node-cache';
+import { acquireNodeCache, extractNodeArchive, nodePaths, validateNodeTar } from '../src/node-cache';
+import { runProcess } from '../src/process';
+import { gzipSync } from 'node:zlib';
+import JSZip from 'jszip';
 
 test('Node cache publishes complete verified tools atomically under concurrent writers and reuses them', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'pilot-cache-'));
@@ -49,4 +52,15 @@ test('Node tar accepts distribution-local npm links, rejects traversal, escaping
     [tarEntry(`${folder}/alias`, '2', 'bin'), tarEntry(`${folder}/alias/node`)],
     [tarEntry(`${folder}/device`, '3')],
   ]) assert.throws(() => validateNodeTar(Buffer.concat(entries), folder));
+});
+
+test('native extraction rejects traversal before any file escapes the staging directory', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'pilot-extract-')), folder = 'node-v24.22.2-linux-x64';
+  try {
+    const zip = new JSZip(); zip.file(`${folder}/../escape.txt`, 'unsafe');
+    const bytes = process.platform === 'win32' ? await zip.generateAsync({ type: 'nodebuffer' }) : gzipSync(tarEntry(`${folder}/../escape.txt`));
+    const archive = join(root, process.platform === 'win32' ? 'unsafe.zip' : 'unsafe.tar.gz'); await writeFile(archive, bytes);
+    await assert.rejects(extractNodeArchive(archive, bytes, join(root, 'stage'), folder, root, runProcess));
+    assert.deepEqual((await readdir(root)).sort(), ['stage', process.platform === 'win32' ? 'unsafe.zip' : 'unsafe.tar.gz'].sort());
+  } finally { await rm(root, { recursive: true, force: true }); }
 });

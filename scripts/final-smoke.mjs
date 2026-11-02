@@ -6,7 +6,7 @@ import { createServer } from 'node:http';
 import { createHash, randomBytes } from 'node:crypto';
 import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve, sep } from 'node:path';
+import { basename, dirname, join, resolve, sep } from 'node:path';
 import JSZip from 'jszip';
 
 const repository = process.cwd(), root = await mkdtemp(join(tmpdir(), 'sbom-final-'));
@@ -124,12 +124,18 @@ try {
   }
   const probe = join(root, 'artifact-failure.cjs');
   await writeFile(probe, `const Module=require('module');const original=Module._load;Module._load=function(id,...args){const value=original.call(this,id,...args);if(id==='azure-pipelines-task-lib/task')value.uploadArtifact=()=>{throw new Error('Local artifact adapter injection');};return value;};`);
+  async function sourceDigest(file) {
+    const bytes = await readFile(file);
+    // Yarn's normal install formats workspace manifests. Assert their values,
+    // while lockfiles and source configuration must stay byte-identical.
+    return digest(basename(file) === 'package.json' ? JSON.stringify(JSON.parse(bytes)) : bytes);
+  }
   async function hashes(directory, values = []) {
     for (const item of await readdir(directory, { withFileTypes: true })) {
       if (['node_modules', 'obj', 'bin', '.yarn', 'payloads'].includes(item.name)) continue;
       const file = join(directory, item.name);
       if (item.isDirectory()) await hashes(file, values);
-      else if (/(?:\.json|\.ya?ml|\.lock|\.npmrc|\.Config|\.csproj|packages\.config)$/.test(item.name)) values.push([file, digest(await readFile(file))]);
+      else if (/(?:\.json|\.ya?ml|\.lock|\.npmrc|\.Config|\.csproj|packages\.config)$/.test(item.name)) values.push([file, await sourceDigest(file)]);
     }
     return values;
   }
@@ -154,6 +160,7 @@ try {
     const bomFile = join(temp, runs[0], 'sbom', 'bom.json'), bytes = await readFile(bomFile), bom = JSON.parse(bytes); safe(bytes.toString());
     await validateSbom(bomFile, '1.6');
     for (const dependency of expected) assert.ok(bom.components?.some(item => item.name === dependency), `Missing ${dependency}`);
+    if (name === 'pnpm') assert.ok(!bom.components?.some(item => item.name === 'chalk'), 'Fixed cdxgen required scope must exclude this pnpm fixture dev-only chalk');
     assert.ok(bom.dependencies?.some(item => item.dependsOn?.length), 'Real dependency edges missing');
     if (dt) { assert.equal(dtBodies.length, dtStart + 1); assert.deepEqual(dtBodies.at(-1).bytes, bytes); }
     else assert.equal(dtBodies.length, dtStart);
@@ -161,7 +168,7 @@ try {
       const data = artifacts[0][1].replaceAll('%0D', '\r').replaceAll('%0A', '\n').replaceAll('%AZP25', '%');
       assert.deepEqual(await readFile(data), bytes, 'Queued artifact must remain readable after handler exits');
     }
-    for (const [file, value] of before) assert.equal(digest(await readFile(file)), value, 'Source config/lock mutated');
+    for (const [file, value] of before) assert.equal(await sourceDigest(file), value, `Source config/lock mutated: ${file}`);
     const calls = requests.slice(requestStart);
     if (npmAuth) assert.ok(calls.some(call => call.path.includes('/private/npm/') && call.path.endsWith('package.tgz') && call.authorized));
     if (nugetAuth) assert.ok(calls.some(call => call.path.includes('/private/nuget/') && call.path.endsWith('.nupkg') && call.authorized));
@@ -176,7 +183,7 @@ try {
     const product = join(root, `product-${name}`);
     if (['pnpm', 'yarn'].includes(name)) {
       await cp(join(repository, 'examples', name === 'pnpm' ? 'pnpm-workspace' : 'yarn-modern-workspace'), product, { recursive: true });
-      await scenario(name, 'vue', product, { dt: 'accepted', expected: ['vue'] });
+      await scenario(name, 'vue', product, { dt: 'accepted', expected: name === 'pnpm' ? ['vue', 'lodash'] : ['is-odd', 'is-number'] });
     } else if (['dotnet', 'non-sdk-package-reference', 'packages-config', 'sdk-net48'].includes(name)) {
       await dotnet(product, name); await scenario(name, name === 'dotnet' ? 'dotnet' : 'netframework', product, { dt: name === 'dotnet' ? 'fail' : false, nugetAuth: true, expected: ['Pilot.Private', 'Pilot.Public'] });
     } else if (name === 'combined') {
@@ -191,4 +198,8 @@ try {
   assert.ok(!inventory.some(item => item.upstreamNoticeMissing || item.name === 'nodejs-file-downloader' || item.name === 'azure-pipelines-tool-lib'));
   evidence.attributions = inventory.length;
   evidence.complete = true; await writeFile(join(evidenceDirectory, 'evidence.json'), JSON.stringify(evidence, null, 2));
-} finally { await new Promise(done => server.close(done)); await rm(root, { recursive: true, force: true }); }
+} finally {
+  await new Promise(done => server.close(done));
+  if (process.env.SBOM_FINAL_KEEP_FIXTURES === '1') console.log(`Synthetic fixtures retained for diagnosis: ${root}`);
+  else await rm(root, { recursive: true, force: true });
+}
