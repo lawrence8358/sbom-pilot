@@ -10,10 +10,11 @@ Run `node scripts/resume.mjs` in the integration worktree, then read `implementa
 - Integration branch: `feature/sbom-pilot` in `D:/Project/Git/sbom-pilot`.
 - Ticket 01 code: `a543dc9`; merged by merger in `f8abe50`.
 - Recovery workflow/dispatch manifest/read-only resume inspector: `caa7f3c`.
-- Tickets 02/03/05/08 are now integrated. Latest combined verification:45 tests, build and developer VSIX passed at merge `bedcdf8`. Current HEAD and active leases must be read from Git and implementation-state.json.
+- Tickets 01/02/03/04/05/06/08 are integrated. Latest combined verification:61 tests and typecheck passed at `ba15e11`; the product tree is identical to ticket06's verified build/developer VSIX at `a2d5c63`. Current HEAD and active leases must be read from Git and implementation-state.json.
 - Serial execution is the user's latest direction: at most one subagent, including implementation, merge and review. Finish verified integration before starting another ticket.
 - Ticket 04 Yarn is integrated in `330425d`: typecheck, 54 tests, build and developer VSIX passed. Its real Classic/PnP/node_modules workspace smoke passed before interruption; recovered process exit0 and final evidence are in checkpoint04. No need to repeat unchanged smoke.
-- Ticket 06 Framework is ready for integration at `a2d5c63`: typecheck, 61 tests, real Windows three-format smoke including Unicode path and explicit transitive edges, build and developer VSIX passed in its worktree. Next merge this commit into root and verify integration; do not restart implementation. Ticket 11 (`25a2a09`) remains parked.
+- Ticket 06 Framework is integrated at `ba15e11`; typecheck and61tests passed after conflict-free merge. Real Windows three-format/Unicode/edge smoke and build/devVSIX passed on the identical product tree at `a2d5c63`.
+- Ticket 11 compatibility/network is the sole active slice, resuming preserved WIP `25a2a09`. Read checkpoint11 in that worktree and finish shipped-artifact checks; do not restart completed network implementation.
 - Agent IDs/conversations can be replaced; branches/worktrees/checkpoints retain the work. Product terminology follows the original requirement: .NET Core.
 
 ## Validation already performed
@@ -29,7 +30,7 @@ Run `node scripts/resume.mjs` in the integration worktree, then read `implementa
 
 ## Remaining graph and integration
 
-- Code integrated:01/02/03/04/05/08. Sole active ticket:06; parked:11.07/09 are ready but queued;10 follows06,12 follows07/09/10/11. The resume inspector recomputes the actual unassigned frontier from ticket edges and state.
+- Code integrated:01/02/03/04/05/06/08. Sole active ticket:11.07/09/10 are ready but queued;12 follows07/09/10/11. The resume inspector recomputes the actual unassigned frontier from ticket edges and state.
 - Once a worker has a final commit, run the merger as the sole subagent. Root should not mutate integration simultaneously. Preserve all config/workflow/manifest behavior, terminology corrections and serial dispatch policy across retained branches; resolve package-lock from merged package manifests and rerun checks if conflict requires regeneration.
 -03 added generic JS installer dispatch and test discovery;05 added .NET Core dispatch;08 added conditional DT. Subsequent workflow/config/manifest edits must preserve all three. jsonc-parser needs its published ESM entry alias in both actual build and bundle tests to avoid a real UMD startup failure found during integration.
 - After integration, update `integratedTickets` and active leases, progress/evidence, and recompute frontier. Save checkpoints before any new long-running task.
