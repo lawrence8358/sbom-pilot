@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "integrationBranch": "feature/sbom-pilot",
+  "reviewBase": "e3a5bf6ed57b74c519d0d64285f2929d0195688b",
+  "noRemoteWrites": true,
+  "integratedTickets": ["01"],
+  "activeWorktrees": [
+    { "ticket": "02", "branch": "ticket/02-options", "worktree": "../.sbom-pilot-worktrees/02-options", "checkpoint": ".scratch/sbom-task/checkpoints/02.md" },
+    { "ticket": "03", "branch": "ticket/03-pnpm", "worktree": "../.sbom-pilot-worktrees/03-pnpm", "checkpoint": ".scratch/sbom-task/checkpoints/03.md" },
+    { "ticket": "05", "branch": "ticket/05-dotnet", "worktree": "../.sbom-pilot-worktrees/05-dotnet", "checkpoint": ".scratch/sbom-task/checkpoints/05.md" }
+  ],
+  "reviewStatus": "not-started",
+  "externalValidation": ["live Azure DevOps Services/Server installation and artifact download", "real public Publisher ID confirmation", "public repository URL (no remote exists)"],
+  "notesDirectory": "../.sbom-pilot-notes"
+}
