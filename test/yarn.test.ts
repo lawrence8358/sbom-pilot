@@ -10,7 +10,7 @@ import type { ProcessRunner, Command } from '../src/process';
 import type { ToolContext } from '../src/tools';
 
 const classicLock = '# yarn lockfile v1\n';
-const modernLock = '__metadata:\n  version: 8\n  cacheKey: 10c0\n';
+const modernLock = '__metadata:\n  version: 10\n  cacheKey: 10c0\n';
 const tools: ToolContext = { node: process.execPath, npmCli: 'bundled-npm.js', cdxgenCli: 'cdxgen.js', nodeVersion: '24.22.2', cdxgenVersion: '13.6.0', env: { PRESERVED_SETTING: 'yes' } };
 async function fixture(action: (root: string, temp: string) => Promise<void>) {
   const base = await mkdtemp(join(tmpdir(), 'sbom-yarn-'));
@@ -92,6 +92,7 @@ for (const [version, modern, strictFlag] of [['1.22.22', false, '--frozen-lockfi
     assert.equal(install.env?.YARN_IGNORE_PATH, '1');
     assert.equal(tools.env.YARN_IGNORE_PATH, undefined);
     assert.equal(await readFile(configPath, 'utf8'), configuration);
+    assert.equal(calls.some(command => command.args.includes('check') && command.args.includes('--integrity')), !modern);
     assert.deepEqual(await readdir(temp), []);
     await assert.rejects(javascriptInstaller.install(root, tools, fakeRunner(root, version, [], 'fixture', true), { tempDirectory: temp }), error => error instanceof Error && error.message.includes(strictFlag) && !error.message.includes('TOKEN_MUST_NOT_ESCAPE'));
   }));
@@ -129,4 +130,10 @@ test('Classic Corepack sha1 suffix is accepted and wrong-length hashes rejected'
   assert.ok((await inspectJavaScriptProject(root)).integrity?.startsWith('sha1-'));
   await project(root, false, 'yarn@1.22.22+sha1.a');
   await assert.rejects(inspectJavaScriptProject(root), /雜湊長度/);
+}));
+
+test('repository ignorePath setting keeps registry manager selection', () => fixture(async root => {
+  await project(root, true, 'yarn@4.18.1');
+  await writeFile(join(root, '.yarnrc.yml'), 'ignorePath: true\nyarnPath: missing.cjs\n');
+  assert.equal((await inspectJavaScriptProject(root)).yarn?.path, undefined);
 }));

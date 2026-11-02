@@ -22,14 +22,19 @@ export async function inspectYarnProject(root: string, declaredVersion?: string)
   }
   if (declaredVersion && (Number(declaredVersion.split('.')[0]) === 1) !== (generation === 'classic')) throw new Error('Yarn packageManager 版本與 lockfile 世代互相矛盾。');
   let modernPath: string | undefined, classicPath: string | undefined;
+  let modernPathDefined = false, ignorePath: boolean | undefined;
   for (let directory = resolve(root); ; directory = dirname(directory)) {
-    if (!modernPath && await exists(join(directory, '.yarnrc.yml'))) {
+    if (await exists(join(directory, '.yarnrc.yml'))) {
       let config;
       try { config = parse(await readFile(join(directory, '.yarnrc.yml'), 'utf8')); }
       catch { throw new Error('.yarnrc.yml 不是有效 YAML。'); }
-      if (config?.yarnPath !== undefined && config.yarnPath !== null) {
-        if (typeof config.yarnPath !== 'string' || !config.yarnPath.trim() || config.yarnPath.includes('${')) throw new Error('yarnPath 必須是明確的本機 JavaScript 路徑。');
-        modernPath = resolve(directory, config.yarnPath);
+      if (ignorePath === undefined && typeof config?.ignorePath === 'boolean') ignorePath = config.ignorePath;
+      if (!modernPathDefined && config?.yarnPath !== undefined) {
+        modernPathDefined = true;
+        if (config.yarnPath !== null) {
+          if (typeof config.yarnPath !== 'string' || !config.yarnPath.trim() || config.yarnPath.includes('${')) throw new Error('yarnPath 必須是明確的本機 JavaScript 路徑。');
+          modernPath = resolve(directory, config.yarnPath);
+        }
       }
     }
     if (!classicPath && await exists(join(directory, '.yarnrc'))) {
@@ -41,9 +46,9 @@ export async function inspectYarnProject(root: string, declaredVersion?: string)
     if (await exists(join(directory, '.git')) || dirname(directory) === directory) break;
   }
   if (modernPath && classicPath && modernPath !== classicPath) throw new Error('Yarn 設定的 yarnPath 與 yarn-path 互相矛盾。');
-  const path = modernPath ?? classicPath;
+  const path = ignorePath ? undefined : modernPath ?? classicPath;
   if (path && !/\.(?:c?js|mjs)$/i.test(path)) throw new Error('目前 yarnPath 僅支援本機 JavaScript 發行檔。');
-  if (!declaredVersion && !path && generation === 'modern' && metadataVersion !== '8') throw new Error('此現代 Yarn lockfile 沒有已驗證 fallback；請宣告精確 packageManager 或 yarnPath。');
+  if (!declaredVersion && !path && generation === 'modern' && metadataVersion !== '10') throw new Error('此現代 Yarn lockfile 沒有已驗證 fallback；請宣告精確 packageManager 或 yarnPath。');
   return {
     version: declaredVersion ?? (generation === 'classic' ? YARN_CLASSIC_FALLBACK_VERSION : YARN_MODERN_FALLBACK_VERSION),
     reason: declaredVersion ? 'declaration' : path ? 'project-binary' : 'fallback',

@@ -12,6 +12,7 @@
     "test:smoke": "node scripts/smoke.mjs",
     "test:options-smoke": "node scripts/options-smoke.mjs",
     "test:smoke:pnpm": "node scripts/smoke-pnpm.mjs",
+    "test:smoke:yarn": "node scripts/smoke-yarn.mjs",
     "package:dev": "npm run build && node scripts/package.mjs --local",
     "package:release": "npm run build && node scripts/package.mjs"
   },

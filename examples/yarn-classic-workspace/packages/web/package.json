@@ -1,0 +1,6 @@
+{
+  "name": "@example/web-product",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": { "@example/shared": "1.0.0", "is-number": "7.0.0" }
+}
