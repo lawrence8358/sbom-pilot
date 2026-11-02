@@ -48,11 +48,15 @@ async function inventory(directory) {
     if (entry.name.startsWith('@')) { await inventory(path); continue; }
     let pkg;
     try { pkg = JSON.parse(await readFile(`${path}/package.json`, 'utf8')); } catch { continue; }
+    if (pkg.name === 'truncate-utf8-bytes' && pkg.version === '1.0.2') await cp('third-party/truncate-utf8-bytes-1.0.2/LICENSE.WTFPL.txt', `${path}/LICENSE.WTFPL.txt`);
     const files = await readdir(path);
     const license = files.find(file => /^licen[sc]e(?:\.|$)/i.test(file));
     const readmeLicense = !license && files.includes('README.md') && (await readFile(`${path}/README.md`, 'utf8')).includes('Permission is hereby granted');
-    if (!license && !readmeLicense) throw new Error(`External runtime license missing: ${pkg.name}`);
-    attributions.push({ name: pkg.name, version: pkg.version, license: pkg.license, kind: 'external', licenseFile: `${path.replace(/^dist\//, '')}/${license || 'README.md'}` });
+    const missingUpstreamNotice = !license && !readmeLicense && pkg.name === 'nodejs-file-downloader' && pkg.version === '4.13.0' && pkg.license === 'ISC';
+    if (!license && !readmeLicense && !missingUpstreamNotice) throw new Error(`External runtime license missing: ${pkg.name}`);
+    // The original package/repository declares ISC but supplies no full notice.
+    // Preserve its actual metadata; never invent a copyright holder or year.
+    attributions.push({ name: pkg.name, version: pkg.version, license: pkg.license, kind: 'external', licenseFile: `${path.replace(/^dist\//, '')}/${license || (readmeLicense ? 'README.md' : 'package.json')}`, ...(missingUpstreamNotice ? { upstreamNoticeMissing: true, source: 'https://github.com/ibrod83/nodejs-file-downloader', note: 'Original ISC declaration preserved; full upstream notice unavailable. Public-release review remains open.' } : {}) });
     if (files.includes('node_modules')) await inventory(`${path}/node_modules`);
   }
 }
