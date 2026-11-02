@@ -1,0 +1,21 @@
+import { mkdir, readFile, writeFile, rm } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
+
+const local = process.argv.includes('--local');
+const manifest = JSON.parse(await readFile('vss-extension.json', 'utf8'));
+const publisher = process.env.SBOM_PILOT_PUBLISHER;
+const repository = process.env.SBOM_PILOT_REPOSITORY_URL;
+if (!local && (!publisher || publisher === 'local-dev-placeholder' || !/^[A-Za-z0-9][A-Za-z0-9-]*$/.test(publisher) || !repository || !/^https:\/\//.test(repository))) {
+  throw new Error('正式打包需設定實際 SBOM_PILOT_PUBLISHER 及公開 HTTPS SBOM_PILOT_REPOSITORY_URL。');
+}
+manifest.publisher = local ? 'local-dev-placeholder' : publisher;
+manifest.public = !local;
+if (local) manifest.name += ' (Local Development)';
+else manifest.repository = { type: 'git', uri: repository };
+await mkdir('packages', { recursive: true });
+const path = '.packaging-manifest.json';
+await writeFile(path, JSON.stringify(manifest, null, 2));
+try {
+  const result = spawnSync(process.execPath, ['node_modules/tfx-cli/_build/tfx-cli.js', 'extension', 'create', '--manifest-globs', path, '--output-path', 'packages', '--no-prompt'], { stdio: 'inherit' });
+  if (result.status !== 0) process.exitCode = result.status ?? 1;
+} finally { await rm(path, { force: true }); }
