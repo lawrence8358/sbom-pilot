@@ -49,7 +49,7 @@ export function readTaskConfig(read: InputReader): TaskConfig {
   const excludes = read('excludes');
   return {
     environment: text('environment', 'vue'), projectPath: text('projectPath'),
-    nodeVersion: text('nodeVersion', '24.x'), cdxgenVersion: text('cdxgenVersion', CDXGEN_VERSION),
+    nodeVersion: text('nodeVersion', '24.x'), cdxgenVersion: read('cdxgenVersion')?.trim() || CDXGEN_VERSION,
     specVersion: text('specVersion', '1.6'), excludes: parseExcludes(excludes === undefined ? DEFAULT_EXCLUDES : excludes),
     fetchLicense: boolean('fetchLicense', true), noCache: boolean('noCache', true), uploadToDt: boolean('uploadToDt', false),
   };

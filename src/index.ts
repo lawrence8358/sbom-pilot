@@ -2,13 +2,14 @@ import * as tl from 'azure-pipelines-task-lib/task';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { readTaskConfig } from './config';
+import { readAzureInput } from './azure-inputs';
 import { runWorkflow } from './workflow';
 
 async function main(): Promise<void> {
   let tempDirectory: string | undefined;
   try {
     if (!tl.getVariable('Build.BuildId') || tl.getVariable('Release.ReleaseId')) throw new Error('此 Task 需要 Classic Build 或 YAML Build 工作；Classic Release 不支援 Build Artifact 上傳。');
-    const config = readTaskConfig(name => tl.getInput(name));
+    const config = readTaskConfig(readAzureInput);
     const agentTemp = tl.getVariable('Agent.TempDirectory');
     if (!agentTemp) throw new Error('缺少 Agent.TempDirectory。');
     tempDirectory = await mkdtemp(join(agentTemp, 'sbom-pilot-'));

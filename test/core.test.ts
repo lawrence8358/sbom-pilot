@@ -43,6 +43,12 @@ test('runtime input parsing applies defaults, keeps blank excludes and rejects i
     assert.throws(() => readTaskConfig(name => name === 'projectPath' ? 'root' : name === 'fetchLicense' ? value : undefined), /true.*false/);
   }
 });
+test('actual Azure SDK adapter preserves explicit blank input after SDK vault loading', async () => {
+  await runProcess({ executable: process.execPath,
+    args: ['-e', "const {readAzureInput}=require('./.test-build/src/azure-inputs');if(readAzureInput('excludes')!=='')process.exit(2);if(readAzureInput('nodeVersion')!=='24.x')process.exit(3)"],
+    cwd: process.cwd(), env: { ...process.env, INPUT_EXCLUDES: '', INPUT_NODEVERSION: '24.x' },
+  });
+});
 test('tool overrides reject old package names, prereleases and incompatible runtime before install', () => {
   assert.doesNotThrow(() => validateToolOptions('24.x', '13.6.0'));
   for (const version of ['12.0.0', '14.0.0', '13.x', '13.6.0-beta.1', 'latest']) assert.throws(() => validateToolOptions('24.x', version), /13.x/);
@@ -62,13 +68,15 @@ test('unsupported spec and malformed runtime types fail before any tool preparat
 test('scan options set each environment switch independently without changing parent configuration', () => fixture(async root => {
   const { generateSbom } = await import('../src/scan');
   const captured: { env?: NodeJS.ProcessEnv; args: string[] }[] = [];
+  const syntheticTools = { ...tools, env: { PATH: 'fixture-path', npm_config_registry: 'https://example.invalid' } };
   const run: ProcessRunner = async command => { captured.push(command); return { stdout: '', stderr: '' }; };
   for (const fetchLicense of [true, false]) for (const noCache of [true, false]) {
-    await generateSbom({ config: { ...config(root), fetchLicense, noCache, excludes: [] }, tools, outputPath: join(root, 'bom.json') }, run);
+    await generateSbom({ config: { ...config(root), fetchLicense, noCache, excludes: [] }, tools: syntheticTools, outputPath: join(root, 'bom.json') }, run);
     const command = captured.at(-1)!;
     assert.equal(command.env?.FETCH_LICENSE, String(fetchLicense));
     assert.equal(command.env?.CDXGEN_NO_CACHE, String(noCache));
-    assert.equal(command.env?.PATH, tools.env.PATH);
+    assert.equal(command.env?.PATH, syntheticTools.env.PATH);
+    assert.equal(command.env?.npm_config_registry, syntheticTools.env.npm_config_registry);
     assert.equal(command.args.includes('--exclude'), false);
     assert.equal(command.args[1], root);
   }

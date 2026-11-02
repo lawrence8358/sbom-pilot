@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "node scripts/test.mjs",
     "test:smoke": "node scripts/smoke.mjs",
+    "test:options-smoke": "node scripts/options-smoke.mjs",
     "package:dev": "npm run build && node scripts/package.mjs --local",
     "package:release": "npm run build && node scripts/package.mjs"
   },

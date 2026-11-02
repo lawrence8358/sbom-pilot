@@ -7,7 +7,7 @@ export function validateToolOptions(nodeRange: string, cdxgenVersion: string): v
   if (!validRange(nodeRange) || !intersects(nodeRange, '>=24')) {
     throw new Error('Node.js 版本必須是與 >=24 相容的 semver 範圍。');
   }
-  if (!valid(cdxgenVersion) || major(cdxgenVersion) !== 13 || prerelease(cdxgenVersion)) {
+  if (valid(cdxgenVersion) !== cdxgenVersion || major(cdxgenVersion) !== 13 || prerelease(cdxgenVersion)) {
     throw new Error('此版本僅支援 @cdxgen/cdxgen 13.x 的穩定精確版本覆寫，例如 13.6.0；不支援舊套件名稱或其他 major。');
   }
 }
