@@ -15,6 +15,7 @@
     "test:smoke:pnpm": "node scripts/smoke-pnpm.mjs",
     "test:dotnet": "node --test .test-build/test/dotnet.test.js",
     "test:smoke:dotnet": "node scripts/smoke-dotnet.mjs",
+    "test:smoke:combined": "node scripts/smoke-combined.mjs",
     "test:smoke:framework": "node scripts/smoke-framework.mjs",
     "test:smoke:yarn": "node scripts/smoke-yarn.mjs",
     "package:dev": "npm run build && node scripts/package.mjs --local",
