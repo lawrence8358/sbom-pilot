@@ -2,7 +2,7 @@
 
 在 Azure Pipelines 加入一個 **SBOM Pilot — Generate & Upload SBOM** Task，即可準備工具並還原專案依賴，產生 CycloneDX 1.6 JSON，並要求 Agent 發佈名稱為 `SBOM` 的 Build Artifact。
 
-本階段提供 Vue/npm、pnpm 與 Yarn Classic／現代 Yarn 專案及 workspace、SDK-style .NET Core 與選用的 Dependency-Track（DT）上傳，使用公開 npm/NuGet 來源。傳統 .NET Framework、私有來源認證及合併交付產品將於後續版本交付。`--required-only` 固定啟用，代表 cdxgen 的 required scope 篩選，不能視為已逐項核對實際部署成品。Yarn workspace 實測會保留部分被上游標為 required 的開發依賴，詳見 [Yarn 支援及限制](docs/yarn.md)。
+本階段提供 Vue/npm、pnpm 與 Yarn Classic／現代 Yarn 專案及 workspace、SDK-style .NET Core、Windows .NET Framework 與選用的 Dependency-Track（DT）上傳，使用公開 npm/NuGet 來源。私有來源認證及合併交付產品將於後續版本交付。`--required-only` 固定啟用，代表 cdxgen 的 required scope 篩選，不能視為已逐項核對實際部署成品。Yarn workspace 實測會保留部分被上游標為 required 的開發依賴，詳見 [Yarn 支援及限制](docs/yarn.md)。
 
 ## 前置條件及支援範圍
 
@@ -59,7 +59,7 @@ steps:
 
 | 欄位（YAML） | 預設 | 說明 |
 | --- | --- | --- |
-| `environment` | `vue` | `vue`（Vue/npm／pnpm／Yarn，依宣告與 lockfile 辨識）或 `dotnet`（.NET Core） |
+| `environment` | `vue` | `vue`（Vue/npm／pnpm／Yarn）、`dotnet`（.NET Core）或 `netframework`（.NET Framework，限 Windows） |
 | `projectPath` | `$(Build.SourcesDirectory)` | 專案根目錄 |
 | `nodeVersion` | `24.x` | 最新符合 semver 範圍的 Node，必須 >=24 |
 | `excludes` | 見下列規則 | 相對根目錄 glob，逗號分隔，保留花括號內逗號；明確設定空字串代表不加自訂排除 |
@@ -124,6 +124,8 @@ DT 上傳失敗時仍要求 Agent 發佈有效 `SBOM` 成品，最後 Task 失�
 MIT License · Copyright © 2026 Lawrence Shen。第三方授權見 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。
 
 ## .NET Core 模式
+
+傳統格式、packages.config 或 Windows Framework 設定請使用 [.NET Framework 模式](docs/framework.md)。該模式按格式使用 Task 準備的 SDK，或 Agent 預裝的 Visual Studio MSBuild；不需要選用 NuGet lockfile。
 
 在 Classic Build 選擇「.NET Core」，專案路徑指向包含 SDK-style `.csproj`、`.fsproj` 或 `.vbproj` 的目錄；YAML 使用同一 Task：
 

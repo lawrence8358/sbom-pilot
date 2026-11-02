@@ -102,3 +102,26 @@ npm run test:smoke:dotnet
 Windows x64 亦以缺少可用 host 的子程序環境實測：從 https://dot.net/v1/dotnet-install.ps1 取得 Microsoft 官方腳本，下載 SDK 10.0.101 至 Task 自有快取，驗證 `.complete` 與 `dotnet --version`，再以該 SDK 完成真實 restore／SBOM。這項測試不安裝全域工具，也不修改機器 PATH。
 
 尚未驗證：Linux .NET 執行、arm64、真正 Azure DevOps VSIX 安裝及 Artifact 發佈、企業 Proxy／自訂 CA、特殊 workloads／自訂 SDK 與私有 NuGet。
+
+## .NET Framework：開發與驗證
+
+使用說明與格式矩陣見 [Framework 文件](docs/framework.md)。本版支援底線為 Visual Studio MSBuild >=17.8；其原因是使用公開的 structured property evaluation，而非聲稱 MSBuild 從該版才支援 packages.config。
+
+`src/dotnet/msbuild.ts` 尋找及驗證 Agent 的 MSBuild、評估專案所需 targets 與 reference assemblies。`src/dotnet/framework.ts` 透過相同 NuGet restore graph 判斷 PackageReference／PackagesConfig，讀取實際 outputPath、lockfile、config 路徑，並使用已安裝的 NuGet.Configuration／NuGet.Versioning 解析有效 repositoryPath 與套件檔名。暫存 PowerShell helper 明確使用 UTF-8，不把完整還原圖或含秘密的工具輸出送到日誌。
+
+```powershell
+npm test
+npm run test:smoke:framework
+npm run build
+npm run package:dev
+```
+
+新增七項 Framework 測試；與已整合的 .NET Core、Yarn、DT 測試合計 61 項通過。真實 smoke 不編造 Azure 發佈證據，只以本機 artifact adapter 接收經嚴格 1.6 Schema 驗證的檔案。
+
+2026-11-02 Windows x64 實測：Visual Studio 2022 Enterprise MSBuild 17.14.51（原始工具版本 17.14.51.32402）、SDK-style net48 使用 SDK 10.0.101、Node 24.22.2、cdxgen 13.6.0。SDK-style net48、非 SDK-style PackageReference、packages.config 每個流程皆產生 14 個組件，保有 Microsoft.Extensions.Logging → Microsoft.Extensions.Logging.Abstractions 的明確依賴邊。驗證 NuGet.Config、csproj、packages.config、既有 lockfile 的 SHA-256 不變；非 SDK 專案 stale lock 失敗且不發佈。packages.config 使用 Unicode 專案目錄與相對 repositoryPath；另以真實 MSBuild 確認只有明確 repositoryPath、沒有 solution 的還原亦可執行。缺少 MSBuild 與缺少 Import workload targets 都在發佈前失敗。
+
+可重用的私有來源接點：`restoreFrameworkProject(projectPath, root, MSBuildTool, run, tempDirectory)` 接收 `MSBuildTool.env`，回傳 `{ assets: RestoreProject[], packageFiles: string[] }`。`frameworkInstaller.install(root, tools, run, options)` 保留 child-only 認證環境，並將驗證後的 `dotnetAssets`／`dotnetPackageFiles` 傳給共用掃描器。認證功能應注入該環境，不用 RestoreConfigFile 取代 Repo 設定。套件／設定／lockfile 的檔案檢查不能因包裝 installer 而繞過。
+
+本機精簡證據位於忽略的 `.smoke/framework/evidence.json`，包含各格式版本、組件數與 SBOM hash。此驗證不等於所有 Visual Studio workloads 已支援；Linux Framework 為不適用，arm64 與實際 Services／Server 安裝、Classic UI、成品下載仍待外部驗證。
+
+Microsoft 來源：[NuGet/MSBuild restore](https://learn.microsoft.com/en-us/nuget/reference/msbuild-targets#restoring-packagereference-and-packagesconfig-projects-with-msbuild)、[repositoryPath](https://learn.microsoft.com/en-us/nuget/reference/nuget-config-file#config-section)、[vswhere 尋找 MSBuild](https://github.com/microsoft/vswhere/wiki/Find-MSBuild)。

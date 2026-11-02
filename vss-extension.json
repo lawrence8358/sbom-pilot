@@ -27,6 +27,10 @@
     },
     {
       "path": "THIRD-PARTY-NOTICES.md"
+    },
+    {
+      "path": "docs/framework.md",
+      "addressable": true
     }
   ],
   "contributions": [
