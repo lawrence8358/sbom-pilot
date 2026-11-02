@@ -44,6 +44,19 @@ test('npm workspace and independent Yarn project keep their own locked install r
   assert.deepEqual((await discoverJavaScriptProjects(root)).map(project => [project.root, project.manager]), [[npm, 'npm'], [yarn, 'yarn']]);
 }));
 
+test('workspace declarations compare manager/version and only conflicting supplied hashes', () => fixture(async root => {
+  const hash = 'a'.repeat(128), child = join(root, 'packages/app');
+  await manifest(root, { packageManager: `pnpm@10.34.2+sha512.${hash}` });
+  await writeFile(join(root, 'pnpm-workspace.yaml'), "packages:\n  - 'packages/*'\n");
+  await writeFile(join(root, 'pnpm-lock.yaml'), "lockfileVersion: '9.0'\n");
+  await manifest(child, { packageManager: 'pnpm@10.34.2' });
+  assert.equal((await discoverJavaScriptProjects(root)).length, 1);
+  await manifest(child, { packageManager: `pnpm@10.34.2+sha512.${'b'.repeat(128)}` });
+  await assert.rejects(discoverJavaScriptProjects(root), /互相矛盾/);
+  await manifest(child, { packageManager: 'pnpm@10.34.1' });
+  await assert.rejects(discoverJavaScriptProjects(root), /互相矛盾/);
+}));
+
 test('shared brace exclusions apply relative to common root before manifest parsing', () => fixture(async root => {
   await manifest(join(root, 'frontend'));
   await writeFile(join(root, 'frontend/package-lock.json'), '{}');

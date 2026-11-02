@@ -9,7 +9,9 @@ export const NPM_FALLBACK_VERSION = '11.19.1';
 export const PNPM_FALLBACK_VERSION = '10.34.2';
 export const exists = async (path: string) => access(path).then(() => true, () => false);
 
-async function declaration(root: string): Promise<{ manager: JavaScriptManager; version: string; integrity?: string } | undefined> {
+export interface PackageManagerDeclaration { manager: JavaScriptManager; version: string; integrity?: string }
+export const declarationsConflict = (a: PackageManagerDeclaration, b: PackageManagerDeclaration) => a.manager !== b.manager || a.version !== b.version || Boolean(a.integrity && b.integrity && a.integrity !== b.integrity);
+export async function readPackageManagerDeclaration(root: string): Promise<PackageManagerDeclaration | undefined> {
   if (!await exists(join(root, 'package.json'))) return;
   let manifest;
   try { manifest = JSON.parse(await readFile(join(root, 'package.json'), 'utf8')); }
@@ -39,9 +41,9 @@ async function workspaceRoot(requested: string): Promise<string> {
 
 export async function inspectJavaScriptProject(requested: string): Promise<JavaScriptProject> {
   const root = await workspaceRoot(requested);
-  const declared = await declaration(root);
-  const childDeclared = root !== resolve(requested) ? await declaration(requested) : undefined;
-  if (childDeclared && (!declared || childDeclared.manager !== declared.manager || childDeclared.version !== declared.version || childDeclared.integrity !== declared.integrity)) {
+  const declared = await readPackageManagerDeclaration(root);
+  const childDeclared = root !== resolve(requested) ? await readPackageManagerDeclaration(requested) : undefined;
+  if (childDeclared && (!declared || declarationsConflict(childDeclared, declared))) {
     throw new Error('workspace 根目錄與子專案的 packageManager 宣告互相矛盾；請統一於 workspace 根目錄宣告。');
   }
   if (!await exists(join(root, 'package.json')) && !await exists(join(root, 'pnpm-workspace.yaml'))) throw new Error('找不到 package.json；請指定專案或 workspace 根目錄。');

@@ -4,6 +4,7 @@ import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 
+async function main() {
 const compile = spawnSync(process.execPath, ['node_modules/typescript/bin/tsc'], { stdio: 'inherit' });
 if (compile.status !== 0) process.exit(compile.status ?? 1);
 await cp('src/schemas', '.test-build/src/schemas', { recursive: true });
@@ -85,7 +86,9 @@ for (const scenario of scenarios) {
   const edge = (from, to) => {
     assert.ok(component(from), `Missing ${from}`);
     assert.ok(component(to), `Missing ${to}`);
-    assert.ok(bom.dependencies?.some(dependency => dependency.ref === component(from)['bom-ref'] && dependency.dependsOn?.includes(component(to)['bom-ref'])), `Missing ${from} -> ${to} dependency edge`);
+    const sources = new Set(components.filter(component => component.name === from).map(component => component['bom-ref']));
+    const targets = new Set(components.filter(component => component.name === to).map(component => component['bom-ref']));
+    assert.ok(bom.dependencies?.some(dependency => sources.has(dependency.ref) && dependency.dependsOn?.some(ref => targets.has(ref))), `Missing ${from} -> ${to} dependency edge`);
   };
   edge('Microsoft.Extensions.Logging', 'Microsoft.Extensions.Logging.Abstractions');
   if (scenario === 'pnpm') {
@@ -120,3 +123,6 @@ for (const scenario of scenarios) {
   }
 }
 console.log('Only local artifact adapters exercised. Live Azure Build Artifact publication/DT import are separate external gates. Linux .NET Framework is not applicable.');
+}
+// task-lib installs an uncaught handler which may otherwise leave a smoke failure at exit 0.
+main().catch(error => { console.error(error); process.exitCode = 1; });

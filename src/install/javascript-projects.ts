@@ -2,7 +2,7 @@ import { access, readFile, readdir } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import { match } from 'azure-pipelines-task-lib/task';
 import { parse } from 'yaml';
-import { inspectJavaScriptProject } from './project';
+import { declarationsConflict, inspectJavaScriptProject, readPackageManagerDeclaration } from './project';
 import type { JavaScriptProject } from './contracts';
 
 const exists = async (path: string) => access(path).then(() => true, () => false);
@@ -45,13 +45,13 @@ export async function discoverJavaScriptProjects(root: string, excludes: string[
   }
   await visit(base);
   const projects: JavaScriptProject[] = [];
-  const owners: { project: JavaScriptProject; patterns: string[]; declaration?: string }[] = [];
+  const owners: { project: JavaScriptProject; patterns: string[] }[] = [];
   for (const directory of [...directories].sort((a, b) => a.split(/[\\/]/).length - b.split(/[\\/]/).length || a.localeCompare(b))) {
     const owner = owners.find(owner => within(owner.project.root, directory) && matches([localPath(owner.project.root, directory)], owner.patterns).length);
     if (owner) {
       if ((await Promise.all(lockNames.map(name => exists(join(directory, name))))).some(Boolean)) throw new Error('workspace 子專案有獨立 lockfile；請統一根目錄鎖檔或修正 workspace 範圍。');
-      const declared = await exists(join(directory, 'package.json')) ? (await manifest(directory)).packageManager : undefined;
-      if (declared !== undefined && declared !== owner.declaration) throw new Error('workspace 根目錄與子專案 packageManager 宣告互相矛盾。');
+      const declared = await readPackageManagerDeclaration(directory);
+      if (declared && declarationsConflict(declared, owner.project)) throw new Error('workspace 根目錄與子專案 packageManager 宣告互相矛盾。');
       continue;
     }
     const project = await inspectJavaScriptProject(directory);
@@ -59,7 +59,7 @@ export async function discoverJavaScriptProjects(root: string, excludes: string[
     if (resolve(project.root) !== resolve(directory)) throw new Error('前端子目錄不在已辨識的 workspace 成員中；請修正 workspace 清單、排除規則或專案根目錄。');
     projects.push(project);
     const patterns = await workspacePatterns(project);
-    if (patterns) owners.push({ project, patterns, declaration: await exists(join(project.root, 'package.json')) ? (await manifest(project.root)).packageManager : undefined });
+    if (patterns) owners.push({ project, patterns });
   }
   if (!projects.length) throw new Error('合併模式找不到前端 package.json／pnpm workspace；請選擇同時包含前後端的共同根目錄。');
   return projects;
