@@ -46,3 +46,33 @@ npm run package:release
 - [Build Artifact logging command](https://learn.microsoft.com/en-us/azure/devops/pipelines/scripts/logging-commands?view=azure-devops#upload-upload-an-artifact) 由 Agent 非同步執行；[Agent StepsRunner](https://github.com/microsoft/azure-pipelines-agent/blob/v3.238.0/src/Agent.Worker/StepsRunner.cs) 等待 async commands 並合併失敗結果，handler 不宣稱同步上傳完成。
 - 尚待：實際 VSIX 安裝、Classic/YAML、Server/Services、Linux 與 arm64、真正 Agent 成品失敗傳播、企業 Proxy/CA。manifest 最低 Agent 不代表 Server 配對已驗證。
 - 工具下載使用原生 fetch，尚未套用 Azure Agent ProxyUrl/CA 設定。npm 保留 Agent 與 Repo 設定，但本階段未交付 Task 管理私有來源認證。來源認證不得放 CLI arguments，也不得把含秘密的 child stdout/stderr 寫到日誌。
+
+## 現代 .NET：開發與驗證
+
+`src/dotnet/projects.ts` 辨識 SDK-style 專案並保留排除規則；`sdk.ts` 讀取 JSONC `global.json`、驗證 host 選擇及使用官方腳本準備缺少的 SDK；`restore.ts` 透過 NuGet `GenerateRestoreGraphFile` 評估匯入屬性中的 outputPath/nuGetLockFilePath，執行 restore 並驗證 lockfile/依賴資料。`src/install/dotnet.ts` 是 workflow adapter。
+
+供後續傳統專案、合併產品及 NuGet 認證使用的介面：
+
+- `prepareDotnetSdk(cwd, run, { cacheDirectory, tempDirectory, env, log? })` 回傳 `{ executable, version, env, policy }`，不修改父程序環境。
+- `inspectRestoreGraph(projectPath, sdk, run, tempDirectory)`／`restoreDotnetProject(...)` 回傳 `RestoreProject[]`，含 `projectPath`、`assetsPath`、`lockPath`、`hasLock`；所有 child 認證可經 `sdk.env` 注入，不需替換 Repo 的 NuGet.Config。
+- `dotnetInstaller.install(root, tools, run, { tempDirectory?, log?, excludes? })` 接入共用流程，將 SDK 子程序環境與 `dotnetAssets` 放入該次 workflow 的 ToolContext。自訂 installer 若包裝它，需保留這兩項資訊。
+- `scanExcludes` 只將既定 obj 預設規則轉換為可讀取 assets 的規則；`generateSbom` 會拒絕其他排除造成的資料缺口。合併模式仍應使用一次 cdxgen 掃描，無需合併多份 BOM。
+
+```powershell
+npm test
+npm run test:dotnet
+npm run test:smoke:dotnet
+# 選用：下載完整 SDK 到 Task 自有快取，會增加網路與磁碟用量
+$env:SBOM_PILOT_TEST_SDK_DOWNLOAD = '1'
+npm run test:smoke:dotnet
+```
+
+本分支新增九項 .NET 測試。`test:dotnet` 需要先由 `npm test` 編譯；整合分支的一般測試發現流程由工單 03 維護。`.smoke/dotnet/evidence.json` 記錄本機版本、組件數及 SBOM SHA-256，不提交掃描產物或完整日誌。
+
+2026-11-02 Windows x64 真實公開 NuGet 驗證：SDK 6.0.428（含註解的 global.json／disable，無 NuGet lockfile）、9.0.316（宣告 9.0.300/latestFeature，由 Directory.Build.props 匯入自訂 custom-obj 與 locks/product.lock.json）及 10.0.101（無宣告，固定 fallback）皆完成還原與一次 cdxgen 掃描。前兩者各 8 組件，SDK10 為 6 組件；均包含直接 Microsoft.Extensions.Logging 與間接 Microsoft.Extensions.Logging.Abstractions 及依賴關係，通過附帶官方 CycloneDX 1.6 Schema。SDK9 鎖檔 hash 不變，改動套件版本後 locked mode 失敗且不發佈。Node 24.22.2、cdxgen 13.6.0；此測試關閉授權補充以隔離 NuGet 還原行為。
+
+最初實測確認原封不動的 obj 排除會使 cdxgen 只讀 csproj 而遺漏間接套件，因此加入上述 metadata 例外與回歸測試。對照上游固定版 [managedBom](https://github.com/cdxgen/cdxgen/blob/v13.6.0/lib/cli/managedBom.js) 及 [檔案列舉](https://github.com/cdxgen/cdxgen/blob/v13.6.0/lib/core/fs.js)。SDK 規則與鎖檔行為參考 [global.json](https://learn.microsoft.com/en-us/dotnet/core/tools/global-json)、[官方安裝腳本](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-install-script)、[NuGet lockfiles](https://learn.microsoft.com/en-us/nuget/consume-packages/package-references-in-project-files#locking-dependencies)。
+
+Windows x64 亦以缺少可用 host 的子程序環境實測：從 https://dot.net/v1/dotnet-install.ps1 取得 Microsoft 官方腳本，下載 SDK 10.0.101 至 Task 自有快取，驗證 `.complete` 與 `dotnet --version`，再以該 SDK 完成真實 restore／SBOM。這項測試不安裝全域工具，也不修改機器 PATH。
+
+尚未驗證：Linux .NET 執行、arm64、真正 Azure DevOps VSIX 安裝及 Artifact 發佈、企業 Proxy／自訂 CA、特殊 workloads／自訂 SDK 與私有 NuGet。

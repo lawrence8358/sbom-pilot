@@ -6,7 +6,7 @@ import { basename, dirname, join } from 'node:path';
 import { readSdkPolicy, prepareDotnetSdk, FALLBACK_DOTNET_SDK, type DotnetSdk } from '../src/dotnet/sdk';
 import { discoverDotnetProjects } from '../src/dotnet/projects';
 import { restoreDotnetProject } from '../src/dotnet/restore';
-import { scanArguments } from '../src/scan';
+import { scanArguments, scanExcludes, generateSbom } from '../src/scan';
 import { runWorkflow } from '../src/workflow';
 import type { ProcessRunner, Command } from '../src/process';
 import type { ToolContext } from '../src/tools';
@@ -134,4 +134,15 @@ test('dotnet workflow uses common validation/publication and scan contract', () 
   await runWorkflow(config, root, { log: () => {}, prepare: async () => ({ ...tools }), installer: { install: async () => {} }, generate: async () => {}, validate: async path => ({ path, componentCount: 2 }), publish: async () => { published = true; } });
   assert.equal(published, true);
   await assert.rejects(runWorkflow(config, root, { log: () => {}, prepare: async () => ({ ...tools }), installer: { install: async () => { throw new Error('SDK incompatible'); } }, publish: async () => {} }), /依賴安裝.*SDK incompatible/);
+}));
+
+test('dotnet scan retains verified obj assets but rejects custom exclusions hiding dependency inputs', () => fixture(async root => {
+  const config = { environment: 'dotnet', projectPath: root, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: ['**/obj/**'], fetchLicense: false, noCache: true, uploadToDt: false };
+  const request = { config, tools: { ...tools, dotnetAssets: [join(root, 'obj', 'project.assets.json')] }, outputPath: join(root, 'bom.json') };
+  assert.deepEqual(scanExcludes(request), ['**/obj/!(project.assets.json)']);
+  let ran = false;
+  await generateSbom(request, async () => { ran = true; return response(); });
+  assert.equal(ran, true);
+  await assert.rejects(generateSbom({ ...request, config: { ...config, excludes: ['**/*.json'] } }, async () => response()), /排除規則遮蔽/);
+  await assert.rejects(generateSbom({ ...request, tools: { ...tools, dotnetAssets: [join(root, '..', 'outside', 'project.assets.json')] } }, async () => response()), /根目錄外/);
 }));

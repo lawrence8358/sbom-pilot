@@ -1,8 +1,8 @@
 # SBOM Pilot
 
-在 Azure Pipelines 加入一個 **SBOM Pilot — Generate & Upload SBOM** Task，即可準備 Node.js 與 cdxgen、依 npm lockfile 安裝依賴，產生 CycloneDX 1.6 JSON，並要求 Agent 發佈名稱為 `SBOM` 的 Build Artifact。
+在 Azure Pipelines 加入一個 **SBOM Pilot — Generate & Upload SBOM** Task，即可準備工具並還原專案依賴，產生 CycloneDX 1.6 JSON，並要求 Agent 發佈名稱為 `SBOM` 的 Build Artifact。
 
-本階段提供 Vue/npm 與公開 npm 來源。DT 上傳、pnpm、Yarn、.NET、私有來源認證及合併交付產品將於後續版本交付。`--required-only` 固定啟用，代表 cdxgen 的 required scope 篩選，不能視為已逐項核對實際部署成品。
+本階段提供 Vue/npm 與 SDK-style 現代 .NET，使用公開 npm/NuGet 來源。DT 上傳、pnpm、Yarn、傳統 .NET Framework、私有來源認證及合併交付產品將於後續版本交付。`--required-only` 固定啟用，代表 cdxgen 的 required scope 篩選，不能視為已逐項核對實際部署成品。
 
 ## 前置條件及支援範圍
 
@@ -55,7 +55,7 @@ steps:
 
 | 欄位（YAML） | 預設 | 說明 |
 | --- | --- | --- |
-| `environment` | `vue` | 本階段僅 Vue/npm |
+| `environment` | `vue` | `vue`（Vue/npm）或 `dotnet`（.NET Core／現代 .NET） |
 | `projectPath` | `$(Build.SourcesDirectory)` | 專案根目錄 |
 | `nodeVersion` | `24.x` | 最新符合 semver 範圍的 Node，必須 >=24 |
 | `excludes` | 見下列規則 | 相對根目錄 glob，逗號分隔，保留花括號內逗號 |
@@ -82,3 +82,31 @@ steps:
 - **packageManager 版本不同**：此階段使用 Node 內建 npm，指定相符 Node 版本；獨立準備宣告套件管理器版本將於後續功能交付。
 
 MIT License · Copyright © 2026 Lawrence Shen。第三方授權見 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。
+
+## 現代 .NET 模式
+
+在 Classic Build 選擇「.NET Core／現代 .NET」，專案路徑指向包含 SDK-style `.csproj`、`.fsproj` 或 `.vbproj` 的目錄；YAML 使用同一 Task：
+
+```yaml
+steps:
+  - task: SbomPilot@0
+    inputs:
+      environment: dotnet
+      projectPath: '$(Build.SourcesDirectory)'
+      specVersion: '1.6'
+      uploadToDt: false
+```
+
+Task 從每個專案的實際還原目錄向上尋找 `global.json`，支援註解及完整 `sdk.version`，由 .NET host 套用 `rollForward` 與 `allowPrerelease`。沒有 SDK 版本宣告時採固定 SDK **10.0.101**，不從 TargetFramework 猜測 SDK feature band。建議在 Repo 提交 `global.json` 以固定專案政策：
+
+```json
+{ "sdk": { "version": "10.0.101", "rollForward": "disable" } }
+```
+
+相容 SDK 已安裝時驗證後使用；缺少時以 Microsoft 官方 `dotnet-install` 腳本安裝至 Task 工具快取，設定子程序的 PATH／DOTNET_ROOT，不需要額外 UseDotNet 或 restore Task。Agent 仍須具備 SDK 所需原生程式庫、Windows PowerShell 或 Linux bash，並能存取 dot.net、builds.dotnet.microsoft.com 與有效 NuGet 來源。腳本不會安裝 Visual Studio workloads。`global.json sdk.paths` 目前會明確拒絕；跨專案 SDK 政策、特殊 workloads 或自訂 SDK 無法解析時，請依錯誤檢查專案格式及 Agent 條件。
+
+依賴還原使用 SDK 內建 NuGet，保留分層 `NuGet.Config`。Task 先以 NuGet 還原圖取得實際輸出及 lockfile 路徑，再執行 `dotnet restore`；已有 lockfile 才啟用 locked mode 並驗證內容不變。沒有選用 NuGet 鎖檔的合法專案可正常執行，不需要 npm lockfile。每個專案及其 ProjectReference 必須有有效 `project.assets.json`，否則停止，不將只有直接套件的結果當作完整依賴清單。
+
+`.NET` 有一項必要的排除規則轉換：預設 `**/obj/**` 送給掃描器時轉為 `**/obj/!(project.assets.json)`，繼續排除編譯產物，保留經還原驗證的依賴資料。欄位預設值不變；其他自訂 glob 不會改寫。自訂規則若遮蔽必要 assets，或還原資料位於掃描根目錄外，Task 會失敗並要求調整。排除整個非交付專案時，請使用相對該專案目錄的規則。
+
+Windows x64 已以 SDK 6.0.428、9.0.316、10.0.101 實測公開 NuGet、間接依賴、關係及 CycloneDX 1.6；Linux .NET、實際 Server／Services 安裝及原生成品上傳仍待獨立驗證。詳見 [開發紀錄](README-Dev.md)。傳統非 SDK-style 專案目前不適用此模式。

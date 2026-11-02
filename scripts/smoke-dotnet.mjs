@@ -62,6 +62,8 @@ for (const scenario of [
     assert.equal(publications, 1, 'Stale lock must not publish');
     assert.equal(await hashLock(), before);
     await writeFile(projectFile, projectXml('6.0.0'));
+  } else {
+    await assert.rejects(readFile(join(project, 'packages.lock.json')), { code: 'ENOENT' });
   }
   evidence.push({ scenario: scenario.name, platform: process.platform, arch: process.arch, sdk: scenario.sdk, node: tools.nodeVersion, cdxgen: tools.cdxgenVersion, specVersion: bom.specVersion, components: result.componentCount, direct: 'Microsoft.Extensions.Logging', transitive: 'Microsoft.Extensions.Logging.Abstractions', artifactSha256: createHash('sha256').update(bytes).digest('hex'), lockedUnchanged: scenario.locked || undefined });
   console.log(`DOTNET SMOKE PASS ${scenario.name}: ${result.componentCount} components; direct/transitive packages, dependency edges and schema verified.`);
@@ -73,8 +75,13 @@ if (process.env.SBOM_PILOT_TEST_SDK_DOWNLOAD === '1') {
   const sdk = await prepareDotnetSdk(project, runProcess, { cacheDirectory: join(root, 'download-cache'), tempDirectory: join(root, 'download-temp'), env: { ...process.env, DOTNET_HOST_PATH: join(root, 'missing-host', process.platform === 'win32' ? 'dotnet.exe' : 'dotnet') }, log: console.log });
   assert.equal(sdk.version, '10.0.101');
   assert.ok(sdk.executable.startsWith(join(root, 'download-cache')));
-  evidence.push({ scenario: 'official-sdk-acquisition', platform: process.platform, arch: process.arch, sdk: sdk.version, hostVerified: true });
-  console.log('DOTNET SDK ACQUISITION PASS: official script installed and verified SDK in task-owned cache.');
+  const acquired = await runWorkflow({ environment: 'dotnet', projectPath: project, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: parseExcludes(DEFAULT_EXCLUDES), fetchLicense: false, noCache: true, uploadToDt: false }, join(root, 'run-acquired-sdk'), {
+    log: console.log, prepare: async () => ({ ...tools, env: { ...tools.env, ...sdk.env } }), publish: async () => {},
+  });
+  const acquiredBom = JSON.parse(await readFile(acquired.path, 'utf8'));
+  assert.ok(acquiredBom.components.some(component => component.name === 'Microsoft.Extensions.Logging.Abstractions'));
+  evidence.push({ scenario: 'official-sdk-acquisition', platform: process.platform, arch: process.arch, sdk: sdk.version, hostVerified: true, restoredAndScanned: true, components: acquired.componentCount });
+  console.log('DOTNET SDK ACQUISITION PASS: official script installed SDK in task-owned cache, host verified, real restore and SBOM passed.');
 }
 await writeFile(join(root, 'evidence.json'), JSON.stringify(evidence, null, 2));
 console.log('Only local artifact adapter tested; real Azure DevOps publication and Linux .NET execution require separate evidence.');

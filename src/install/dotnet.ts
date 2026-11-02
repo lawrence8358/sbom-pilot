@@ -17,13 +17,15 @@ export const dotnetInstaller = {
     const cacheDirectory = tools.env.AGENT_TOOLSDIRECTORY ?? join(tempDirectory, 'tools');
     const originalEnv = { ...tools.env };
     let scanEnv: NodeJS.ProcessEnv | undefined;
+    const assets = new Set<string>();
     for (const project of projects) {
       const sdk = await prepareDotnetSdk(project.directory, run, { cacheDirectory, tempDirectory: join(tempDirectory, 'dotnet'), env: originalEnv, log: options.log });
-      await restoreDotnetProject(project.path, sdk, run, join(tempDirectory, 'dotnet'));
+      for (const restored of await restoreDotnetProject(project.path, sdk, run, join(tempDirectory, 'dotnet'))) assets.add(restored.assetsPath);
       scanEnv ??= sdk.env;
       options.log?.(`.NET 還原完成（SDK ${sdk.version}）；已驗證 project.assets.json。`);
     }
     // This ToolContext belongs to a single workflow; propagate only to child commands.
     tools.env = { ...tools.env, ...scanEnv };
+    tools.dotnetAssets = [...assets];
   },
 };
