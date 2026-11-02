@@ -10,11 +10,12 @@ export interface JavaScriptProject {
   root: string;
   manager: JavaScriptManager;
   version: string;
-  reason: 'declaration' | 'fallback';
+  reason: 'declaration' | 'fallback' | 'project-binary';
   integrity?: string;
   lockPath: string;
+  yarn?: { generation: 'classic' | 'modern'; path?: string };
 }
-export interface ManagerCommand { executable: string; args: string[] }
+export interface ManagerCommand { executable: string; args: string[]; env?: NodeJS.ProcessEnv; version?: string }
 export interface JavaScriptAdapter {
   install(project: JavaScriptProject, command: ManagerCommand, tools: ToolContext, run: ProcessRunner): Promise<void>;
 }

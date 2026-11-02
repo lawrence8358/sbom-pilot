@@ -9,6 +9,7 @@ npm run build
 npm run test:smoke
 npm run test:options-smoke
 npm run test:smoke:pnpm
+npm run test:smoke:yarn
 npm run package:dev
 ```
 
@@ -36,10 +37,11 @@ npm run package:release
 | `src/process.ts` | `ProcessRunner(Command)`，無 shell、執行逾時、抑制來源秘密輸出 |
 | `src/tools.ts` | `ToolContext`、Node 解析／SHA-256 校驗／快取、隔離 cdxgen 準備 |
 | `src/install/contracts.ts` | `DependencyInstaller`；第四個 options 提供暫存目錄與 logger，保留原有三參數注入 |
-| `src/install/javascript.ts` | npm／pnpm 預設分派、鎖檔內容檢查；可注入 Yarn adapter |
+| `src/install/javascript.ts` | npm／pnpm／Yarn 預設分派、鎖檔內容檢查與可注入 adapter |
 | `src/install/project.ts` | 宣告／鎖檔／pnpm workspace 辨識與固定 fallback |
 | `src/install/manager.ts` | 隔離準備精確版本、封裝雜湊與 Node engine 驗證、JS／原生 bin 啟動、清理 |
 | `src/install/npm.ts`、`pnpm.ts` | npm ci／pnpm frozen 安裝；不額外改變專案腳本政策 |
+| `src/install/yarn-project.ts`、`yarn.ts` | Yarn 世代／專案入口／fallback 辨識，Classic frozen+integrity 與現代 immutable |
 | `src/scan.ts` | CLI 參數與掃描，禁止重複 install |
 | `src/validation.ts` | 官方 Schema 驗證後回傳 `ValidatedSbom` |
 | `src/dt/config.ts` | 僅啟用時驗證 URL／UUID／Key／TLS 選項 |
@@ -57,6 +59,10 @@ npm run package:release
 
 workspace smoke 同時揭露 ajv-formats-draft2019 的 IRI scheme 白名單誤拒合法 `git+https`。handler 對 ASCII IRI-reference 使用 URI-reference 語法驗證，Unicode 則保留原國際格式驗證器；官方 Schema 未修改。回歸測試接受 git+https／Unicode URL，並拒絕 ASCII URL 的空白及無效百分號編碼。
 
+2026-11-02 ticket 04：`npm test` 35/35 通過。`npm run test:smoke:yarn` 實測 Classic 1.22.22 node_modules、Yarn 4.18.1 PnP／node-modules，皆以 Node 24.22.2／cdxgen 13.6.0 產生官方 1.6 Schema 有效的 6 組件 SBOM；workspace 與間接依賴圖、實際模組載入、專案腳本、鎖檔／設定不變、錯誤 manifest 失敗均驗證。Corepack Classic SHA-1 封裝、現代 SHA-224 CLI 及本機 yarnPath 亦有真實驗證。上游 required scope 會保留 workspace 開發專用 chalk，此限制詳見 [Yarn 說明](docs/yarn.md)，沒有另做排除或宣稱開發依賴全面消失。
+
+`test:smoke:yarn -- --refresh-fixtures` 是維護者明確更新範例鎖檔的模式，在 `.smoke/` 隔離撰寫後將 lockfile 複製回範例；正常 smoke 與 Task 都只使用提交的鎖檔，不更新它們。新增依賴／設定後請檢查並提交範例鎖檔；不要把大型快取或專案安裝結果加入版本庫。
+
 ## 來源與已知驗證邊界
 
 - npm registry 實際查證 `@cdxgen/cdxgen@13.6.0` 可取得，engines Node >=24、CLI `bin/cdxgen.js`。原始碼：[固定 tag](https://github.com/cdxgen/cdxgen/tree/v13.6.0)。
@@ -67,7 +73,7 @@ workspace smoke 同時揭露 ajv-formats-draft2019 的 IRI scheme 白名單誤�
 - 尚待：實際 VSIX 安裝、Classic/YAML、Server/Services、Linux 與 arm64、真正 Agent 成品失敗傳播、企業 Proxy/CA。manifest 最低 Agent 不代表 Server 配對已驗證。
 - 工具下載使用原生 fetch，尚未套用 Azure Agent ProxyUrl/CA 設定。npm 保留 Agent 與 Repo 設定，但本階段未交付 Task 管理私有來源認證。來源認證不得放 CLI arguments，也不得把含秘密的 child stdout/stderr 寫到日誌。
 
-## 現代 .NET：開發與驗證
+## .NET Core：開發與驗證
 
 `src/dotnet/projects.ts` 辨識 SDK-style 專案並保留排除規則；`sdk.ts` 讀取 JSONC `global.json`、驗證 host 選擇及使用官方腳本準備缺少的 SDK；`restore.ts` 透過 NuGet `GenerateRestoreGraphFile` 評估匯入屬性中的 outputPath/nuGetLockFilePath，執行 restore 並驗證 lockfile/依賴資料。`src/install/dotnet.ts` 是 workflow adapter。
 

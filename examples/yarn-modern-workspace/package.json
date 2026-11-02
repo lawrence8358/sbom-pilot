@@ -1,0 +1,12 @@
+{
+  "name": "example-modern-product",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "yarn@4.18.1+sha224.065c7650cf11cb01e21cefe2398a1c8a70a13bd04136056722763046",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "postinstall": "node -e \"require('fs').writeFileSync('install-marker.txt', 'project script ran')\""
+  }
+}

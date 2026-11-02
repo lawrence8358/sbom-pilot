@@ -10,10 +10,11 @@ Run `node scripts/resume.mjs` in the integration worktree, then read `implementa
 - Integration branch: `feature/sbom-pilot` in `D:/Project/Git/sbom-pilot`.
 - Ticket 01 code: `a543dc9`; merged by merger in `f8abe50`.
 - Recovery workflow/dispatch manifest/read-only resume inspector: `caa7f3c`.
-- Ticket 02: branch `ticket/02-options`, WIP `944d6aa`; checkpoint and later test fix in its existing worktree. Finish option validation/smoke; Ajv upgraded to8.20.0.
-- Ticket 03: branch `ticket/03-pnpm`, coordinator preserved interrupted work in `2d02f77`; checkpoint exists. Typecheck passed after resumption; JS detection/manager/pnpm modules need tests and real smoke.
-- Ticket 05: branch `ticket/05-dotnet`, WIP `75ddc45`; JSONC dependency and detailed plan checkpointed, product code still being implemented at recovery.
-- Workers were resumed after the user's explicit continue instruction. Agent IDs/conversations can be replaced; branches/worktrees/checkpoints retain the work.
+- Tickets 02/03/05/08 are now integrated. Latest combined verification:45 tests, build and developer VSIX passed at merge `bedcdf8`. Current HEAD and active leases must be read from Git and implementation-state.json.
+- Serial execution is the user's latest direction: at most one subagent, including implementation, merge and review. Finish verified integration before starting another ticket.
+- Ticket 04 Yarn is integrated in `330425d`: typecheck, 54 tests, build and developer VSIX passed. Its real Classic/PnP/node_modules workspace smoke passed before interruption; recovered process exit0 and final evidence are in checkpoint04. No need to repeat unchanged smoke.
+- Ticket 06 Framework (`940ff8b`) is the sole active slice; ticket 11 compatibility/network (`25a2a09`) is parked with clean committed WIP. Read each checkpoint in its own worktree before resuming.
+- Agent IDs/conversations can be replaced; branches/worktrees/checkpoints retain the work. Product terminology follows the original requirement: .NET Core.
 
 ## Validation already performed
 
@@ -21,12 +22,16 @@ Run `node scripts/resume.mjs` in the integration worktree, then read `implementa
 - Root merger independently ran npm ci/test/build successfully on integration.
 - Root ran Linux Docker `node:24-bookworm` (digest `sha256:e7add2a490bb17d97b485b8641bd88455fff7839ade0f5eba493c3508124d413`): fresh npm ci,10/10 tests, build, cold real tool smoke all passed.23 components, same Vue/chalk and lock invariants. Container was removed normally. This is local Linux scan evidence, not a live Agent run.
 - Production audit baseline had direct Ajv8.17.1 moderate (02 upgrades) plus task-lib/tool-lib transitive minimatch advisory with no compatible upstream fix. Do not blindly override minimatch to a breaking major; reassess audit on final lockfile.
+-02 options smoke verified paths with spaces and26components without exclusions versus23 with both design directories excluded. Ajv upgraded to8.20.0.
+-03 real Windows smoke verified pnpm10workspace, pnpm12native executable and declared npm10 installation. Valid git+https IRI references exposed a format-library bug; the committed validator preserves official schema and validates ASCII references correctly.
+-05 real Windows SDK6/9/10 restore and scan, custom assets/lock paths, stale lock rejection and official SDK acquisition passed. Default obj exclusion must retain restore dependency metadata; this is implemented and must be preserved in07.
+-08 real local HTTP/TLS tests, actual bundled debug secret ordering and artifact attempt after DT failure passed. This is not live DT or Azure verification.
 
 ## Remaining graph and integration
 
-- Currently implemented only01.02/03/05 are in progress.04,08,11 are unassigned frontier;06 follows05;07 follows02/03/04/05;09 follows03/04;10 follows06;12 follows07/08/09/10/11.
-- Once a worker has final commit, use a merger subagent to merge into integration. Root should not mutate integration simultaneously. Preserve all config/workflow/manifest behavior across parallel branches; resolve package-lock from merged package manifests and rerun checks if conflict requires regeneration.
--03 owns generic JS installer dispatch and test discovery;05 adds modern.NET dispatch;02 owns config/options, so shared workflow/config/manifest edits may need semantic merging.
+- Code integrated:01/02/03/04/05/08. Sole active ticket:06; parked:11.07/09 are ready but queued;10 follows06,12 follows07/09/10/11. The resume inspector recomputes the actual unassigned frontier from ticket edges and state.
+- Once a worker has a final commit, run the merger as the sole subagent. Root should not mutate integration simultaneously. Preserve all config/workflow/manifest behavior, terminology corrections and serial dispatch policy across retained branches; resolve package-lock from merged package manifests and rerun checks if conflict requires regeneration.
+-03 added generic JS installer dispatch and test discovery;05 added .NET Core dispatch;08 added conditional DT. Subsequent workflow/config/manifest edits must preserve all three. jsonc-parser needs its published ESM entry alias in both actual build and bundle tests to avoid a real UMD startup failure found during integration.
 - After integration, update `integratedTickets` and active leases, progress/evidence, and recompute frontier. Save checkpoints before any new long-running task.
 - Final Standards/Spec review has NOT started. Must run both against `e3a5bf6...HEAD`, fix findings in an isolated implementer worktree, verify and commit.
 
@@ -37,3 +42,4 @@ Run `node scripts/resume.mjs` in the integration worktree, then read `implementa
 - No live Azure DevOps organization/server supplied: install/UI/real Artifact completion checks still unverified. Agent awaits queued artifact uploads and propagates upload failure; do not delete output or synchronously claim success.
 - Optional publisher question had no answer yet: reference project has actual Publisher ID LawrenceShen, but do not infer consent from author name. Current developer VSIX uses explicitly local test publisher. No public repo URL exists; public packaging must not invent one.
 - Full spec/public branding already approved: SBOM Pilot, sbom-pilot, Task display SBOM Pilot — Generate & Upload SBOM, MIT, Lawrence Shen, Traditional Chinese README plus developer guide. No further design interview is needed for those decisions.
+- Yarn workspace experiment found upstream cdxgen13.6 can mark a dev-only workspace dependency as required, so required-only retains it. Keep mandated scope behavior, record this concrete limitation and do not claim all non-production dependencies are guaranteed absent or silently invent a second filter.

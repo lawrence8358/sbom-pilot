@@ -3,11 +3,42 @@
   "id": "sbom-pilot",
   "name": "SBOM Pilot",
   "version": "0.1.0",
-  "description": "產生 CycloneDX SBOM 的單一 Azure Pipelines Task。作者 Lawrence Shen；MIT 授權。",
+  "description": "產生 CycloneDX SBOM 的單一 Azure Pipelines Task。",
   "public": false,
-  "targets": [{ "id": "Microsoft.VisualStudio.Services" }],
-  "categories": ["Azure Pipelines"],
-  "content": { "details": { "path": "README.md" }, "license": { "path": "LICENSE" } },
-  "files": [{ "path": "dist" }, { "path": "THIRD-PARTY-NOTICES.md" }],
-  "contributions": [{ "id": "sbom-pilot", "type": "ms.vss-distributed-task.task", "targets": ["ms.vss-distributed-task.tasks"], "properties": { "name": "dist" } }]
+  "targets": [
+    {
+      "id": "Microsoft.VisualStudio.Services"
+    }
+  ],
+  "categories": [
+    "Azure Pipelines"
+  ],
+  "content": {
+    "details": {
+      "path": "README.md"
+    },
+    "license": {
+      "path": "LICENSE"
+    }
+  },
+  "files": [
+    {
+      "path": "dist"
+    },
+    {
+      "path": "THIRD-PARTY-NOTICES.md"
+    }
+  ],
+  "contributions": [
+    {
+      "id": "sbom-pilot",
+      "type": "ms.vss-distributed-task.task",
+      "targets": [
+        "ms.vss-distributed-task.tasks"
+      ],
+      "properties": {
+        "name": "dist"
+      }
+    }
+  ]
 }

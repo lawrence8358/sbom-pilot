@@ -1,8 +1,8 @@
 # JavaScript 套件管理器
 
-Task 依宣告與 lockfile 選擇管理器，不需要 Corepack 或全域 npm／pnpm。提供 `packageManager: "pnpm@10.34.2"` 或 `npm@10.9.2` 等精確版本時，Task 優先遵循；Node 內建 npm 若已相符即可使用，否則在 Task 暫存目錄隔離準備，驗證實際版本及 Node engine 後執行。標準 `+sha224.<hex>`／sha256／sha384／sha512 雜湊後綴會以下載的套件封裝實際位元組驗證，錯誤時不執行工具安裝腳本。版本範圍、自訂 URL、未知管理器會報錯。
+Task 依宣告與 lockfile 選擇管理器，不需要 Corepack 或全域 npm／pnpm／Yarn。提供 `packageManager: "pnpm@10.34.2"`、`npm@10.9.2` 或 `yarn@4.18.1` 等精確版本時，Task 優先遵循；Node 內建 npm 若已相符即可使用，否則在 Task 暫存目錄隔離準備，驗證實際版本及 Node engine 後執行。標準 sha1／sha224／sha256／sha384／sha512 雜湊後綴也會驗證；npm／pnpm／Classic Yarn 驗證封裝位元組，現代 Yarn 依 Corepack 格式驗證 CLI 執行檔。版本範圍、自訂 URL、未知管理器會報錯。
 
-未宣告精確版本時，npm 固定使用 `11.19.1`；pnpm 單段 YAML 的 lockfileVersion `9`／`9.0` 固定使用 `10.34.2`，不宣稱這是原作者的工具版本。pnpm 12 的多段 YAML 或其他 lock 格式請先明訂精確版本；Task 不會升級鎖檔。Yarn adapter 尚未交付，保留明確擴充介面，遇到 Yarn 會失敗而非改用 npm。
+未宣告精確版本時，npm 固定使用 `11.19.1`；pnpm 單段 YAML 的 lockfileVersion `9`／`9.0` 固定使用 `10.34.2`，不宣稱這是原作者的工具版本。pnpm 12 的多段 YAML 或其他 lock 格式請先明訂精確版本；Task 不會升級鎖檔。Yarn Classic 固定 fallback 為 `1.22.22`，現代 Yarn metadata 10 固定為 `4.18.1`；其他現代格式需明訂精確版本或專案執行檔，詳見 [Yarn 說明](yarn.md)。
 
 npm 專案只能存在一份 `package-lock.json` 或 `npm-shrinkwrap.json`；pnpm 專案使用 `pnpm-lock.yaml`。同根多鎖檔、管理器宣告與鎖檔不同、pnpm workspace 根目錄出現 npm 鎖檔均會在安裝前報錯。缺少或 manifest 不同步時，請在本機以相同管理器修正並提交，不要在 Pipeline 中產生新鎖檔。
 

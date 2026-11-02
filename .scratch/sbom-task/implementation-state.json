@@ -3,11 +3,11 @@
   "integrationBranch": "feature/sbom-pilot",
   "reviewBase": "e3a5bf6ed57b74c519d0d64285f2929d0195688b",
   "noRemoteWrites": true,
-  "integratedTickets": ["01", "02", "03"],
+  "dispatchPolicy": { "maxConcurrentSubagents": 1, "requireVerifiedIntegrationBeforeNextTicket": true },
+  "integratedTickets": ["01", "02", "03", "04", "05", "08"],
   "activeWorktrees": [
-    { "ticket": "08", "branch": "ticket/08-dt", "worktree": "../.sbom-pilot-worktrees/08-dt", "checkpoint": ".scratch/sbom-task/checkpoints/08.md" },
-    { "ticket": "04", "branch": "ticket/04-yarn", "worktree": "../.sbom-pilot-worktrees/04-yarn", "checkpoint": ".scratch/sbom-task/checkpoints/04.md" },
-    { "ticket": "05", "branch": "ticket/05-dotnet", "worktree": "../.sbom-pilot-worktrees/05-dotnet", "checkpoint": ".scratch/sbom-task/checkpoints/05.md" }
+    { "ticket": "11", "phase": "parked", "branch": "ticket/11-compat", "worktree": "../.sbom-pilot-worktrees/11-compat", "checkpoint": ".scratch/sbom-task/checkpoints/11.md" },
+    { "ticket": "06", "phase": "implementing", "branch": "ticket/06-framework", "worktree": "../.sbom-pilot-worktrees/06-framework", "checkpoint": ".scratch/sbom-task/checkpoints/06.md" }
   ],
   "reviewStatus": "not-started",
   "externalValidation": ["live Azure DevOps Services/Server installation and artifact download", "real public Publisher ID confirmation", "public repository URL (no remote exists)"],
