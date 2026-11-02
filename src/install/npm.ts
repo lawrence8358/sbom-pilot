@@ -8,7 +8,7 @@ export async function inspectNpmProject(root: string): Promise<void> {
 }
 export const npmAdapter: JavaScriptAdapter = {
   async install(project, command, tools, run) {
-    await run({ executable: command.executable, args: [...command.args, 'ci', '--no-audit', '--no-fund', '--fetch-retries=2', '--fetch-timeout=60000'], cwd: project.root, env: tools.env });
+    await run({ executable: command.executable, args: [...command.args, 'ci', '--no-audit', '--no-fund', '--fetch-retries=2', '--fetch-timeout=60000'], cwd: project.root, env: command.env ?? tools.env });
   },
 };
 export const npmInstaller: DependencyInstaller = {

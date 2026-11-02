@@ -66,3 +66,7 @@ steps:
 8. 企業情境另跑 authenticated Proxy、bypass、內部 CA、DT預設TLS／略過的矩陣。記錄具體憑證與 Proxy 類型但不保存秘密。完成後將實際結果／hash／版本填回驗證紀錄；沒有執行的列保持 UNVERIFIED。
 
 Build Artifact 的 logging command 由 Agent 非同步處理；handler 的「已排入佇列」不是完成確認。[官方成品命令](https://learn.microsoft.com/en-us/azure/devops/pipelines/scripts/logging-commands?view=azure-devops#upload-upload-an-artifact) 與 [Agent StepsRunner](https://github.com/microsoft/azure-pipelines-agent/blob/v3.238.0/src/Agent.Worker/StepsRunner.cs) 支持此設計，實際下載與失敗結果仍需上述 live 驗證。
+
+## 私有 npm 來源追加驗證
+
+2026-11-03：Windows x64 完整私有來源七種情境，以及 Ubuntu24.04.3 x64／Node24.22.2／SDK10.0.101 容器的 npm、原生pnpm12、YarnPnP、合併產品，均實際下載 Bearer／Basic 私有套件與無認證公開套件並驗證依賴邊／1.6Schema／本機成品。Windows與Linux各91/91測試；錯誤／缺認證、來源隔離、清理及設定／鎖檔不變亦通過。完整命令與限制見[私有 npm 文件](npm-auth.md)；此紀錄追加於上方先前入口／協定與合併驗證，liveAzure及企業環境狀態不變。

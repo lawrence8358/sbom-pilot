@@ -13,7 +13,7 @@ export interface CombinedInstallers {
 export async function installCombinedProject(root: string, tools: ToolContext, run: ProcessRunner, options: CombinedInstallOptions = {}, installers: CombinedInstallers = { javascript: javascriptInstaller, dotnet: dotnetInstaller }): Promise<void> {
   const projects = await discoverJavaScriptProjects(root, options.excludes);
   options.log?.(`合併交付產品：辨識 ${projects.length} 個 JavaScript 安裝根目錄；workspace 成員不重複安裝。`);
-  for (const project of projects) await installers.javascript.install(project.root, tools, run, options);
+  for (const project of projects) await installers.javascript.install(project.root, tools, run, { ...options, sourceRoot: root });
   // Propagates verified SDK child environment and assets into this workflow's tools.
   await installers.dotnet.install(root, tools, run, options);
 }

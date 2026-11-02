@@ -99,7 +99,7 @@ test('combined preparation restores each JavaScript root then backend with same 
   const calls: string[] = [], excludes = ['**/_Design{,Front}/**'];
   const context = { ...tools, env: { ...tools.env } };
   await installCombinedProject(root, context, async () => ({ stdout: '', stderr: '' }), { excludes }, {
-    javascript: { install: async directory => { calls.push(directory); } },
+    javascript: { install: async (directory, _tools, _run, options) => { calls.push(directory); assert.equal(options?.sourceRoot, root); } },
     dotnet: { install: async (directory, selected, _run, options) => {
       calls.push(directory); assert.equal(options?.excludes, excludes);
       selected.dotnetAssets = [join(root, 'backend/obj/project.assets.json')];

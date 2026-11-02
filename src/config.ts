@@ -1,6 +1,7 @@
 import { realpath, stat } from 'node:fs/promises';
 import { CDXGEN_VERSION, SUPPORTED_SPEC_VERSIONS, validateToolOptions } from './tool-options';
 import { DEFAULT_DT_URL, validateDtConfig, type DtConfig } from './dt/config';
+import { parseNpmCredentials, validateNpmCredentials, type NpmCredential } from './install/npm-credentials';
 
 export const DEFAULT_EXCLUDES = '**/_Design{,Front}/**,**/bin/**,**/obj/**,**/node_modules/**,**/dist/**';
 export interface TaskConfig {
@@ -14,6 +15,7 @@ export interface TaskConfig {
   noCache: boolean;
   uploadToDt: boolean;
   dt?: DtConfig;
+  npmCredentials?: NpmCredential[];
 }
 export function parseExcludes(value: string): string[] {
   const result: string[] = [];
@@ -56,6 +58,7 @@ export function readTaskConfig(read: InputReader): TaskConfig {
     specVersion: text('specVersion', '1.6'), excludes: parseExcludes(excludes === undefined ? DEFAULT_EXCLUDES : excludes),
     fetchLicense: boolean('fetchLicense', true), noCache: boolean('noCache', true), uploadToDt,
     dt: uploadToDt ? validateDtConfig({ apiUrl: text('dtApiUrl', DEFAULT_DT_URL), projectUuid: text('dtProjectUuid'), apiKey: text('dtApiKey'), skipTlsCertificateCheck: boolean('skipDtTlsCertificateCheck', false) }) : undefined,
+    npmCredentials: parseNpmCredentials(read('npmCredentials')),
   };
 }
 export async function validateConfig(config: TaskConfig): Promise<TaskConfig> {
@@ -70,5 +73,5 @@ export async function validateConfig(config: TaskConfig): Promise<TaskConfig> {
   if (!Array.isArray(config.excludes) || config.excludes.some(value => typeof value !== 'string' || value.includes('\0'))) throw new Error('排除規則必須是 glob 字串清單。');
   const projectPath = await realpath(config.projectPath);
   if (!(await stat(projectPath)).isDirectory()) throw new Error('專案路徑必須是目錄。');
-  return { ...config, projectPath, dt: config.uploadToDt ? validateDtConfig(config.dt) : undefined };
+  return { ...config, projectPath, dt: config.uploadToDt ? validateDtConfig(config.dt) : undefined, npmCredentials: config.npmCredentials === undefined ? undefined : validateNpmCredentials(config.npmCredentials) };
 }

@@ -6,12 +6,16 @@ import { createHash } from 'node:crypto';
 import type { ToolContext } from '../tools';
 import type { ProcessRunner } from '../process';
 import type { InstallOptions, JavaScriptProject, ManagerCommand } from './contracts';
+import { NpmAuthenticationError } from './npm-credentials';
 
-export async function withPackageManager(project: JavaScriptProject, tools: ToolContext, run: ProcessRunner, options: InstallOptions, action: (command: ManagerCommand) => Promise<void>): Promise<void> {
+export async function withPackageManager(project: JavaScriptProject, tools: ToolContext, run: ProcessRunner, options: InstallOptions & { projectEnvironment?: NodeJS.ProcessEnv }, action: (command: ManagerCommand) => Promise<void>): Promise<void> {
   let directory: string | undefined;
   try {
     const modernYarn = project.manager === 'yarn' && project.yarn?.generation === 'modern';
-    const managerEnv = project.manager === 'yarn' ? { ...tools.env, YARN_IGNORE_PATH: '1' } : tools.env;
+    // Only the verified project command/config initialization receives explicit
+    // placeholder mappings. Provisioning below retains the original tool env.
+    const projectEnv = options.projectEnvironment ?? tools.env;
+    const managerEnv = project.manager === 'yarn' ? { ...projectEnv, YARN_IGNORE_PATH: '1' } : projectEnv;
     const verifyBinaryHash = async (path: string) => {
       if (!project.integrity) return;
       const [algorithm, expected] = project.integrity.split('-');
@@ -31,10 +35,10 @@ export async function withPackageManager(project: JavaScriptProject, tools: Tool
       return;
     }
     if (project.manager === 'npm' && !project.integrity) {
-      const actual = (await run({ executable: tools.node, args: [tools.npmCli, '--version'], cwd: project.root, env: tools.env })).stdout.trim();
+      const actual = (await run({ executable: tools.node, args: [tools.npmCli, '--version'], cwd: project.root, env: managerEnv })).stdout.trim();
       if (actual === project.version) {
         options.log?.(`npm ${actual}（${project.reason === 'declaration' ? '專案宣告' : '固定 fallback'}）。`);
-        await action({ executable: tools.node, args: [tools.npmCli] });
+        await action({ executable: tools.node, args: [tools.npmCli], env: managerEnv, version: actual });
         return;
       }
     }
@@ -70,7 +74,8 @@ export async function withPackageManager(project: JavaScriptProject, tools: Tool
     const command = /\.(?:c?js|mjs)$/i.test(executable) ? { executable: tools.node, args: [executable] } : { executable, args: [] };
     if (modernYarn) await verifyBinaryHash(executable);
     await verifyCommand(command);
-  } catch {
+  } catch (error) {
+    if (error instanceof NpmAuthenticationError) throw error;
     throw new Error(`${project.manager} ${project.version} 準備或嚴格安裝失敗（${project.manager === 'npm' ? 'npm ci' : project.yarn?.generation === 'modern' ? '--immutable' : '--frozen-lockfile'}）；請檢查 Node 相容性、lockfile、來源與安裝腳本。未轉印可能含認證的子程序輸出。`);
   } finally {
     if (directory) await rm(directory, { recursive: true, force: true });

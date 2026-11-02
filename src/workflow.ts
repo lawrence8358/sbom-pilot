@@ -38,14 +38,14 @@ export async function runWorkflow(input: TaskConfig, tempDirectory: string, serv
   await mkdir(tempDirectory, { recursive: true });
   const tools = await stage('工具準備', () => (services.prepare ?? prepareTools)({ nodeVersion: config.nodeVersion, cdxgenVersion: config.cdxgenVersion, tempDirectory }, run, services.log));
   await stage('依賴安裝', () => services.installer
-    ? services.installer.install(config.projectPath, tools, run, { tempDirectory, log: services.log })
+    ? services.installer.install(config.projectPath, tools, run, { tempDirectory, log: services.log, npmCredentials: config.npmCredentials, sourceRoot: config.projectPath })
     : config.environment === 'dotnet'
       ? dotnetInstaller.install(config.projectPath, tools, run, { tempDirectory, log: services.log, excludes: config.excludes })
       : config.environment === 'netframework'
         ? frameworkInstaller.install(config.projectPath, tools, run, { tempDirectory, log: services.log, excludes: config.excludes })
         : config.environment === 'combined'
-          ? combinedInstaller.install(config.projectPath, tools, run, { tempDirectory, log: services.log, excludes: config.excludes })
-          : javascriptInstaller.install(config.projectPath, tools, run, { tempDirectory, log: services.log }));
+          ? combinedInstaller.install(config.projectPath, tools, run, { tempDirectory, log: services.log, excludes: config.excludes, npmCredentials: config.npmCredentials })
+          : javascriptInstaller.install(config.projectPath, tools, run, { tempDirectory, log: services.log, npmCredentials: config.npmCredentials, sourceRoot: config.projectPath }));
   const outputPath = join(tempDirectory, 'sbom', 'bom.json');
   await mkdir(join(tempDirectory, 'sbom'), { recursive: true });
   await stage('SBOM 產生', () => (services.generate ?? generateSbom)({ config, tools, outputPath }, run));

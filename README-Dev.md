@@ -138,3 +138,15 @@ Microsoft 來源：[NuGet/MSBuild restore](https://learn.microsoft.com/en-us/nug
 `src/install/javascript-projects.ts` 從共同根目錄探索未排除的前端 manifest，將 workspace 成員歸到其安裝根目錄；`src/install/combined.ts` 先逐一呼叫現有 JavaScript installer，再呼叫 .NET Core installer。`runWorkflow` 保持一次產生／驗證／DT／artifact 流程，掃描使用 dotnet+js。`CombinedInstallOptions` 沿用 `tempDirectory?`、`log?`、`excludes?`；ToolContext 的 child-only env 與已驗證 assets 在整次流程延續，供後續私有來源注入。
 
 `npm run test:smoke:combined` 實際還原並檢查組件、依賴邊、一次掃描及本機成品、共用排除及鎖檔不變。Windows 六種場景與 Linux Ubuntu SDK 容器的實際還原／合併掃描結果及完整 Docker 命令見 [combined.md](docs/combined.md)。單元測試總計76項；本機 artifact adapter 不代表 Azure 原生成品已上傳。Yarn dev-only required scope 限制照實保留；Linux Framework 不適用。
+
+## 私有 npm 認證：開發與驗證
+
+使用者介面與 SecretVariable 範例見 [npm-auth.md](docs/npm-auth.md)。`npm-credentials.ts` 負責格式／映射驗證與衍生值；`npm-auth.ts` 檢查 source/auth-slot 對應、保留分層設定，在 repo 外建立可清理的 userconfig 或 Yarn plugin。JS installer 先準備管理器，再讓專案版本／config 初始化與 install 取得明確映射；工具準備、scanner、.NET Core 與 DT 沿用原 ToolContext.env。
+
+`npm test` 現為91項（原76項加15項認證回歸），涵蓋來源隔離、Base64、父環境與不同 userconfig/authfile、Yarn fallback、temp cleanup及實際 bundled pre-SDK secret masking。`npm run test:smoke:npm-auth` 用本機合成 registry 與真正套件下載驗證 npm11.19.1、pnpm10.34.2／native12.16.1、Classic1.22.22、Yarn4.18.1 PnP／node-modules及私有前端＋.NET Core 合併產品。
+
+2026-11-03 Windows x64 已分段完成真實矩陣：npm4、pnpm10/12各3、Classic/PnP/node-modules各4、combined10個有效組件。每種情境有Bearer與Basic私有套件→公開套件依賴邊、官方1.6Schema、一次scan/localartifact、明確placeholder、wrong/missing安裝失敗、設定／鎖檔不變及清理／秘密檢查；合併另有Logging→Abstractions後端邊。Node24.22.2/cdxgen13.6.0，hostNode24.22.1。完整最終重跑與額外平台結果以checkpoint09最新紀錄為準。
+
+fixture作者建立鎖檔；workflow仍嚴格安裝。Yarn fixture關閉globalmirror並隔離globalFolder，避免同名測試套件的metadata/tarball快取造成假成功。生產Repo快取政策不變。失敗診斷只在合成fixture保留受限且去識別的文字，不轉印真實子程序原始輸出。證據在忽略的`.smoke/npm-auth/evidence.json`，不提交完整產物或日誌。此驗證不等於公司feed、真實Azure發佈或private license metadata補充已驗收。
+
+工單09最終來源`a4b85be`：Windows完整七種private registry smoke及Linux Ubuntu24.04.3 x64的npm／nativepnpm12／YarnPnP／combined均通過；兩邊91/91測試。Typecheck、build、developer VSIX與隔離dist/VSIX啟動／原始及衍生npm秘密遮罩／manifest／notice檢查通過。重跑Docker命令見[私有來源文件](docs/npm-auth.md)；Linux證據`.smoke/npm-auth-linux-evidence.json`。這些是本機合成來源與artifact adapter，不代表liveAzure或公司feed已驗收。
