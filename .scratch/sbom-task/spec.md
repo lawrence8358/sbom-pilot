@@ -1,8 +1,8 @@
 # SBOM Pilot 需求規格
 
-Status: needs-info
+Status: ready-for-agent
 
-原始需求：[需求.md](../../需求.md)。本文記錄 grill-with-docs 訪談中確認的需求；尚未確認整體規格或授權開始實作。
+原始需求：[需求.md](../../需求.md)。使用者已核可需求及工單拆分，並授權依本規格在本機開發分支實作；目前沒有遠端 Repo，不建立 PR。
 
 ## 已確認
 
