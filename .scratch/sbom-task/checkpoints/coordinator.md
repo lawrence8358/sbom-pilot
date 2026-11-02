@@ -10,11 +10,12 @@ Run `node scripts/resume.mjs` in the integration worktree, then read `implementa
 - Integration branch: `feature/sbom-pilot` in `D:/Project/Git/sbom-pilot`.
 - Ticket 01 code: `a543dc9`; merged by merger in `f8abe50`.
 - Recovery workflow/dispatch manifest/read-only resume inspector: `caa7f3c`.
-- Tickets 01/02/03/04/05/06/08 are integrated. Latest combined verification:61 tests and typecheck passed at `ba15e11`; the product tree is identical to ticket06's verified build/developer VSIX at `a2d5c63`. Current HEAD and active leases must be read from Git and implementation-state.json.
+- Tickets 01/02/03/04/05/06/08/11 are integrated. Latest combined verification: npm ci, typecheck and67tests passed at `3e4d1aa`; product tree is identical to ticket11's verified Windows/Linux dist/VSIX at `5cc6c11`. Current HEAD and active leases must be read from Git and implementation-state.json.
 - Serial execution is the user's latest direction: at most one subagent, including implementation, merge and review. Finish verified integration before starting another ticket.
 - Ticket 04 Yarn is integrated in `330425d`: typecheck, 54 tests, build and developer VSIX passed. Its real Classic/PnP/node_modules workspace smoke passed before interruption; recovered process exit0 and final evidence are in checkpoint04. No need to repeat unchanged smoke.
 - Ticket 06 Framework is integrated at `ba15e11`; typecheck and61tests passed after conflict-free merge. Real Windows three-format/Unicode/edge smoke and build/devVSIX passed on the identical product tree at `a2d5c63`.
-- Ticket 11 is ready for integration at `5cc6c11`: Windows/Linux Node24 67 tests and packaged dist/VSIX checks passed; Node20 shipped checks and 16 network/DT/process tests passed. UTF-8 split-chunk fix included. Next merge/verify integration; do not restart finished checks. Own checkpoint11 records exact images, results and retained Docker volume.
+- Ticket 11 integrated at `3e4d1aa`: Windows/Linux Node24 67 tests and packaged dist/VSIX checks passed; Node20 shipped checks and16network/DT/process tests passed. UTF-8 split-chunk fix included. Own checkpoint11 records exact images, results and retained Docker volume.
+- Ticket07 is the sole active slice, new isolated worktree `../.sbom-pilot-worktrees/07-combined`, branch `ticket/07-combined`. Follow original common-root pnpm workspace plus .NET sample: one recursive dotnet/js scan, one SBOM; add real Linux .NET Core/combined smoke with local Docker.09/10 remain queued.
 - Latest user asked how Linux was tested and explicitly offered Docker. Explained that their local Docker is already used for Node20/24 bookworm container checks, not a real Azure Agent. Linux .NET restore/scan and final combined product smoke still need verification in subsequent tickets.
 - Attribution inventory is complete, but upstream nodejs-file-downloader4.13.0 has ISC metadata without full notice. Public packaging is deliberately gated; inspect checkpoint11/notices before final release work. Do not invent copyright/license text.
 - Agent IDs/conversations can be replaced; branches/worktrees/checkpoints retain the work. Product terminology follows the original requirement: .NET Core.
@@ -32,7 +33,7 @@ Run `node scripts/resume.mjs` in the integration worktree, then read `implementa
 
 ## Remaining graph and integration
 
-- Code integrated:01/02/03/04/05/06/08. Sole active ticket:11.07/09/10 are ready but queued;12 follows07/09/10/11. The resume inspector recomputes the actual unassigned frontier from ticket edges and state.
+- Code integrated:01/02/03/04/05/06/08/11. Sole active ticket:07.09/10 are ready but queued;12 follows07/09/10/11. The resume inspector recomputes the actual unassigned frontier from ticket edges and state.
 - Once a worker has a final commit, run the merger as the sole subagent. Root should not mutate integration simultaneously. Preserve all config/workflow/manifest behavior, terminology corrections and serial dispatch policy across retained branches; resolve package-lock from merged package manifests and rerun checks if conflict requires regeneration.
 -03 added generic JS installer dispatch and test discovery;05 added .NET Core dispatch;08 added conditional DT. Subsequent workflow/config/manifest edits must preserve all three. jsonc-parser needs its published ESM entry alias in both actual build and bundle tests to avoid a real UMD startup failure found during integration.
 - After integration, update `integratedTickets` and active leases, progress/evidence, and recompute frontier. Save checkpoints before any new long-running task.

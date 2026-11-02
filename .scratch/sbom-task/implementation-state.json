@@ -4,11 +4,11 @@
   "reviewBase": "e3a5bf6ed57b74c519d0d64285f2929d0195688b",
   "noRemoteWrites": true,
   "dispatchPolicy": { "maxConcurrentSubagents": 1, "requireVerifiedIntegrationBeforeNextTicket": true },
-  "integratedTickets": ["01", "02", "03", "04", "05", "06", "08"],
+  "integratedTickets": ["01", "02", "03", "04", "05", "06", "08", "11"],
   "activeWorktrees": [
-    { "ticket": "11", "phase": "integrating", "candidateCommit": "5cc6c118db1e0be57005fe948f803c3bbaa8b243", "branch": "ticket/11-compat", "worktree": "../.sbom-pilot-worktrees/11-compat", "checkpoint": ".scratch/sbom-task/checkpoints/11.md" }
+    { "ticket": "07", "phase": "implementing", "branch": "ticket/07-combined", "worktree": "../.sbom-pilot-worktrees/07-combined", "checkpoint": ".scratch/sbom-task/checkpoints/07.md" }
   ],
   "reviewStatus": "not-started",
-  "externalValidation": ["live Azure DevOps Services/Server installation and artifact download", "real public Publisher ID confirmation", "public repository URL (no remote exists)"],
+  "externalValidation": ["live Azure DevOps Services/Server installation and artifact download", "real public Publisher ID confirmation", "public repository URL (no remote exists)", "upstream nodejs-file-downloader4.13.0 full ISC notice missing; public packaging gated"],
   "notesDirectory": "../.sbom-pilot-notes"
 }
