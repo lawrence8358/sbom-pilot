@@ -2,6 +2,8 @@
 
 使用者於 2026-11-03 要求：五小時額度將到，先保存並交接。接手後先恢復既有工作，不另外建立重複任務。
 
+續接更新：交接已提交為 `7ba0797`，使用者其後明確要求繼續。已核對 root 與09 worktree 乾淨，從 `d4dc049` 恢復09，仍只啟動一個子代理。以下為交接時快照，後續最新狀態請讀 implementation-state.json 與目標 checkpoint。
+
 ## 接手第一步
 
 在 `D:/Project/Git/sbom-pilot` 執行 `node scripts/resume.mjs`，讀取 `implementation-state.json`、本檔與 `checkpoints/coordinator.md`，再進入目標 worktree 讀取該處的 checkpoint。以實際 Git HEAD/status 為準。
