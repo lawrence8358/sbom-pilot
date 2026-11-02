@@ -11,15 +11,16 @@
 | Windows x64 本機 | Handler Node20.20.2／24.22.1 | dist 與實際 VSIX 在 Repo 外啟動、秘密遮罩、manifest 與告示檢查通過；Node20 HTTP／DT／Proxy／CA 15/15 測試通過 |
 | Linux x64 Debian bookworm 容器 | Node24.22.2 | fresh npm ci；最終67/67測試、建置、tfx0.24.2打包、隔離 dist／VSIX 檢查通過 |
 | Linux x64 Debian bookworm 容器 | Node20.20.2 | HTTP／DT／Proxy／CA／UTF-8子程序16/16測試、隔離 dist／VSIX 檢查通過 |
+| Linux x64 Ubuntu24.04.3 SDK 容器 | Node24.22.2／SDK10.0.101 | fresh npm ci、76/76測試；真實 .NET Core restore＋獨立／pnpm 合併掃描通過，詳見[可重跑命令及結果](combined.md) |
 | Azure DevOps Services | 由實際 Agent 選擇 Node20_1／Node24 | UNVERIFIED；需記錄服務日期、Agent、OS、handler 與下載成品 |
 | Server2022.2／Agent3.238.0 | Node20_1 來源候選 | 官方配對表及 tagged Agent 原始碼支持此候選；VSIX 安裝、Windows／Linux、Classic／YAML 均 UNVERIFIED |
 | Server2020.1.2／2019.1.2 官方 Agent3.225.0 | 低於本 manifest 門檻 | 不列為支援組合，不從其他 Agent 版本推定可用 |
 | arm64 | Windows／Linux 工具下載設計目標 | UNVERIFIED |
 | .NET Framework／Linux | 不適用 | .NET Framework 僅 Windows，需預裝 VS Build Tools／workloads |
 
-本機掃描既有證據見 README-Dev：Windows/Linux npm 最小流程、Windows npm/pnpm/Yarn、.NET Core SDK6/9/10、Windows .NET Framework。上述容器入口與協定檢查沒有重新執行未變更的專案 smoke，也沒有把容器當成真實 Pipeline Agent。
+本機掃描既有證據見 README-Dev：Windows/Linux npm 最小流程、Windows npm/pnpm/Yarn、.NET Core SDK6/9/10、Windows .NET Framework；新增[前後端合併與 Linux .NET Core 真實還原／掃描](combined.md)。Debian 容器列為入口／協定檢查，Ubuntu SDK 容器列另有實際 NuGet 與合併掃描證據；均為本機測試環境。
 
-Windows 最終完整測試為67/67；Node20另通過分段UTF-8 stdout/stderr回歸檢查。子程序以串流解碼保存跨 data event 的中文字元，避免 JSON 或專案路徑被替換字元破壞。
+合併模式新增後，Windows 完整測試為76/76（既有67加9項合併測試）；Node20另有先前分段UTF-8 stdout/stderr回歸檢查。子程序以串流解碼保存跨 data event 的中文字元，避免 JSON 或專案路徑被替換字元破壞。
 
 Linux Node24 image ID：`sha256:e7add2a490bb17d97b485b8641bd88455fff7839ade0f5eba493c3508124d413`；Node20：`sha256:8f693eaa7e0a8e71560c9a82b55fd54c2ae920a2ba5d2cde28bac7d1c01c9ba5`。
 

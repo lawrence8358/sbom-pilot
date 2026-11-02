@@ -108,7 +108,7 @@ npm run test:smoke:dotnet
 
 Windows x64 亦以缺少可用 host 的子程序環境實測：從 https://dot.net/v1/dotnet-install.ps1 取得 Microsoft 官方腳本，下載 SDK 10.0.101 至 Task 自有快取，驗證 `.complete` 與 `dotnet --version`，再以該 SDK 完成真實 restore／SBOM。這項測試不安裝全域工具，也不修改機器 PATH。
 
-尚未驗證：Linux .NET 執行、arm64、真正 Azure DevOps VSIX 安裝及 Artifact 發佈、企業 Proxy／自訂 CA、特殊 workloads／自訂 SDK 與私有 NuGet。
+Linux .NET Core 的實際還原與掃描另見[合併模式驗證](docs/combined.md#驗證紀錄)。尚未驗證：arm64、真正 Azure DevOps VSIX 安裝及 Artifact 發佈、企業 Proxy／自訂 CA、特殊 workloads／自訂 SDK 與私有 NuGet。
 
 ## .NET Framework：開發與驗證
 
@@ -132,3 +132,9 @@ npm run package:dev
 本機精簡證據位於忽略的 `.smoke/framework/evidence.json`，包含各格式版本、組件數與 SBOM hash。此驗證不等於所有 Visual Studio workloads 已支援；Linux Framework 為不適用，arm64 與實際 Services／Server 安裝、Classic UI、成品下載仍待外部驗證。
 
 Microsoft 來源：[NuGet/MSBuild restore](https://learn.microsoft.com/en-us/nuget/reference/msbuild-targets#restoring-packagereference-and-packagesconfig-projects-with-msbuild)、[repositoryPath](https://learn.microsoft.com/en-us/nuget/reference/nuget-config-file#config-section)、[vswhere 尋找 MSBuild](https://github.com/microsoft/vswhere/wiki/Find-MSBuild)。
+
+## 前後端合併：開發與驗證
+
+`src/install/javascript-projects.ts` 從共同根目錄探索未排除的前端 manifest，將 workspace 成員歸到其安裝根目錄；`src/install/combined.ts` 先逐一呼叫現有 JavaScript installer，再呼叫 .NET Core installer。`runWorkflow` 保持一次產生／驗證／DT／artifact 流程，掃描使用 dotnet+js。`CombinedInstallOptions` 沿用 `tempDirectory?`、`log?`、`excludes?`；ToolContext 的 child-only env 與已驗證 assets 在整次流程延續，供後續私有來源注入。
+
+`npm run test:smoke:combined` 實際還原並檢查組件、依賴邊、一次掃描及本機成品、共用排除及鎖檔不變。Windows 六種場景與 Linux Ubuntu SDK 容器的實際還原／合併掃描結果及完整 Docker 命令見 [combined.md](docs/combined.md)。單元測試總計76項；本機 artifact adapter 不代表 Azure 原生成品已上傳。Yarn dev-only required scope 限制照實保留；Linux Framework 不適用。

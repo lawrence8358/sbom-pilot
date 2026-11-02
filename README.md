@@ -2,7 +2,7 @@
 
 在 Azure Pipelines 加入一個 **SBOM Pilot — Generate & Upload SBOM** Task，即可準備工具並還原專案依賴，產生 CycloneDX 1.6 JSON，並要求 Agent 發佈名稱為 `SBOM` 的 Build Artifact。
 
-本階段提供 Vue/npm、pnpm 與 Yarn Classic／現代 Yarn 專案及 workspace、SDK-style .NET Core、Windows .NET Framework 與選用的 Dependency-Track（DT）上傳，使用公開 npm/NuGet 來源。私有來源認證及合併交付產品將於後續版本交付。`--required-only` 固定啟用，代表 cdxgen 的 required scope 篩選，不能視為已逐項核對實際部署成品。Yarn workspace 實測會保留部分被上游標為 required 的開發依賴，詳見 [Yarn 支援及限制](docs/yarn.md)。
+本階段提供 Vue/npm、pnpm 與 Yarn Classic／現代 Yarn 專案及 workspace、SDK-style .NET Core、Windows .NET Framework、.NET Core 前後端合併及選用的 Dependency-Track（DT）上傳，使用公開 npm/NuGet 來源。私有來源認證將於後續版本交付。`--required-only` 固定啟用，代表 cdxgen 的 required scope 篩選，不能視為已逐項核對實際部署成品。Yarn workspace 實測會保留部分被上游標為 required 的開發依賴，詳見 [Yarn 支援及限制](docs/yarn.md)。
 
 ## 前置條件及支援範圍
 
@@ -59,7 +59,7 @@ steps:
 
 | 欄位（YAML） | 預設 | 說明 |
 | --- | --- | --- |
-| `environment` | `vue` | `vue`（Vue/npm／pnpm／Yarn）、`dotnet`（.NET Core）或 `netframework`（.NET Framework，限 Windows） |
+| `environment` | `vue` | `vue`（Vue/npm／pnpm／Yarn）、`dotnet`（.NET Core）、`netframework`（.NET Framework，限 Windows）或 `combined`（.NET Core 前後端合併） |
 | `projectPath` | `$(Build.SourcesDirectory)` | 專案根目錄 |
 | `nodeVersion` | `24.x` | 最新符合 semver 範圍的 Node，必須 >=24 |
 | `excludes` | 見下列規則 | 相對根目錄 glob，逗號分隔，保留花括號內逗號；明確設定空字串代表不加自訂排除 |
@@ -123,6 +123,23 @@ DT 上傳失敗時仍要求 Agent 發佈有效 `SBOM` 成品，最後 Task 失�
 
 MIT License · Copyright © 2026 Lawrence Shen。第三方授權見 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。
 
+## .NET Core 前後端合併模式
+
+Classic Build 選擇「.NET Core 前後端合併」，`projectPath` 指向同時包含前端與後端的共同根目錄。根目錄可直接是 pnpm workspace；也可在子目錄放置 npm／pnpm／Yarn 專案或 workspace。Task 從各 workspace 擁有的根目錄進行嚴格安裝，再還原 SDK-style .NET Core 後端，以一次遞迴 dotnet/js 掃描產生一份 SBOM。可直接使用[共同根目錄範例](examples/combined-product/package.json)：
+
+```yaml
+- task: SbomPilot@0
+  displayName: 產生前後端交付產品 SBOM
+  inputs:
+    environment: combined
+    projectPath: '$(Build.SourcesDirectory)/examples/combined-product'
+    excludes: '**/_Design{,Front}/**,**/bin/**,**/obj/**,**/node_modules/**,**/dist/**'
+    specVersion: '1.6'
+    uploadToDt: false
+```
+
+Classic 與 YAML 都只需一個共同根目錄，不需另填前端／後端路徑。排除規則共用並相對該根目錄，可加入產品特有的 `frontend/prototypes/**,backend/Tests/**`；前端仍須有一致的管理器宣告與鎖檔，後端沿用 SDK 與選用 NuGet 鎖檔政策。啟用 DT 時仍對應同一個既有交付產品 UUID。詳見[根目錄規則、限制與可重跑的 Windows／Linux 驗證](docs/combined.md)。
+
 ## .NET Core 模式
 
 傳統格式、packages.config 或 Windows Framework 設定請使用 [.NET Framework 模式](docs/framework.md)。該模式按格式使用 Task 準備的 SDK，或 Agent 預裝的 Visual Studio MSBuild；不需要選用 NuGet lockfile。
@@ -151,4 +168,4 @@ Task 從每個專案的實際還原目錄向上尋找 `global.json`，支援註�
 
 `.NET` 有一項必要的排除規則轉換：預設 `**/obj/**` 送給掃描器時轉為 `**/obj/!(project.assets.json)`，繼續排除編譯產物，保留經還原驗證的依賴資料。欄位預設值不變；其他自訂 glob 不會改寫。自訂規則若遮蔽必要 assets，或還原資料位於掃描根目錄外，Task 會失敗並要求調整。排除整個非交付專案時，請使用相對該專案目錄的規則。
 
-Windows x64 已以 SDK 6.0.428、9.0.316、10.0.101 實測公開 NuGet、間接依賴、關係及 CycloneDX 1.6；Linux .NET、實際 Server／Services 安裝及原生成品上傳仍待獨立驗證。詳見 [開發紀錄](README-Dev.md)。傳統非 SDK-style 專案目前不適用此模式。
+Windows x64 已以 SDK 6.0.428、9.0.316、10.0.101 實測公開 NuGet、間接依賴、關係及 CycloneDX 1.6；Linux x64 Ubuntu 容器亦已用 SDK 10.0.101 實際還原及掃描。實際 Server／Services 安裝及原生成品上傳仍待獨立驗證。詳見 [開發紀錄](README-Dev.md)。傳統非 SDK-style 專案目前不適用此模式。

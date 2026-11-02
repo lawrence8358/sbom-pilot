@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { discoverJavaScriptProjects } from '../src/install/javascript-projects';
+import { discoverDotnetProjects } from '../src/dotnet/projects';
 import { installCombinedProject } from '../src/install/combined';
 import { runWorkflow } from '../src/workflow';
 import { scanArguments, scanExcludes } from '../src/scan';
@@ -60,11 +61,15 @@ test('workspace declarations compare manager/version and only conflicting suppli
 test('shared brace exclusions apply relative to common root before manifest parsing', () => fixture(async root => {
   await manifest(join(root, 'frontend'));
   await writeFile(join(root, 'frontend/package-lock.json'), '{}');
-  for (const directory of ['_Design', '_DesignFront', 'backend/obj']) {
+  for (const directory of ['_Design', '_DesignFront', 'backend/obj', 'frontend/prototypes', 'backend/Tests']) {
     await mkdir(join(root, directory), { recursive: true });
     await writeFile(join(root, directory, 'package.json'), 'invalid JSON');
+    await writeFile(join(root, directory, 'Excluded.csproj'), '<invalid-project />');
   }
-  assert.equal((await discoverJavaScriptProjects(root, parseExcludes(DEFAULT_EXCLUDES))).length, 1);
+  await writeFile(join(root, 'backend/Product.csproj'), '<Project Sdk="Microsoft.NET.Sdk" />');
+  const excludes = parseExcludes(`${DEFAULT_EXCLUDES},frontend/prototypes/**,backend/Tests/**`);
+  assert.equal((await discoverJavaScriptProjects(root, excludes)).length, 1);
+  assert.deepEqual((await discoverDotnetProjects(root, excludes)).map(project => project.path), [join(root, 'backend/Product.csproj')]);
 }));
 
 test('workspace lock/declaration conflicts fail before any dependency installer', () => fixture(async root => {
