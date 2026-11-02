@@ -2,7 +2,7 @@
 
 ## Start here
 
-Urgent quota handoff was saved at `7ba0797`; the user has now explicitly requested continuation. Root and ticket09 worktrees were confirmed clean; resume existing09 WIP `d4dc049`, with only one subagent. Read `.scratch/sbom-task/HANDOFF.md` and the worker checkpoint; do not restart completed work. Current worker checkpoint/HEAD is authoritative.
+Urgent quota handoff was saved at `7ba0797`; user continuation resumed09 from `d4dc049`. Ticket09 is now complete in its worktree at `bd1c483a054f7ffa7b94e90966bee0ecb3279a98`, awaiting merge. 91 tests/typecheck/build/devVSIX/isolated package checks passed; real Windows7/Linux4 private auth scenarios passed. Next merge/verify, not restart. Preserve InstallOptions.sourceRoot through installer wrappers and first secret import order. Current Git/state/worker checkpoint is authoritative.
 
 Run `node scripts/resume.mjs` in the integration worktree, then read `implementation-state.json` and the target worker checkpoint in its own worktree. Git HEAD/status are authoritative when this summary is older. Resume existing work; no remote writes or PR.
 
