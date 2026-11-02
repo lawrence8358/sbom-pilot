@@ -7,25 +7,137 @@
   "helpMarkDown": "請參閱 Extension README 的前置條件與限制。",
   "category": "Utility",
   "author": "Lawrence Shen",
-  "version": { "Major": 0, "Minor": 1, "Patch": 0 },
+  "version": {
+    "Major": 0,
+    "Minor": 1,
+    "Patch": 0
+  },
   "instanceNameFormat": "SBOM Pilot",
-  "runsOn": ["Agent"],
-  "minimumAgentVersion": "3.232.1",
-  "groups": [{ "name": "advanced", "displayName": "進階設定", "isExpanded": false }],
-  "inputs": [
-    { "name": "environment", "type": "pickList", "label": "開發環境", "required": true, "defaultValue": "vue", "options": { "vue": "Vue（npm／pnpm）", "dotnet": ".NET Core／現代 .NET" } },
-    { "name": "nodeVersion", "type": "string", "label": "Node.js 版本", "required": true, "defaultValue": "24.x", "helpMarkDown": "下載最新符合範圍的版本；cdxgen 需要 Node >=24。Task handler 使用獨立的 Node20_1。" },
-    { "name": "projectPath", "type": "filePath", "label": "專案路徑", "required": true, "defaultValue": "$(Build.SourcesDirectory)" },
-    { "name": "excludes", "type": "multiLine", "label": "排除規則", "required": false, "defaultValue": "**/_Design{,Front}/**,**/bin/**,**/obj/**,**/node_modules/**,**/dist/**", "helpMarkDown": "相對於專案根目錄的 glob，以逗號分隔；花括號內的逗號會保留。清空欄位代表不加入自訂排除規則，cdxgen 自身忽略規則仍適用。" },
-    { "name": "specVersion", "type": "pickList", "label": "CycloneDX Spec Version", "required": true, "defaultValue": "1.6", "options": { "1.6": "1.6" } },
-    { "name": "uploadToDt", "type": "boolean", "label": "推送到 DT", "required": false, "defaultValue": "false", "helpMarkDown": "啟用後上傳到指定既有 DT 專案；API 接受即完成，不等待背景匯入或弱點分析。" },
-    { "name": "dtApiUrl", "type": "string", "label": "DT API URL", "required": true, "defaultValue": "http://localhost:8081", "visibleRule": "uploadToDt = true", "helpMarkDown": "DT 服務根網址，可包含反向代理路徑。localhost 指執行 Task 的 Agent；Task 會附加 /api/v1/bom。" },
-    { "name": "dtProjectUuid", "type": "string", "label": "DT Project UUID", "required": true, "visibleRule": "uploadToDt = true", "helpMarkDown": "既有 DT 專案 UUID；不自動建立專案。" },
-    { "name": "dtApiKey", "type": "string", "label": "DT API Key", "required": true, "visibleRule": "uploadToDt = true", "helpMarkDown": "以 Secret Pipeline Variable 傳入，例如 $(dtApiKey)。請勿直接填入明文。" },
-    { "name": "skipDtTlsCertificateCheck", "type": "boolean", "label": "略過 DT TLS 憑證檢查", "defaultValue": "false", "visibleRule": "uploadToDt = true", "groupName": "advanced", "helpMarkDown": "只作用於 DT HTTPS 連線，預設驗證憑證。" },
-    { "name": "cdxgenVersion", "type": "string", "label": "cdxgen 版本", "required": false, "defaultValue": "13.6.0", "groupName": "advanced", "helpMarkDown": "固定預設 13.6.0。覆寫限 @cdxgen/cdxgen 13.x 穩定精確版本；準備後檢查實際版本、Node engines 與必要 CLI 選項。其他 major／預發版不支援。" },
-    { "name": "fetchLicense", "type": "boolean", "label": "補充授權資訊", "defaultValue": "true", "groupName": "advanced" },
-    { "name": "noCache", "type": "boolean", "label": "停用 cdxgen 快取", "defaultValue": "true", "groupName": "advanced" }
+  "runsOn": [
+    "Agent"
   ],
-  "execution": { "Node20_1": { "target": "index.js" } }
+  "minimumAgentVersion": "3.232.1",
+  "groups": [
+    {
+      "name": "advanced",
+      "displayName": "進階設定",
+      "isExpanded": false
+    }
+  ],
+  "inputs": [
+    {
+      "name": "environment",
+      "type": "pickList",
+      "label": "開發環境",
+      "required": true,
+      "defaultValue": "vue",
+      "options": {
+        "vue": "Vue（npm／pnpm）",
+        "dotnet": ".NET Core／現代 .NET"
+      }
+    },
+    {
+      "name": "nodeVersion",
+      "type": "string",
+      "label": "Node.js 版本",
+      "required": true,
+      "defaultValue": "24.x",
+      "helpMarkDown": "下載最新符合範圍的版本；cdxgen 需要 Node >=24。Task handler 使用獨立的 Node20_1。"
+    },
+    {
+      "name": "projectPath",
+      "type": "filePath",
+      "label": "專案路徑",
+      "required": true,
+      "defaultValue": "$(Build.SourcesDirectory)"
+    },
+    {
+      "name": "excludes",
+      "type": "multiLine",
+      "label": "排除規則",
+      "required": false,
+      "defaultValue": "**/_Design{,Front}/**,**/bin/**,**/obj/**,**/node_modules/**,**/dist/**",
+      "helpMarkDown": "相對於專案根目錄的 glob，以逗號分隔；花括號內的逗號會保留。清空欄位代表不加入自訂排除規則，cdxgen 自身忽略規則仍適用。"
+    },
+    {
+      "name": "specVersion",
+      "type": "pickList",
+      "label": "CycloneDX Spec Version",
+      "required": true,
+      "defaultValue": "1.6",
+      "options": {
+        "1.6": "1.6"
+      }
+    },
+    {
+      "name": "uploadToDt",
+      "type": "boolean",
+      "label": "推送到 DT",
+      "required": false,
+      "defaultValue": "false",
+      "helpMarkDown": "啟用後上傳到指定既有 DT 專案；API 接受即完成，不等待背景匯入或弱點分析。"
+    },
+    {
+      "name": "dtApiUrl",
+      "type": "string",
+      "label": "DT API URL",
+      "required": true,
+      "defaultValue": "http://localhost:8081",
+      "visibleRule": "uploadToDt = true",
+      "helpMarkDown": "DT 服務根網址，可包含反向代理路徑。localhost 指執行 Task 的 Agent；Task 會附加 /api/v1/bom。"
+    },
+    {
+      "name": "dtProjectUuid",
+      "type": "string",
+      "label": "DT Project UUID",
+      "required": true,
+      "visibleRule": "uploadToDt = true",
+      "helpMarkDown": "既有 DT 專案 UUID；不自動建立專案。"
+    },
+    {
+      "name": "dtApiKey",
+      "type": "string",
+      "label": "DT API Key",
+      "required": true,
+      "visibleRule": "uploadToDt = true",
+      "helpMarkDown": "以 Secret Pipeline Variable 傳入，例如 $(dtApiKey)。請勿直接填入明文。"
+    },
+    {
+      "name": "skipDtTlsCertificateCheck",
+      "type": "boolean",
+      "label": "略過 DT TLS 憑證檢查",
+      "defaultValue": "false",
+      "visibleRule": "uploadToDt = true",
+      "groupName": "advanced",
+      "helpMarkDown": "只作用於 DT HTTPS 連線，預設驗證憑證。"
+    },
+    {
+      "name": "cdxgenVersion",
+      "type": "string",
+      "label": "cdxgen 版本",
+      "required": false,
+      "defaultValue": "13.6.0",
+      "groupName": "advanced",
+      "helpMarkDown": "固定預設 13.6.0。覆寫限 @cdxgen/cdxgen 13.x 穩定精確版本；準備後檢查實際版本、Node engines 與必要 CLI 選項。其他 major／預發版不支援。"
+    },
+    {
+      "name": "fetchLicense",
+      "type": "boolean",
+      "label": "補充授權資訊",
+      "defaultValue": "true",
+      "groupName": "advanced"
+    },
+    {
+      "name": "noCache",
+      "type": "boolean",
+      "label": "停用 cdxgen 快取",
+      "defaultValue": "true",
+      "groupName": "advanced"
+    }
+  ],
+  "execution": {
+    "Node20_1": {
+      "target": "index.js"
+    }
+  }
 }
