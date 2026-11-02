@@ -9,6 +9,7 @@
     "build": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit",
     "test:package": "node scripts/verify-package.mjs",
+    "test:final": "node scripts/final-smoke.mjs",
     "test": "node scripts/test.mjs",
     "test:smoke": "node scripts/smoke.mjs",
     "test:options-smoke": "node scripts/options-smoke.mjs",

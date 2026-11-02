@@ -22,6 +22,7 @@ steps:
       uploadToDt: false
 ```
 
-私有來源認證欄位屬後續功能；請勿把秘密寫入參數或提交到設定檔。安裝失敗時 Task 顯示階段與一般原因，不轉印可能含來源 token 的子程序輸出。Task 會清除準備管理器所用的暫存目錄；專案依賴留在 checkout 供 cdxgen 掃描，掃描使用 `--install-deps false`，不再次安裝。
+私有來源以選填 npmCredentials Secret Variable 提供，詳見 [認證格式與來源隔離](npm-auth.md)；請勿把秘密值寫死在 YAML 或提交到設定檔。安裝失敗時 Task 顯示階段與一般原因，不轉印可能含來源 token 的子程序輸出。Task 會清除準備管理器所用的暫存目錄；專案依賴留在 checkout 供 cdxgen 掃描，掃描使用 `--install-deps false`，不再次安裝。
 
 官方行為參考：[npm ci](https://docs.npmjs.com/cli/v11/commands/npm-ci/)、[pnpm install](https://pnpm.io/cli/install)、[pnpm 工具版本與平台](https://pnpm.io/installation)。支援與實測限制見 [README-Dev](../README-Dev.md)。
+

@@ -50,6 +50,7 @@ test('Node tar accepts distribution-local npm links, rejects traversal, escaping
     [tarEntry(`${folder}/../escape`)], [tarEntry('/absolute')],
     [tarEntry(`${folder}/bin/npm`, '2', '../../../outside')],
     [tarEntry(`${folder}/alias`, '2', 'bin'), tarEntry(`${folder}/alias/node`)],
+    [tarEntry(`${folder}/alias`, '2', '.'), tarEntry(`${folder}/second`, '2', 'alias/../escape')],
     [tarEntry(`${folder}/device`, '3')],
   ]) assert.throws(() => validateNodeTar(Buffer.concat(entries), folder));
 });

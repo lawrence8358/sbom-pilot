@@ -33,8 +33,9 @@ workspace 從共同根目錄安裝一次；子目錄會往上尋找擁有 `yarn.
 - [Classic workspace](../examples/yarn-classic-workspace/package.json)：Yarn 1.22.22、node_modules、標準 SHA-1 宣告。
 - [現代 workspace](../examples/yarn-modern-workspace/package.json)：Yarn 4.18.1、PnP、標準 SHA-224 CLI 宣告；改為 `nodeLinker: node-modules` 也已實測。
 
-YAML 與 pnpm 範例相同，只需把 `projectPath` 指到上述共同根目錄。本機可執行 `npm run test:smoke:yarn`：Windows x64、Node 24.22.2、cdxgen 13.6.0 三種佈局均產生通過官方 CycloneDX 1.6 Schema 的 6 組件 SBOM，包含 shared/web-product workspace 套件、is-odd 與 is-number 直接／間接依賴及對應圖邊；專案安裝腳本、實際模組載入、錯誤 manifest 的嚴格失敗、未變更的 lockfile／設定均有檢查。成品 adapter 為本機驗證，不代表已測 Azure Agent 發佈、Linux 或 arm64。
+YAML 與 pnpm 範例相同，只需把 `projectPath` 指到上述共同根目錄。本機可執行 `npm run test:smoke:yarn`：Windows x64、Node 24.22.2、cdxgen 13.6.0 三種佈局均產生通過官方 CycloneDX 1.6 Schema 的 6 組件 SBOM，包含 shared/web-product workspace 套件、is-odd 與 is-number 直接／間接依賴及對應圖邊；專案安裝腳本、實際模組載入、錯誤 manifest 的嚴格失敗、未變更的 lockfile／設定均有檢查。成品 adapter 為本機驗證；Linux 私有 PnP 與最終套件回歸見 [相容性](compatibility.md)，真實 Azure Agent 發佈與 arm64 仍未驗證。
 
 **required scope 的已知限制**：上述 Yarn workspace 裡，shared 的開發專用 chalk 5.3.0 被 cdxgen 13.6.0 標記為 `required`，因此三種佈局都會保留它。Task 按規格固定傳入 `--required-only`，不另做自訂排除。這與 npm／pnpm 既有 Vue 範例成功排除開發專用 chalk 的結果不同，不能宣稱 Yarn workspace 已排除所有開發套件或完成實際部署成品核對。
 
 安裝旗標參考：[Classic install](https://classic.yarnpkg.com/lang/en/docs/cli/install/)、[現代 install](https://yarnpkg.com/cli/install)、[Yarn 設定](https://yarnpkg.com/configuration/yarnrc)。
+

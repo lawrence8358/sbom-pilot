@@ -2,11 +2,11 @@
 
 在 Azure Pipelines 加入一個 **SBOM Pilot — Generate & Upload SBOM** Task，即可準備工具並還原專案依賴，產生 CycloneDX 1.6 JSON，並要求 Agent 發佈名稱為 `SBOM` 的 Build Artifact。
 
-本階段提供 Vue/npm、pnpm 與 Yarn Classic／現代 Yarn 專案及 workspace、SDK-style .NET Core、Windows .NET Framework、.NET Core 前後端合併及選用的 Dependency-Track（DT）上傳，使用公開／私有 npm 與 NuGet 來源。私有 NuGet 以選填 Secret Pipeline Variable 提供，詳見[認證格式與來源隔離](docs/nuget-auth.md)。`--required-only` 固定啟用，代表 cdxgen 的 required scope 篩選，不能視為已逐項核對實際部署成品。Yarn workspace 實測會保留部分被上游標為 required 的開發依賴，詳見 [Yarn 支援及限制](docs/yarn.md)。
+0.1.0 提供 Vue/npm、pnpm 與 Yarn Classic／現代 Yarn 專案及 workspace、SDK-style .NET Core、Windows .NET Framework、.NET Core 前後端合併及選用的 Dependency-Track（DT）上傳，使用公開／私有 npm 與 NuGet 來源。私有 NuGet 以選填 Secret Pipeline Variable 提供，詳見[認證格式與來源隔離](docs/nuget-auth.md)。`--required-only` 固定啟用，代表 cdxgen 的 required scope 篩選，不能視為已逐項核對實際部署成品。Yarn workspace 實測會保留部分被上游標為 required 的開發依賴，詳見 [Yarn 支援及限制](docs/yarn.md)。
 
 ## 前置條件及支援範圍
 
-| 項目 | 本階段範圍 |
+| 項目 | 支援範圍 |
 | --- | --- |
 | Pipeline | Classic Build、YAML Build；不支援 Classic Release |
 | Agent OS | Windows / Linux x64、arm64 為設計目標；目前實測紀錄見開發文件 |
@@ -26,7 +26,7 @@ Yarn workspace 也指定共同根目錄；[Classic 範例](examples/yarn-classic
 
 ## 安裝
 
-由維護者依 [開發說明](README-Dev.md) 產生 VSIX，於組織或 Collection 的擴充功能管理介面上傳並安裝。`npm run package:dev` 產生明確標示 `(Local Development)`、Publisher 為 `local-dev-placeholder` 的測試套件，此名稱不是正式 Marketplace 身分。公開 Publisher 與專案網址尚未填入，不提供捏造的 Marketplace 連結。
+由維護者依 [開發說明](README-Dev.md) 產生 VSIX，於組織或 Collection 的擴充功能管理介面上傳並安裝。`npm run package:dev` 產生明確標示 `(Local Development)`、Publisher 為 `local-dev-placeholder` 的測試套件，此名稱不是正式 Marketplace 身分。公開 Publisher 與專案網址尚未填入，不提供捏造的 Marketplace 連結。版本內容見 [CHANGELOG](CHANGELOG.md)。
 
 實際組織／Server 的安裝流程與權限依管理政策而定。此版本尚未完成真實環境 VSIX 安裝驗證，請先在測試環境試用。
 
@@ -171,3 +171,19 @@ Task 從每個專案的實際還原目錄向上尋找 `global.json`，支援註�
 `.NET` 有一項必要的排除規則轉換：預設 `**/obj/**` 送給掃描器時轉為 `**/obj/!(project.assets.json)`，繼續排除編譯產物，保留經還原驗證的依賴資料。欄位預設值不變；其他自訂 glob 不會改寫。自訂規則若遮蔽必要 assets，或還原資料位於掃描根目錄外，Task 會失敗並要求調整。排除整個非交付專案時，請使用相對該專案目錄的規則。
 
 Windows x64 已以 SDK 6.0.428、9.0.316、10.0.101 實測公開 NuGet、間接依賴、關係及 CycloneDX 1.6；Linux x64 Ubuntu 容器亦已用 SDK 10.0.101 實際還原及掃描。實際 Server／Services 安裝及原生成品上傳仍待獨立驗證。詳見 [開發紀錄](README-Dev.md)。傳統非 SDK-style 專案目前不適用此模式。
+
+## .NET Framework 模式
+
+Windows Agent 的 Classic Build 選「.NET Framework（Windows）」，YAML 使用：
+
+```yaml
+- task: SbomPilot@0
+  inputs:
+    environment: netframework
+    projectPath: '$(Build.SourcesDirectory)'
+    uploadToDt: false
+```
+
+支援 SDK-style net48、非 SDK PackageReference 與 packages.config。SDK-style 沿用上述 SDK 政策；傳統格式需要 Agent 預裝 Visual Studio MSBuild >=17.8、NuGet Restore targets、相符 Developer/Targeting Pack 及 workloads。Task 不安裝整套 Visual Studio。packages.config 須有可判定的 solution 或 repositoryPath，不要求新增 NuGet lockfile。Linux 不適用。完整條件與範例見 [.NET Framework](docs/framework.md)。
+
+最終 VSIX 已在本機 Windows/Linux 執行真實 install/restore/scan，包含私有 npm/NuGet 合併產品、DT 接受／拒絕、相同有效成品，以及 Linux 無 SDK 的官方冷安裝。這些本機證據不代表真實 Azure 安裝／下載已完成，詳見[當前矩陣與手動驗收](docs/compatibility.md)。

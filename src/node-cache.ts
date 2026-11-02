@@ -62,7 +62,7 @@ function safeEntry(name: string, folder: string): string {
 /** Validate tar headers before invoking the OS extractor. Links may only resolve
  * within the official distribution root; no later entry may traverse a link. */
 export function validateNodeTar(tar: Buffer, folder: string): void {
-  const links: string[] = [], paths: string[] = [];
+  const links: string[] = [], paths: string[] = [], targets: string[] = [];
   let longName: string | undefined, longLink: string | undefined;
   let extended: Record<string, string> = {};
   const string = (data: Buffer) => data.toString('utf8').split('\0')[0];
@@ -84,6 +84,7 @@ export function validateNodeTar(tar: Buffer, folder: string): void {
         if (space < index || !Number.isSafeInteger(length) || length <= space - index + 1 || index + length > body.length) throw new Error('Node tar PAX 資料無效。');
         const field = body.subarray(space + 1, index + length - 1).toString('utf8'), equal = field.indexOf('=');
         if (equal < 1) throw new Error('Node tar PAX 資料無效。');
+        if (!['path', 'linkpath', 'mtime', 'atime', 'ctime', 'uid', 'gid', 'uname', 'gname', 'charset', 'hdrcharset', 'comment'].includes(field.slice(0, equal))) throw new Error('Node tar PAX 包含不支援的擷取屬性。');
         extended[field.slice(0, equal)] = field.slice(equal + 1); index += length;
       }
     } else {
@@ -95,6 +96,7 @@ export function validateNodeTar(tar: Buffer, folder: string): void {
         const target = extended.linkpath || longLink || string(header.subarray(157, 257));
         if (!target || target.includes('\\') || target.startsWith('/') || /^[A-Za-z]:/.test(target)) throw new Error('Node tar 連結無效。');
         safeEntry(posix.normalize(type === '2' ? posix.join(posix.dirname(name), target) : target), folder);
+        targets.push(type === '2' ? `${posix.dirname(name)}/${target}` : target);
         links.push(name);
       }
       extended = {}; longName = undefined; longLink = undefined;
@@ -102,6 +104,13 @@ export function validateNodeTar(tar: Buffer, folder: string): void {
     offset = start + Math.ceil(size / 512) * 512;
   }
   if (!paths.length || paths.some(path => links.some(link => path.startsWith(`${link}/`)))) throw new Error('Node tar 包含空內容或穿越連結的路徑。');
+  for (const target of targets) {
+    const segments: string[] = [];
+    for (const segment of target.split('/')) {
+      if (segment === '..') segments.pop(); else if (segment && segment !== '.') segments.push(segment);
+      if (links.includes(segments.join('/'))) throw new Error('Node tar 連結不能穿越另一個連結。');
+    }
+  }
 }
 
 const unzipScript = `param([string]$Archive,[string]$Destination,[string]$Folder)

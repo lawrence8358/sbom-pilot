@@ -79,4 +79,5 @@ docker cp sbom-pilot-07-linux:/work/.smoke/combined/evidence.json .smoke/combine
 
 所有場景均記錄恰一次 scanner 呼叫及本機 artifact callback，驗證 required-only／install-deps=false、共用設計目錄排除與官方1.6 Schema。Windows host Node24.22.1；容器 Node24.22.2/npm11.19.1。容器 fresh npm ci 與76/76測試通過，執行來源提交 `3c7f69b`。固定 SDK digest 為 `sha256:5504edd1267dd4deab3443f960cfab219249c8bd935fbcc358f1c24aeae23fe0`，Node來源 digest 為 `sha256:e7add2a490bb17d97b485b8641bd88455fff7839ade0f5eba493c3508124d413`。本機證據 JSON 含平台／版本、各次 SBOM hash 與組件數；完整產物與日誌不提交。
 
-尚待外部環境驗收：真實 Services／Server VSIX 安裝、Classic／YAML、Build Artifact 完成下載及失敗傳播、DT 真實匯入、私有來源、企業 Proxy／CA、arm64。容器內有已安裝的 SDK；此 Linux 測試沒有宣稱已驗證 Linux 官方腳本下載 SDK。
+此處保留先前公開來源、SDK 預裝矩陣。最終 VSIX 另已完成 Windows/Linux 私有 npm＋NuGet combined，以及無 SDK 的 plain Node Docker 官方 SDK 冷安裝；當前證據與重跑命令見 [相容性](compatibility.md)。真實 Services/Server 安裝、Classic/YAML、原生成品下載／故障傳播、公司 feed／企業 Proxy/CA、arm64 仍待外部環境驗收。
+
