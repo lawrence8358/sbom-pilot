@@ -106,6 +106,14 @@ test('total request timeout bounds retries and never leaks server data', () => f
   assert.equal(count, 2);
   assert.ok(Date.now() - start < 2000);
 }));
+test('unexpected transport exceptions never expose key-bearing messages', () => fixture(async (_root, sbom) => {
+  let calls = 0;
+  await assert.rejects(uploadToDependencyTrack(sbom, config('http://127.0.0.1'), () => {}, {
+    policy: { ...policy, maxAttempts: 1 },
+    transport: async () => { calls++; throw new Error(`X-Api-Key: ${KEY}`); },
+  }), error => error instanceof Error && !error.message.includes(KEY) && /傳輸失敗/.test(error.message));
+  assert.equal(calls, 1);
+}));
 test('redirects are not followed, malformed acceptance and oversized responses fail safely', () => fixture(async (_root, sbom) => {
   let count = 0;
   await serve((_request, response) => { count++; response.writeHead(302, { Location: 'http://127.0.0.1:1/steal' }).end(KEY); }, async url => {
@@ -132,6 +140,12 @@ test('workflow attempts artifact publication after DT error and returns failure;
   await runWorkflow({ ...input, uploadToDt: false }, join(root, 'off'), services);
   assert.equal(uploaded, 1); assert.equal(published, 2);
   await assert.rejects(runWorkflow(input, join(root, 'publish-failed'), { ...services, publish: async () => { throw new Error('artifact failed'); } }), /成品發佈/);
+  const { upload: _injectedUpload, ...defaultServices } = services;
+  const beforeDefaultUpload = published;
+  await serve((_request, response) => response.writeHead(401).end(KEY), async url => {
+    await assert.rejects(runWorkflow({ ...input, dt: config(url) }, join(root, 'default-uploader'), defaultServices), /DT 上傳.*401/);
+  });
+  assert.equal(published, beforeDefaultUpload + 1);
 }));
 test('self-signed TLS is rejected by default and explicit skip applies only to DT request', () => fixture(async (_root, sbom) => {
   const key = await readFile('test/fixtures/localhost.key.pem', 'utf8');
