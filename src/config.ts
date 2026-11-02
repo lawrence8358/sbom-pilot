@@ -27,7 +27,7 @@ export function parseExcludes(value: string): string[] {
 }
 export async function validateConfig(config: TaskConfig): Promise<TaskConfig> {
   if (!['win32', 'linux'].includes(process.platform)) throw new Error('目前僅支援 Windows 與 Linux Agent。');
-  if (config.environment !== 'vue') throw new Error('此版本僅提供 Vue/npm 模式；其他模式尚未交付。');
+  if (!['vue', 'dotnet'].includes(config.environment)) throw new Error('此版本提供 Vue 與現代 .NET 模式；其他模式尚未交付。');
   if (config.uploadToDt) throw new Error('此版本尚未提供 DT 上傳，請關閉推送到 DT。');
   if (config.specVersion !== '1.6') throw new Error('此版本僅驗證 CycloneDX 1.6。');
   const projectPath = await realpath(config.projectPath);

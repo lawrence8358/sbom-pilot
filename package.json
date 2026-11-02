@@ -10,6 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "node scripts/test.mjs",
     "test:smoke": "node scripts/smoke.mjs",
+    "test:dotnet": "node --test .test-build/test/dotnet.test.js",
+    "test:smoke:dotnet": "node scripts/smoke-dotnet.mjs",
     "package:dev": "npm run build && node scripts/package.mjs --local",
     "package:release": "npm run build && node scripts/package.mjs"
   },

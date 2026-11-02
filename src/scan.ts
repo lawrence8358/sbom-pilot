@@ -6,7 +6,7 @@ import { rm } from 'node:fs/promises';
 export interface ScanRequest { config: TaskConfig; tools: ToolContext; outputPath: string }
 export type SbomGenerator = (request: ScanRequest, run: ProcessRunner) => Promise<void>;
 export function scanArguments(request: ScanRequest): string[] {
-  return [request.tools.cdxgenCli, request.config.projectPath, '-r', '-t', 'js',
+  return [request.tools.cdxgenCli, request.config.projectPath, '-r', '-t', request.config.environment === 'dotnet' ? 'dotnet' : 'js',
     '--required-only', '--spec-version', request.config.specVersion, '--install-deps', 'false',
     ...request.config.excludes.flatMap(pattern => ['--exclude', pattern]), '-o', request.outputPath];
 }
