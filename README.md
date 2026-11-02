@@ -2,7 +2,7 @@
 
 在 Azure Pipelines 加入一個 **SBOM Pilot — Generate & Upload SBOM** Task，即可準備 Node.js 與 cdxgen、依 npm／pnpm lockfile 安裝依賴，產生 CycloneDX 1.6 JSON，並要求 Agent 發佈名稱為 `SBOM` 的 Build Artifact。
 
-本階段提供 Vue/npm、pnpm 單專案／workspace 與公開 npm 來源。DT 上傳、Yarn、.NET、私有來源認證及合併交付產品將於後續版本交付。`--required-only` 固定啟用，代表 cdxgen 的 required scope 篩選，不能視為已逐項核對實際部署成品。
+本階段提供 Vue/npm、pnpm 單專案／workspace、公開 npm 來源與選用的 Dependency-Track（DT）上傳。Yarn、.NET、私有來源認證及合併交付產品將於後續版本交付。`--required-only` 固定啟用，代表 cdxgen 的 required scope 篩選，不能視為已逐項核對實際部署成品。
 
 ## 前置條件及支援範圍
 
@@ -62,7 +62,11 @@ steps:
 | `nodeVersion` | `24.x` | 最新符合 semver 範圍的 Node，必須 >=24 |
 | `excludes` | 見下列規則 | 相對根目錄 glob，逗號分隔，保留花括號內逗號；明確設定空字串代表不加自訂排除 |
 | `specVersion` | `1.6` | 固定以附帶的官方 1.6 JSON Schema 驗證 |
-| `uploadToDt` | `false` | 此階段設定 true 會清楚失敗；關閉不需要 DT 設定 |
+| `uploadToDt` | `false` | 啟用後上傳到既有 DT 專案；關閉不讀取或驗證 DT 欄位 |
+| `dtApiUrl` | `http://localhost:8081` | 啟用 DT 時必填；服務根網址，可包含反向代理路徑，Task 附加 `/api/v1/bom`；localhost 指 Agent |
+| `dtProjectUuid` | 無 | 啟用 DT 時必填；既有 DT 專案 UUID |
+| `dtApiKey` | 無 | 啟用 DT 時必填；由 Secret Pipeline Variable 傳入 |
+| `skipDtTlsCertificateCheck` | `false` | 啟用 DT 時的進階選項；僅略過 DT HTTPS 憑證驗證 |
 | `cdxgenVersion` | `13.6.0` | 進階精確版本覆寫，限 `@cdxgen/cdxgen` 13.x 穩定版；留空使用預設。實際套件版本、Node engines 與必要 CLI 選項會驗證，其他 major／預發版會於工具下載前失敗 |
 | `fetchLicense` | `true` | `FETCH_LICENSE`；可能需要額外網路存取 |
 | `noCache` | `true` | `CDXGEN_NO_CACHE`；不影響 npm 或 Node 工具快取 |
@@ -79,6 +83,32 @@ steps:
 
 若需清除預填排除規則，YAML 使用 `excludes: ''`；Classic 清空該欄位。cdxgen 自身的內建忽略規則（例如 `.git`）仍適用。路徑可包含空白，不需在欄位值內再加引號。
 
+## 選用 DT 上傳
+
+先在 DT 建立交付產品對應的專案，並取得該專案 UUID 及可上傳 BOM 的 API Key。Task 只使用此既有 UUID，不自動建立或以名稱推定其他專案。
+
+在 Pipeline Variables 建立名為 `dtApiKey` 的秘密變數並啟用保密，再加入設定：
+
+```yaml
+- task: SbomPilot@0
+  inputs:
+    environment: vue
+    projectPath: '$(Build.SourcesDirectory)'
+    uploadToDt: true
+    dtApiUrl: 'https://<dt-service-host>'
+    dtProjectUuid: '<existing-project-uuid>'
+    dtApiKey: '$(dtApiKey)'
+    skipDtTlsCertificateCheck: false
+```
+
+Classic Build 勾選「推送到 DT」後才顯示 DT 欄位，API Key 同樣填秘密變數參照。掃描路徑、排除規則與 Spec Version 一律保留。
+
+Task 用 HTTP PUT 將已驗證 SBOM 的原始位元組以 Base64 傳至 `/api/v1/bom`；成品仍保留同一份檔案。API 回傳接受 token 時只記錄「DT 已接受上傳」，不等待背景匯入或弱點分析。這個訊息不代表 DT 已完成匯入。
+
+每次請求最多 30 秒，暫時網路錯誤及 HTTP 408、429、500、502、503、504 最多嘗試三次；401／403 等錯誤不重試，不跟隨重新導向。重試可能再次提交已被 DT 接受但回應遺失的 SBOM。日誌不包含 Key、token 或伺服器回應內容。
+
+DT 上傳失敗時仍要求 Agent 發佈有效 `SBOM` 成品，最後 Task 失敗。成品上傳由 Agent 非同步執行，仍需檢查工作結果及成品頁。TLS 預設驗證；略過選項只作用於 DT，不更改 Node/npm/cdxgen 連線的 TLS 設定。企業 Proxy／自訂 CA 的共同傳輸支援仍待整合驗證。
+
 ## 疑難排解
 
 - **缺少 lockfile／npm ci 失敗**：在本機使用相同 npm 版本修正 manifest 與 lockfile 後提交。確認 registry 可達及安裝腳本可在 Agent 執行。為避免洩漏來源 token，Task 不轉印原始子程序輸出。
@@ -86,5 +116,7 @@ steps:
 - **SBOM 驗證失敗**：檢查 cdxgen 版本覆寫；檔案即使存在，未通過 CycloneDX Schema 也不會發佈。
 - **成品不見／發佈失敗**：確認使用 Build 工作、查看 Agent 上傳階段錯誤及工作結果；Classic Release 不支援此成品命令。
 - **管理器／鎖檔矛盾**：清除其他管理器的競爭鎖檔，並確認 `packageManager` 宣告的是精確版本。Task 不會自行猜測或改用其他工具；指定版本須能在所選 Node 執行。
+- **DT 401／403／404**：確認 Key 上傳權限、既有 Project UUID、服務根網址及 Agent 可達性。localhost 指 Agent；不會自動指向另台 DT 主機。
+- **DT TLS 失敗**：預設要求有效憑證；進階略過檢查只對 DT 生效。未完成自訂 CA／Proxy 實測前，請先在測試環境驗證連線。
 
 MIT License · Copyright © 2026 Lawrence Shen。第三方授權見 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。

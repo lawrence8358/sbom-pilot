@@ -42,6 +42,10 @@ npm run package:release
 | `src/install/npm.ts`、`pnpm.ts` | npm ci／pnpm frozen 安裝；不額外改變專案腳本政策 |
 | `src/scan.ts` | CLI 參數與掃描，禁止重複 install |
 | `src/validation.ts` | 官方 Schema 驗證後回傳 `ValidatedSbom` |
+| `src/dt/config.ts` | 僅啟用時驗證 URL／UUID／Key／TLS 選項 |
+| `src/dt/transport.ts` | 可注入 `DtTransport`；原生 HTTP(S)、總請求逾時、回應大小界限、無 redirect |
+| `src/dt/upload.ts` | 同一 SBOM 位元組的 JSON PUT、有限重試、接受 token 邊界 |
+| `src/azure-secret-inputs.ts` | SDK 初始化前僅於記憶體擷取 Key；Adapter 先遮罩，不用 getInput 讀取秘密 |
 
 官方 CycloneDX 1.6 schema 及其依賴直接封裝，不在執行時向外下載 schema。Azure SDK 需要語言資源及平台檔案，建置保留完整 production SDK dependency tree；其餘程式以 esbuild 打包。
 
@@ -56,6 +60,8 @@ workspace smoke 同時揭露 ajv-formats-draft2019 的 IRI scheme 白名單誤�
 ## 來源與已知驗證邊界
 
 - npm registry 實際查證 `@cdxgen/cdxgen@13.6.0` 可取得，engines Node >=24、CLI `bin/cdxgen.js`。原始碼：[固定 tag](https://github.com/cdxgen/cdxgen/tree/v13.6.0)。
+- DT JSON PUT 契約：[官方 CI/CD 文件](https://docs.dependencytrack.org/usage/cicd/)、[4.13.6 BomResource](https://github.com/DependencyTrack/dependency-track/blob/4.13.6/src/main/java/org/dependencytrack/resources/v1/BomResource.java)。只接受既有 UUID，回傳接受 token 即結束，不查詢 token 或分析狀態。原生傳輸最多三次、每次30秒，Proxy/CA 可注入 `DtTransport` 延伸。
+- ticket08 本機驗證：真實 loopback HTTP／HTTPS server 涵蓋接受上傳、401不重試、503／429有限重試、總請求逾時、不跟隨redirect、無效接受token／過大回應、憑證預設拒絕／單次略過；workflow DT失敗仍交付同一檔案給artifactadapter；實際 esbuild bundle 在 `SYSTEM_DEBUG=true` 下驗證秘密先註冊遮罩且沒有 SDK `dtApiKey=` debug輸出。這些是本機協定與adapter證據，不代表真實DT匯入或Azure成品已驗證。
 - [CycloneDX 1.6 schema](https://github.com/CycloneDX/specification/tree/1.6/schema) 隨套件附 Apache-2.0 授權。
 - [Build Artifact logging command](https://learn.microsoft.com/en-us/azure/devops/pipelines/scripts/logging-commands?view=azure-devops#upload-upload-an-artifact) 由 Agent 非同步執行；[Agent StepsRunner](https://github.com/microsoft/azure-pipelines-agent/blob/v3.238.0/src/Agent.Worker/StepsRunner.cs) 等待 async commands 並合併失敗結果，handler 不宣稱同步上傳完成。
 - 尚待：實際 VSIX 安裝、Classic/YAML、Server/Services、Linux 與 arm64、真正 Agent 成品失敗傳播、企業 Proxy/CA。manifest 最低 Agent 不代表 Server 配對已驗證。

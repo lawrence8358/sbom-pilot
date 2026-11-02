@@ -1,5 +1,6 @@
 import { realpath, stat } from 'node:fs/promises';
 import { CDXGEN_VERSION, SUPPORTED_SPEC_VERSIONS, validateToolOptions } from './tool-options';
+import { DEFAULT_DT_URL, validateDtConfig, type DtConfig } from './dt/config';
 
 export const DEFAULT_EXCLUDES = '**/_Design{,Front}/**,**/bin/**,**/obj/**,**/node_modules/**,**/dist/**';
 export interface TaskConfig {
@@ -12,6 +13,7 @@ export interface TaskConfig {
   fetchLicense: boolean;
   noCache: boolean;
   uploadToDt: boolean;
+  dt?: DtConfig;
 }
 export function parseExcludes(value: string): string[] {
   const result: string[] = [];
@@ -47,17 +49,18 @@ export function readTaskConfig(read: InputReader): TaskConfig {
     throw new Error(`參數 ${name} 必須是 true 或 false。`);
   };
   const excludes = read('excludes');
+  const uploadToDt = boolean('uploadToDt', false);
   return {
     environment: text('environment', 'vue'), projectPath: text('projectPath'),
     nodeVersion: text('nodeVersion', '24.x'), cdxgenVersion: read('cdxgenVersion')?.trim() || CDXGEN_VERSION,
     specVersion: text('specVersion', '1.6'), excludes: parseExcludes(excludes === undefined ? DEFAULT_EXCLUDES : excludes),
-    fetchLicense: boolean('fetchLicense', true), noCache: boolean('noCache', true), uploadToDt: boolean('uploadToDt', false),
+    fetchLicense: boolean('fetchLicense', true), noCache: boolean('noCache', true), uploadToDt,
+    dt: uploadToDt ? validateDtConfig({ apiUrl: text('dtApiUrl', DEFAULT_DT_URL), projectUuid: text('dtProjectUuid'), apiKey: text('dtApiKey'), skipTlsCertificateCheck: boolean('skipDtTlsCertificateCheck', false) }) : undefined,
   };
 }
 export async function validateConfig(config: TaskConfig): Promise<TaskConfig> {
   if (!['win32', 'linux'].includes(process.platform)) throw new Error('目前僅支援 Windows 與 Linux Agent。');
   if (config.environment !== 'vue') throw new Error('此版本僅提供 Vue/npm 模式；其他模式尚未交付。');
-  if (config.uploadToDt) throw new Error('此版本尚未提供 DT 上傳，請關閉推送到 DT。');
   for (const name of ['fetchLicense', 'noCache', 'uploadToDt'] as const) {
     if (typeof config[name] !== 'boolean') throw new Error(`參數 ${name} 必須是布林值。`);
   }
@@ -66,5 +69,5 @@ export async function validateConfig(config: TaskConfig): Promise<TaskConfig> {
   if (!Array.isArray(config.excludes) || config.excludes.some(value => typeof value !== 'string' || value.includes('\0'))) throw new Error('排除規則必須是 glob 字串清單。');
   const projectPath = await realpath(config.projectPath);
   if (!(await stat(projectPath)).isDirectory()) throw new Error('專案路徑必須是目錄。');
-  return { ...config, projectPath };
+  return { ...config, projectPath, dt: config.uploadToDt ? validateDtConfig(config.dt) : undefined };
 }
