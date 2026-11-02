@@ -7,7 +7,7 @@
   "integratedTickets": ["01", "02", "03", "04", "05", "08"],
   "activeWorktrees": [
     { "ticket": "11", "phase": "parked", "branch": "ticket/11-compat", "worktree": "../.sbom-pilot-worktrees/11-compat", "checkpoint": ".scratch/sbom-task/checkpoints/11.md" },
-    { "ticket": "06", "phase": "implementing", "branch": "ticket/06-framework", "worktree": "../.sbom-pilot-worktrees/06-framework", "checkpoint": ".scratch/sbom-task/checkpoints/06.md" }
+    { "ticket": "06", "phase": "integrating", "candidateCommit": "a2d5c631a1ea619935827ba8331e88f7efc59c08", "branch": "ticket/06-framework", "worktree": "../.sbom-pilot-worktrees/06-framework", "checkpoint": ".scratch/sbom-task/checkpoints/06.md" }
   ],
   "reviewStatus": "not-started",
   "externalValidation": ["live Azure DevOps Services/Server installation and artifact download", "real public Publisher ID confirmation", "public repository URL (no remote exists)"],

@@ -13,7 +13,7 @@ Run `node scripts/resume.mjs` in the integration worktree, then read `implementa
 - Tickets 02/03/05/08 are now integrated. Latest combined verification:45 tests, build and developer VSIX passed at merge `bedcdf8`. Current HEAD and active leases must be read from Git and implementation-state.json.
 - Serial execution is the user's latest direction: at most one subagent, including implementation, merge and review. Finish verified integration before starting another ticket.
 - Ticket 04 Yarn is integrated in `330425d`: typecheck, 54 tests, build and developer VSIX passed. Its real Classic/PnP/node_modules workspace smoke passed before interruption; recovered process exit0 and final evidence are in checkpoint04. No need to repeat unchanged smoke.
-- Ticket 06 Framework (`940ff8b`) is the sole active slice; ticket 11 compatibility/network (`25a2a09`) is parked with clean committed WIP. Read each checkpoint in its own worktree before resuming.
+- Ticket 06 Framework is ready for integration at `a2d5c63`: typecheck, 61 tests, real Windows three-format smoke including Unicode path and explicit transitive edges, build and developer VSIX passed in its worktree. Next merge this commit into root and verify integration; do not restart implementation. Ticket 11 (`25a2a09`) remains parked.
 - Agent IDs/conversations can be replaced; branches/worktrees/checkpoints retain the work. Product terminology follows the original requirement: .NET Core.
 
 ## Validation already performed
