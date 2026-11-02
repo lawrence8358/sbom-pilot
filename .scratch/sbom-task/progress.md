@@ -8,13 +8,13 @@ The user authorized implementation on a local branch, with no remote push or PR.
 | Ticket | Progress | Evidence |
 | --- | --- | --- |
 | 01 | Implemented; local verification passed | a543dc9 / merge f8abe50; 10 tests; build/dev VSIX; real Node24.22.2 + cdxgen13.6.0 Vue smoke, 23 components, lock unchanged |
-| 02 | In progress | Isolated implementer worktree |
+| 02 | Implemented; local verification passed | c3bc8ad / merge 313200f; 15 tests; real options smoke 26 vs23 components; Ajv8.20; build/dev VSIX |
 | 03 | In progress | Isolated implementer worktree |
 | 04 | Waiting for 01 | |
 | 05 | In progress | Isolated implementer worktree |
 | 06 | Waiting for 05 | |
 | 07 | Waiting for 02, 03, 04, 05 | |
-| 08 | Waiting for 01 | |
+| 08 | In progress | Isolated implementer worktree |
 | 09 | Waiting for 03, 04 | |
 | 10 | Waiting for 06 | |
 | 11 | Waiting for 01 | Actual Services/Server installation needs live environments; source declarations alone are not proof |
