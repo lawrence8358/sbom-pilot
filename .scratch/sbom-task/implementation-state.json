@@ -6,7 +6,7 @@
   "dispatchPolicy": { "maxConcurrentSubagents": 1, "requireVerifiedIntegrationBeforeNextTicket": true },
   "integratedTickets": ["01", "02", "03", "04", "05", "06", "08"],
   "activeWorktrees": [
-    { "ticket": "11", "phase": "implementing", "branch": "ticket/11-compat", "worktree": "../.sbom-pilot-worktrees/11-compat", "checkpoint": ".scratch/sbom-task/checkpoints/11.md" }
+    { "ticket": "11", "phase": "integrating", "candidateCommit": "5cc6c118db1e0be57005fe948f803c3bbaa8b243", "branch": "ticket/11-compat", "worktree": "../.sbom-pilot-worktrees/11-compat", "checkpoint": ".scratch/sbom-task/checkpoints/11.md" }
   ],
   "reviewStatus": "not-started",
   "externalValidation": ["live Azure DevOps Services/Server installation and artifact download", "real public Publisher ID confirmation", "public repository URL (no remote exists)"],

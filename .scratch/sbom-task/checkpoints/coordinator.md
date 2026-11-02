@@ -14,7 +14,9 @@ Run `node scripts/resume.mjs` in the integration worktree, then read `implementa
 - Serial execution is the user's latest direction: at most one subagent, including implementation, merge and review. Finish verified integration before starting another ticket.
 - Ticket 04 Yarn is integrated in `330425d`: typecheck, 54 tests, build and developer VSIX passed. Its real Classic/PnP/node_modules workspace smoke passed before interruption; recovered process exit0 and final evidence are in checkpoint04. No need to repeat unchanged smoke.
 - Ticket 06 Framework is integrated at `ba15e11`; typecheck and61tests passed after conflict-free merge. Real Windows three-format/Unicode/edge smoke and build/devVSIX passed on the identical product tree at `a2d5c63`.
-- Ticket 11 compatibility/network is the sole active slice, resuming preserved WIP `25a2a09`. Read checkpoint11 in that worktree and finish shipped-artifact checks; do not restart completed network implementation.
+- Ticket 11 is ready for integration at `5cc6c11`: Windows/Linux Node24 67 tests and packaged dist/VSIX checks passed; Node20 shipped checks and 16 network/DT/process tests passed. UTF-8 split-chunk fix included. Next merge/verify integration; do not restart finished checks. Own checkpoint11 records exact images, results and retained Docker volume.
+- Latest user asked how Linux was tested and explicitly offered Docker. Explained that their local Docker is already used for Node20/24 bookworm container checks, not a real Azure Agent. Linux .NET restore/scan and final combined product smoke still need verification in subsequent tickets.
+- Attribution inventory is complete, but upstream nodejs-file-downloader4.13.0 has ISC metadata without full notice. Public packaging is deliberately gated; inspect checkpoint11/notices before final release work. Do not invent copyright/license text.
 - Agent IDs/conversations can be replaced; branches/worktrees/checkpoints retain the work. Product terminology follows the original requirement: .NET Core.
 
 ## Validation already performed
