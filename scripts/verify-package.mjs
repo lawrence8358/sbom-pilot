@@ -1,0 +1,50 @@
+import { spawnSync } from 'node:child_process';
+import { cp, mkdtemp, readFile, readdir, mkdir, writeFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve, sep } from 'node:path';
+import assert from 'node:assert/strict';
+import JSZip from 'jszip';
+
+const nodes = process.argv.slice(2).filter((_, index) => process.argv[index + 1] === '--node');
+if (!nodes.length) nodes.push(process.execPath);
+const root = await mkdtemp(join(tmpdir(), 'sbom-shipped-'));
+try {
+  const standalone = join(root, 'standalone');
+  await cp('dist', standalone, { recursive: true });
+  const file = (await readdir('packages')).find(name => name.endsWith('.vsix'));
+  assert.ok(file, 'Run npm run package:dev first');
+  const archive = await JSZip.loadAsync(await readFile(join('packages', file)));
+  const unpacked = join(root, 'vsix');
+  for (const [name, entry] of Object.entries(archive.files)) {
+    const target = resolve(unpacked, name);
+    assert.ok(target.startsWith(`${unpacked}${sep}`), 'Unsafe archive path');
+    if (entry.dir) await mkdir(target, { recursive: true });
+    else { await mkdir(dirname(target), { recursive: true }); await writeFile(target, await entry.async('nodebuffer')); }
+  }
+  const taskEntry = Object.keys(archive.files).find(name => name.endsWith('dist/index.js'));
+  assert.ok(taskEntry, 'VSIX task entry missing');
+  const entries = [join(standalone, 'index.js'), join(unpacked, taskEntry)];
+  for (const entry of entries) {
+    const manifest = JSON.parse(await readFile(join(dirname(entry), 'task.json'), 'utf8'));
+    assert.deepEqual(Object.keys(manifest.execution).sort(), ['Node20_1', 'Node24']);
+    assert.deepEqual(manifest.visibility, ['Build']); assert.equal(manifest.minimumAgentVersion, '3.238.0');
+    const licenses = JSON.parse(await readFile(join(dirname(entry), 'licenses/manifest.json'), 'utf8'));
+    for (const name of ['yaml', 'jsonc-parser', 'ajv', 'ajv-formats-draft2019', 'smtp-address-parser', 'https-proxy-agent', 'agent-base']) assert.ok(licenses.some(item => item.name === name), `Attribution missing: ${name}`);
+    for (const item of licenses) await readFile(join(dirname(entry), item.licenseFile));
+    for (const binary of nodes) {
+      const key = 'synthetic-shipped-package-key';
+      const result = spawnSync(binary, [entry], { cwd: root, encoding: 'utf8', env: {
+        ...process.env, SYSTEM_DEBUG: 'true', BUILD_BUILDID: '1', RELEASE_RELEASEID: '', AGENT_TEMPDIRECTORY: root,
+        INPUT_ENVIRONMENT: 'unsupported', INPUT_PROJECTPATH: root, INPUT_UPLOADTODT: 'true', INPUT_DTAPIKEY: key,
+        INPUT_DTPROJECTUUID: 'd40ce445-3566-49d5-bd8d-2601d73cf0d4',
+      } });
+      const output = `${result.stdout || ''}${result.stderr || ''}`;
+      assert.equal(result.error, undefined); assert.equal(result.status, 0);
+      assert.match(output, /參數驗證/); assert.doesNotMatch(output, /Cannot find module|SyntaxError|Unhandled/);
+      const secrets = output.split(/\r?\n/).filter(line => line.includes(key));
+      assert.equal(secrets.length, 1); assert.match(secrets[0], /^##vso\[task.setsecret\]/);
+      const version = spawnSync(binary, ['--version'], { encoding: 'utf8' }).stdout.trim();
+      console.log(`SHIPPED PASS ${entry.includes(`${sep}vsix${sep}`) ? 'VSIX' : 'dist'} ${process.platform}/${process.arch} ${version}; startup, secret mask, manifest and licenses`);
+    }
+  }
+} finally { await rm(root, { recursive: true, force: true }); }

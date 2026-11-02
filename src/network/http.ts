@@ -61,14 +61,14 @@ export async function sendHttpRequest(options: HttpRequest): Promise<HttpRespons
     pending.end(options.body);
   });
 }
-export async function downloadBytes(address: string): Promise<Buffer> {
+export async function downloadBytes(address: string, request = sendHttpRequest): Promise<Buffer> {
   let original: URL;
   try { original = new URL(address); } catch { throw new Error('工具下載網址無效。'); }
   for (let attempt = 0; attempt < 3; attempt++) {
     let url = original;
     try {
       for (let redirect = 0; redirect <= 5; redirect++) {
-        const response = await sendHttpRequest({ url, method: 'GET', headers: {}, rejectUnauthorized: true, timeoutMs: 120_000, maxResponseBytes: 256 * 1024 * 1024 });
+        const response = await request({ url, method: 'GET', headers: {}, rejectUnauthorized: true, timeoutMs: 120_000, maxResponseBytes: 256 * 1024 * 1024 });
         if ([301, 302, 303, 307, 308].includes(response.statusCode)) {
           if (!response.headers.location || redirect === 5) throw new NetworkError(false, '工具下載重新導向超出限制。');
           const next = new URL(response.headers.location, url);
