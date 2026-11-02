@@ -29,6 +29,7 @@ const ready = tickets.filter(ticket => !integrated.has(ticket.id) && !active.has
 console.log(`Integration: ${state.integrationBranch}; actual branch: ${git(['branch', '--show-current']) ?? 'unavailable'}`);
 console.log(`HEAD: ${git(['log', '-1', '--format=%h %s']) ?? 'unavailable'}`);
 console.log(`Review base: ${state.reviewBase}; no remote writes: ${state.noRemoteWrites}`);
+if (state.handoffDocument) console.log(`Handoff: ${join(root, state.handoffDocument)} (read before resuming)`);
 console.log(`Integrated: ${[...integrated].join(', ') || 'none'}`);
 console.log(`Dispatch limit: ${state.dispatchPolicy?.maxConcurrentSubagents ?? 'unspecified'} subagent(s); one verified integration before next slice: ${state.dispatchPolicy?.requireVerifiedIntegrationBeforeNextTicket ?? false}`);
 console.log(`Unassigned frontier: ${ready.map(ticket => ticket.id).join(', ') || 'none'}`);

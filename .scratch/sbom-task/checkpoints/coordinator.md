@@ -2,6 +2,8 @@
 
 ## Start here
 
+User requested urgent quota handoff on 2026-11-03. Read `.scratch/sbom-task/HANDOFF.md` first. Stop starting new work until this handoff is saved; next resumed work is existing ticket09 WIP, not a new ticket. Current worker checkpoint/HEAD is authoritative.
+
 Run `node scripts/resume.mjs` in the integration worktree, then read `implementation-state.json` and the target worker checkpoint in its own worktree. Git HEAD/status are authoritative when this summary is older. Resume existing work; no remote writes or PR.
 
 ## Persisted state
