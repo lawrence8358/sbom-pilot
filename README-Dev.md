@@ -37,7 +37,7 @@ npm run package:release
 | `src/process.ts` | `ProcessRunner(Command)`，無 shell、執行逾時、抑制來源秘密輸出 |
 | `src/tools.ts` | `ToolContext`、Node 解析／SHA-256 校驗／快取、隔離 cdxgen 準備 |
 | `src/install/contracts.ts` | `DependencyInstaller`；第四個 options 提供暫存目錄與 logger，保留原有三參數注入 |
-| `src/install/javascript.ts` | npm／pnpm 預設分派、鎖檔內容檢查；可注入 Yarn adapter |
+| `src/install/javascript.ts` | npm／pnpm／Yarn 預設分派、鎖檔內容檢查與可注入 adapter |
 | `src/install/project.ts` | 宣告／鎖檔／pnpm workspace 辨識與固定 fallback |
 | `src/install/manager.ts` | 隔離準備精確版本、封裝雜湊與 Node engine 驗證、JS／原生 bin 啟動、清理 |
 | `src/install/npm.ts`、`pnpm.ts` | npm ci／pnpm frozen 安裝；不額外改變專案腳本政策 |

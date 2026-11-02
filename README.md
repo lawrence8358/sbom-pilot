@@ -2,7 +2,7 @@
 
 在 Azure Pipelines 加入一個 **SBOM Pilot — Generate & Upload SBOM** Task，即可準備 Node.js 與 cdxgen、依 npm／pnpm／Yarn lockfile 安裝依賴，產生 CycloneDX 1.6 JSON，並要求 Agent 發佈名稱為 `SBOM` 的 Build Artifact。
 
-本階段提供 Vue/npm、pnpm 與 Yarn Classic／現代 Yarn 專案及 workspace，使用公開套件來源。DT 上傳、.NET、私有來源認證及合併交付產品將於後續版本交付。`--required-only` 固定啟用，代表 cdxgen 的 required scope 篩選，不能視為已逐項核對實際部署成品。Yarn workspace 實測會保留部分被上游標為 required 的開發依賴，詳見 [Yarn 支援及限制](docs/yarn.md)。
+本階段提供 Vue/npm、pnpm 與 Yarn Classic／現代 Yarn 專案及 workspace，使用公開套件來源。DT 上傳、.NET Core、私有來源認證及合併交付產品將於後續版本交付。`--required-only` 固定啟用，代表 cdxgen 的 required scope 篩選，不能視為已逐項核對實際部署成品。Yarn workspace 實測會保留部分被上游標為 required 的開發依賴，詳見 [Yarn 支援及限制](docs/yarn.md)。
 
 ## 前置條件及支援範圍
 
