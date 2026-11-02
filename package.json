@@ -23,6 +23,7 @@
     "ajv-formats-draft2019": "1.6.1",
     "azure-pipelines-task-lib": "5.282.0",
     "azure-pipelines-tool-lib": "2.281.0",
+    "https-proxy-agent": "7.0.6",
     "jsonc-parser": "3.3.1",
     "semver": "7.7.4",
     "yaml": "2.9.1"
@@ -31,7 +32,7 @@
     "@types/node": "20.19.33",
     "@types/semver": "7.7.1",
     "esbuild": "0.27.4",
-    "tfx-cli": "0.23.1",
+    "tfx-cli": "0.24.2",
     "typescript": "5.9.3"
   }
 }

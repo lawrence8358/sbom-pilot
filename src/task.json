@@ -10,7 +10,8 @@
   "version": { "Major": 0, "Minor": 1, "Patch": 0 },
   "instanceNameFormat": "SBOM Pilot",
   "runsOn": ["Agent"],
-  "minimumAgentVersion": "3.232.1",
+  "visibility": ["Build"],
+  "minimumAgentVersion": "3.238.0",
   "groups": [{ "name": "advanced", "displayName": "進階設定", "isExpanded": false }],
   "inputs": [
     { "name": "environment", "type": "pickList", "label": "開發環境", "required": true, "defaultValue": "vue", "options": { "vue": "Vue（npm／pnpm）", "dotnet": ".NET Core／現代 .NET" } },
@@ -27,5 +28,5 @@
     { "name": "fetchLicense", "type": "boolean", "label": "補充授權資訊", "defaultValue": "true", "groupName": "advanced" },
     { "name": "noCache", "type": "boolean", "label": "停用 cdxgen 快取", "defaultValue": "true", "groupName": "advanced" }
   ],
-  "execution": { "Node20_1": { "target": "index.js" } }
+  "execution": { "Node20_1": { "target": "index.js" }, "Node24": { "target": "index.js" } }
 }
