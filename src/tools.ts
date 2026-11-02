@@ -4,8 +4,9 @@ import { createHash } from 'node:crypto';
 import { satisfies, valid, validRange, rcompare } from 'semver';
 import * as toolLib from 'azure-pipelines-tool-lib/tool';
 import type { ProcessRunner } from './process';
+import { validateToolOptions, validateCdxgenPackage, parseCdxgenVersion, validateCdxgenHelp } from './tool-options';
+export { CDXGEN_VERSION } from './tool-options';
 
-export const CDXGEN_VERSION = '13.6.0';
 export interface ToolContext {
   node: string;
   npmCli: string;
@@ -36,7 +37,7 @@ export function selectNodeVersion(versions: string[], range: string): string {
   return version.replace(/^v/, '');
 }
 export const prepareTools: ToolPreparer = async (request, run, log) => {
-  if (!valid(request.cdxgenVersion)) throw new Error('cdxgen 版本覆寫必須是精確 semver 版本。');
+  validateToolOptions(request.nodeVersion, request.cdxgenVersion);
   if (!['x64', 'arm64'].includes(process.arch)) throw new Error('工具準備僅支援 x64/arm64 Agent。');
   const versions = JSON.parse((await fetchBytes('https://nodejs.org/dist/index.json')).toString()) as { version: string }[];
   const nodeVersion = selectNodeVersion(versions.map(item => item.version), request.nodeVersion);
@@ -67,10 +68,12 @@ export const prepareTools: ToolPreparer = async (request, run, log) => {
   const cdxgenCli = join(cdxgenRoot, 'node_modules/@cdxgen/cdxgen/bin/cdxgen.js');
   await access(cdxgenCli);
   const pkg = JSON.parse(await readFile(join(cdxgenRoot, 'node_modules/@cdxgen/cdxgen/package.json'), 'utf8'));
-  if (!satisfies(nodeVersion, pkg.engines.node) || pkg.version !== request.cdxgenVersion) throw new Error('cdxgen 與 Node.js 不相容，或實際版本不符。');
+  validateCdxgenPackage(pkg, request.cdxgenVersion, nodeVersion);
   const versionOutput = (await run({ executable: node, args: [cdxgenCli, '--version'], cwd: cdxgenRoot, env, timeoutMs: 120_000 })).stdout;
-  const actual = versionOutput.replace(/\u001b\[[0-9;]*m/g, '').match(/(?:CycloneDX Generator\s+)?(\d+\.\d+\.\d+(?:-[\w.-]+)?)/)?.[1];
+  const actual = parseCdxgenVersion(versionOutput);
   if (actual !== request.cdxgenVersion) throw new Error('cdxgen CLI 版本驗證失敗。');
+  const help = await run({ executable: node, args: [cdxgenCli, '--help'], cwd: cdxgenRoot, env, timeoutMs: 120_000 });
+  validateCdxgenHelp(`${help.stdout}\n${help.stderr}`);
   log(`cdxgen ${actual}（固定 npm 套件；自動安裝依賴將關閉）。`);
   return { node, npmCli, cdxgenCli, nodeVersion, cdxgenVersion: actual, env };
 };

@@ -3,10 +3,12 @@ import { join } from 'node:path';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 import addInternationalFormats from 'ajv-formats-draft2019';
+import { SUPPORTED_SPEC_VERSIONS } from './tool-options';
 
 export interface ValidatedSbom { path: string; componentCount: number }
 export type SbomValidator = (path: string, specVersion: string) => Promise<ValidatedSbom>;
 export const validateSbom: SbomValidator = async (path, specVersion) => {
+  if (!SUPPORTED_SPEC_VERSIONS.includes(specVersion as '1.6')) throw new Error('此版本僅提供 CycloneDX 1.6 官方 Schema。');
   let value: any;
   try { value = JSON.parse(await readFile(path, 'utf8')); }
   catch { throw new Error('SBOM 不存在或不是可解析 JSON。'); }
