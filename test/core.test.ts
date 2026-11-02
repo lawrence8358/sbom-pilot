@@ -34,6 +34,7 @@ test('runtime input parsing applies defaults, keeps blank excludes and rejects i
   assert.equal(defaults.uploadToDt, false);
   assert.equal(defaults.nodeVersion, '24.x');
   assert.equal(defaults.specVersion, '1.6');
+  assert.equal(readTaskConfig(name => name === 'projectPath' ? 'root' : name === 'cdxgenVersion' ? '' : undefined).cdxgenVersion, '13.6.0');
   const values: Record<string, string> = { projectPath: 'root', excludes: '', fetchLicense: 'FALSE', noCache: ' false ' };
   const parsed = readTaskConfig(name => values[name]);
   assert.deepEqual(parsed.excludes, []);

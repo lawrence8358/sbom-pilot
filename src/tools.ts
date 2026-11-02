@@ -58,6 +58,8 @@ export const prepareTools: ToolPreparer = async (request, run, log) => {
   const node = join(nodeRoot, process.platform === 'win32' ? 'node.exe' : 'bin/node');
   const npmCli = join(nodeRoot, process.platform === 'win32' ? 'node_modules/npm/bin/npm-cli.js' : 'lib/node_modules/npm/bin/npm-cli.js');
   const env = { ...process.env, PATH: `${dirname(node)}${delimiter}${process.env.PATH ?? ''}` };
+  const actualNode = (await run({ executable: node, args: ['--version'], cwd: request.tempDirectory, env, timeoutMs: 30_000 })).stdout.trim();
+  if (actualNode !== `v${nodeVersion}`) throw new Error('實際 Node.js runtime 版本與選定版本不符；請檢查 Agent 工具快取。');
   log(`Node.js ${nodeVersion}（掃描工具 runtime；Task handler 使用獨立 Node20_1）。`);
   // Isolated installation: never use an arbitrary global cdxgen or write into the repo.
   // A fresh install avoids trusting an incomplete tool cache after cancelled jobs.

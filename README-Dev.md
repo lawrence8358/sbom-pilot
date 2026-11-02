@@ -7,6 +7,7 @@ npm ci
 npm test
 npm run build
 npm run test:smoke
+npm run test:options-smoke
 npm run package:dev
 ```
 
@@ -38,6 +39,10 @@ npm run package:release
 | `src/validation.ts` | 官方 Schema 驗證後回傳 `ValidatedSbom` |
 
 官方 CycloneDX 1.6 schema 及其依賴直接封裝，不在執行時向外下載 schema。Azure SDK 需要語言資源及平台檔案，建置保留完整 production SDK dependency tree；其餘程式以 esbuild 打包。
+
+`src/config.ts` 的 `readTaskConfig(InputReader)` 共用 Classic/YAML 的 runtime 契約，`src/azure-inputs.ts` 保留 SDK vault 不儲存的明確空字串。`src/tool-options.ts` 集中穩定 cdxgen13.x／Node>=24 政策及實際套件、CLI 版本／必要旗標驗證。只附官方1.6 schema，不把 cdxgen 可產出的其他 spec 宣稱為本 Task 已支援。
+
+2026-11-02 ticket02 選項驗證：`npm test`15/15 通過；涵蓋實際 Azure SDK 空值解析、所有四組授權／快取開關、Node/cdxgen 不相容、官方 schema、真實 npm ci。`npm run test:options-smoke` 以 Node24.22.2/cdxgen13.6.0 在含空白的工具與專案路徑執行，無自訂排除為26組件，`**/_Design{,Front}/**` 排除兩個設計目錄後為23組件，兩份皆通過官方1.6 schema；不相容 Node20／cdxgen12 在下載前被拒絕。授權／快取開關有實際子程序環境值測試，不宣稱單獨開關必定改變每個專案的組件數。未驗證的 liveAzure 仍見下節。
 
 ## 來源與已知驗證邊界
 
