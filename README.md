@@ -60,7 +60,7 @@ steps:
 | 欄位（YAML） | 預設 | 說明 |
 | --- | --- | --- |
 | `environment` | `vue` | `vue`（Vue/npm／pnpm／Yarn）、`dotnet`（.NET Core）、`netframework`（.NET Framework，限 Windows）或 `combined`（.NET Core 前後端合併） |
-| `projectPath` | `$(Build.SourcesDirectory)` | 專案根目錄 |
+| `projectPath` | `$(Build.SourcesDirectory)` | 專案或 workspace 根目錄；combined 使用前後端共同根目錄 |
 | `nodeVersion` | `24.x` | 最新符合 semver 範圍的 Node，必須 >=24 |
 | `excludes` | 見下列規則 | 相對根目錄 glob，逗號分隔，保留花括號內逗號；明確設定空字串代表不加自訂排除 |
 | `specVersion` | `1.6` | 固定以附帶的官方 1.6 JSON Schema 驗證 |
