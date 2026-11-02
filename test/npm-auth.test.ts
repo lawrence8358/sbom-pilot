@@ -66,6 +66,29 @@ test('mapped project placeholders work only at their matching source/auth slot; 
   await assert.rejects(checkProjectAuthentication(project(root, 'yarn', '4.18.1'), env, options), /無法安全對應/);
 }));
 
+test('mapped secrets cannot escape through inherited npm/Yarn config or Yarn fallback syntax', () => fixture(async root => {
+  await mkdir(project(root).root);
+  const childHome = join(root, 'child-home'); await mkdir(childHome);
+  const userconfig = join(childHome, '.npmrc');
+  const mapped: NpmCredential[] = [{ ...credentials[0], environment: { NODE_AUTH_TOKEN: 'token' } }];
+  const env = projectCredentialEnvironment({ HOME: childHome, NPM_CONFIG_USERCONFIG: userconfig }, mapped), options = { npmCredentials: mapped };
+  await writeFile(userconfig, '//unrelated.example.test/:_authToken=${NODE_AUTH_TOKEN}\n');
+  await assert.rejects(checkProjectAuthentication(project(root), env, options), /無法安全對應/);
+  await writeFile(userconfig, '//registry.example.test/team/:_authToken=old-inherited-token\nfetch-retries=4\n');
+  await checkProjectAuthentication(project(root), env, options);
+  await withNpmAuthentication(project(root), { executable: process.execPath, args: [] }, env, { ...options, tempDirectory: join(root, 'temp') }, async command => {
+    const rc = await readFile(command.env!.NPM_CONFIG_USERCONFIG!, 'utf8');
+    assert.ok(!rc.includes('old-inherited-token')); assert.ok(rc.includes('fetch-retries=4'));
+  });
+  for (const suffix of [':-fallback', '-fallback']) {
+    const rc = (registry: string) => `npmScopes:\n  private:\n    npmRegistryServer: ${registry}\n    npmAuthToken: \${NODE_AUTH_TOKEN${suffix}}\n`;
+    await writeFile(join(childHome, '.yarnrc.yml'), rc('https://unrelated.example.test/'));
+    await assert.rejects(checkProjectAuthentication(project(root, 'yarn', '4.18.1'), env, options), /無法安全對應/);
+    await writeFile(join(childHome, '.yarnrc.yml'), rc(credentials[0].registry));
+    await checkProjectAuthentication(project(root, 'yarn', '4.18.1'), env, options);
+  }
+}));
+
 test('placeholder mappings precede manager config/version init and install, while binary provisioning keeps original tool env', () => fixture(async root => {
   const selected = project(root, 'yarn', '4.18.1');
   await mkdir(selected.root);

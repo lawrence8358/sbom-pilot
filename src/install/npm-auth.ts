@@ -21,43 +21,62 @@ export async function checkProjectAuthentication(project: JavaScriptProject, env
   if (!options.npmCredentials?.length) return;
   const credentials = validateNpmCredentials(options.npmCredentials);
   const mappings = new Map(credentials.flatMap(credential => Object.keys(credential.environment ?? {}).map(name => [name, credential] as const)));
-  const refs = (value: string) => [...value.matchAll(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g)].map(match => match[1]);
+  const refs = (value: string) => [...value.matchAll(/\$\{([A-Za-z_][A-Za-z0-9_]*)(?:(?::-|-)[^}]*|\?)?\}/g)].map(match => match[1]);
   const invalidMapping = () => new Error('專案認證的環境變數映射無法安全對應相同 registry／認證欄位；請明訂 npmCredentials.environment，且只在對應來源的認證設定使用該變數。');
   const identity = (registry: string) => { try { const url = new URL(registry.startsWith('//') ? `https:${registry}` : registry); return `//${url.host}${url.pathname.replace(/\/+$/, '')}/`; } catch { return undefined; } };
-  const checkMapped = (value: string, registry: string, alias: CredentialAlias): boolean => {
+  const checkMapped = (value: string, registry: string, alias: CredentialAlias, allowFallback = false): boolean => {
     const variables = refs(value), supplied = variables.filter(name => mappings.has(name));
     if (!supplied.length) return false;
-    if (variables.length !== 1 || value !== `\${${variables[0]}}`) throw invalidMapping();
+    if (variables.length !== 1 || (value !== `\${${variables[0]}}` && !(allowFallback && /^\$\{[A-Za-z_][A-Za-z0-9_]*(?::-|-)[^${}]*\}$/.test(value)))) throw invalidMapping();
     const credential = mappings.get(variables[0])!;
     if (identity(registry) !== identity(credential.registry) || credential.environment?.[variables[0]] !== alias) throw invalidMapping();
     return true;
   };
   const modern = project.manager === 'yarn' && project.yarn?.generation === 'modern';
   const yarnFiles: any[] = [];
+  const visitedFiles = new Set<string>();
+  const checkNpmFile = (contents: string, projectFile: boolean) => {
+    for (const line of contents.split(/\r?\n/)) {
+      if (/^\s*[;#]/.test(line)) continue;
+      const match = line.match(/^\s*["']?(\/\/[^\s"']+\/):(_authToken|_auth|username|_password|tokenHelper)["']?\s*=\s*(.*)$/i);
+      if (!match) { if (refs(line).some(name => mappings.has(name))) throw invalidMapping(); continue; }
+      const target = credentials.some(credential => identity(credential.registry) === identity(match[1]));
+      const value = match[3].trim().replace(/^(["'])(.*)\1$/, '$2');
+      const aliases: Record<string, CredentialAlias> = { _authtoken: 'token', _auth: 'basicBase64', username: 'username', _password: 'passwordBase64' };
+      const alias = aliases[match[2].toLowerCase()];
+      if (alias && checkMapped(value, match[1], alias)) continue;
+      // Only project auth outranks our user-level overlay. Native pnpm12 ignores
+      // project auth placeholders; its trusted auth file supplies the credential.
+      if (projectFile && target && !(project.manager === 'pnpm' && Number(project.version.split('.')[0]) >= 11 && value.includes('${'))) throw new Error('專案 .npmrc 已包含相同 registry 的認證；npmCredentials 的暫存 userconfig 不能覆寫較高優先的專案認證。請用 environment 映射對應的認證佔位，或將該認證改由 npmCredentials 統一提供，保留 registry/scope 設定。');
+    }
+  };
   for (let directory = resolve(project.root);; directory = dirname(directory)) {
     if (modern) {
       let settings;
-      try { settings = parse(await readOptional(join(directory, getEnv(env, 'YARN_RC_FILENAME') ?? '.yarnrc.yml'))); }
+      const path = join(directory, getEnv(env, 'YARN_RC_FILENAME') ?? '.yarnrc.yml');
+      visitedFiles.add(path);
+      try { settings = parse(await readOptional(path)); }
       catch { throw new Error('Yarn 專案認證設定無法解析；請檢查 .yarnrc.yml，設定內容不會轉印。'); }
       if (settings && typeof settings === 'object') yarnFiles.unshift(settings);
     } else {
-      const contents = await readOptional(join(directory, '.npmrc'));
-      for (const line of contents.split(/\r?\n/)) {
-        if (/^\s*[;#]/.test(line)) continue;
-        const match = line.match(/^\s*["']?(\/\/[^\s"']+\/):(_authToken|_auth|username|_password|tokenHelper)["']?\s*=\s*(.*)$/i);
-        if (!match) { if (refs(line).some(name => mappings.has(name))) throw invalidMapping(); continue; }
-        const target = credentials.some(credential => identity(credential.registry) === identity(match[1]));
-        const value = match[3].trim().replace(/^(["'])(.*)\1$/, '$2');
-        const aliases: Record<string, CredentialAlias> = { _authtoken: 'token', _auth: 'basicBase64', username: 'username', _password: 'passwordBase64' };
-        const alias = aliases[match[2].toLowerCase()];
-        if (alias && checkMapped(value, match[1], alias)) continue;
-        // pnpm12 intentionally ignores project auth values containing env placeholders.
-        if (target && !(project.manager === 'pnpm' && Number(project.version.split('.')[0]) >= 11 && value.includes('${'))) throw new Error('專案 .npmrc 已包含相同 registry 的認證；npmCredentials 的暫存 userconfig 不能覆寫較高優先的專案認證。請用 environment 映射對應的認證佔位，或將該認證改由 npmCredentials 統一提供，保留 registry/scope 設定。');
-      }
+      const path = join(directory, '.npmrc');
+      visitedFiles.add(path);
+      checkNpmFile(await readOptional(path), true);
     }
     if (dirname(directory) === directory) break;
   }
+  const childHome = getEnv(env, 'HOME') ?? getEnv(env, 'USERPROFILE') ?? homedir();
+  if (!modern) {
+    const user = resolve(project.root, getEnv(env, 'npm_config_userconfig') ?? join(childHome, '.npmrc'));
+    const auth = getEnv(env, 'PNPM_CONFIG_NPMRC_AUTH_FILE');
+    for (const path of [user, ...(project.manager === 'pnpm' && auth ? [resolve(project.root, auth)] : [])]) if (!visitedFiles.has(path)) checkNpmFile(await readOptional(path), false);
+  }
   if (modern) {
+    const homeRc = join(childHome, getEnv(env, 'YARN_RC_FILENAME') ?? '.yarnrc.yml');
+    if (!visitedFiles.has(homeRc)) {
+      try { const settings = parse(await readOptional(homeRc)); if (settings && typeof settings === 'object') yarnFiles.unshift(settings); }
+      catch { throw new Error('Yarn 使用者認證設定無法解析；設定內容不會轉印。'); }
+    }
     const merged: any = { npmRegistryServer: 'https://registry.yarnpkg.com', npmScopes: {}, npmRegistries: {} };
     for (const file of yarnFiles) {
       for (const key of ['npmRegistryServer', 'npmAuthToken', 'npmAuthIdent']) if (file[key] !== undefined) merged[key] = file[key];
@@ -65,8 +84,8 @@ export async function checkProjectAuthentication(project: JavaScriptProject, env
     }
     const checkAuth = (settings: any, registry: string) => {
       for (const [key, alias] of [['npmAuthToken', 'token'], ['npmAuthIdent', 'basic']] as const) if (typeof settings[key] === 'string') {
-        for (const name of refs(settings[key])) if (env[name] === undefined) throw new Error('Yarn 認證設定引用未提供的環境變數；請在 npmCredentials.environment 明訂對應別名，保留 Repo 的 registry/scope 設定。');
-        checkMapped(settings[key], registry, alias);
+        for (const match of settings[key].matchAll(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g)) if (env[match[1]] === undefined) throw new Error('Yarn 認證設定引用未提供的環境變數；請在 npmCredentials.environment 明訂對應別名，保留 Repo 的 registry/scope 設定。');
+        checkMapped(settings[key], registry, alias, true);
       }
     };
     if (['npmAuthToken', 'npmAuthIdent'].some(key => typeof merged[key] === 'string' && refs(merged[key]).some(name => mappings.has(name)))) throw invalidMapping();
@@ -130,6 +149,12 @@ export async function withNpmAuthentication(project: JavaScriptProject, command:
       const childHome = getEnv(env, 'HOME') ?? getEnv(env, 'USERPROFILE') ?? homedir();
       const userconfig = getEnv(env, 'npm_config_userconfig') ?? join(childHome, '.npmrc');
       const original = await readOptional(resolve(project.root, userconfig));
+      const overlay = (contents: string) => contents.split(/\r?\n/).filter(line => {
+        const match = line.match(/^\s*["']?(\/\/[^\s"']+\/):(?:_authToken|_auth|username|_password|always-auth|tokenHelper)["']?\s*=/i);
+        if (!match) return true;
+        const target = new URL(`https:${match[1]}`);
+        return !credentials.some(credential => { const url = new URL(credential.registry); return url.host === target.host && url.pathname === target.pathname; });
+      }).join('\n');
       const lines: string[] = [];
       credentials.forEach((credential, index) => {
         const url = new URL(credential.registry), key = `//${url.host}${url.pathname}`;
@@ -138,13 +163,13 @@ export async function withNpmAuthentication(project: JavaScriptProject, command:
         lines.push(`${key}:${credential.token ? '_authToken' : '_auth'}=\${${secret}}`, `${key}:always-auth=true`);
       });
       const path = join(directory, 'npmrc');
-      await writeFile(path, `${original}\n${lines.join('\n')}\n`, { mode: 0o600 });
+      await writeFile(path, `${overlay(original)}\n${lines.join('\n')}\n`, { mode: 0o600 });
       setEnv(env, 'NPM_CONFIG_USERCONFIG', path);
       if (project.manager === 'pnpm' && Number(project.version.split('.')[0]) >= 11) {
         const inheritedAuth = getEnv(env, 'PNPM_CONFIG_NPMRC_AUTH_FILE');
         const originalAuth = inheritedAuth ? await readOptional(resolve(project.root, inheritedAuth)) : original;
         const authPath = join(directory, 'pnpm-auth.ini');
-        await writeFile(authPath, `${originalAuth}\n${lines.join('\n')}\n`, { mode: 0o600 });
+        await writeFile(authPath, `${overlay(originalAuth)}\n${lines.join('\n')}\n`, { mode: 0o600 });
         setEnv(env, 'PNPM_CONFIG_NPMRC_AUTH_FILE', authPath);
       }
     }

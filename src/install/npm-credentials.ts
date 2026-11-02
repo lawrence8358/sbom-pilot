@@ -52,8 +52,8 @@ export function validateNpmCredentials(value: unknown): NpmCredential[] {
       if (!entry.environment || typeof entry.environment !== 'object' || Array.isArray(entry.environment) || Object.keys(entry.environment).length > 20) throw invalid();
       const environment: Record<string, CredentialAlias> = {};
       for (const [name, alias] of Object.entries(entry.environment)) {
-        const reserved = /^(?:INPUT_|SECRET_|AGENT_|SYSTEM_|BUILD_|RELEASE_|NPM_CONFIG_|PNPM_|YARN_|SBOM_PILOT_|DOTNET_|GIT_|SSL_|CURL_|LD_|DYLD_|BASH_|NODE_)/.test(name) && name !== 'NODE_AUTH_TOKEN';
-        if (!/^[A-Z][A-Z0-9_]{0,127}$/.test(name) || reserved || /^(?:PATH|PATHEXT|HOME|USERPROFILE|HOMEDRIVE|HOMEPATH|APPDATA|LOCALAPPDATA|TMP|TEMP|TMPDIR|COMSPEC|SHELL|ENV|HTTP_PROXY|HTTPS_PROXY|ALL_PROXY|NO_PROXY)$/.test(name) || variables.has(name)) throw invalid();
+        const reserved = /^(?:INPUT_|SECRET_|AGENT_|SYSTEM_|BUILD_|RELEASE_|NPM_CONFIG_|PNPM_|YARN_|SBOM_PILOT_|DOTNET_|GIT_|SSL_|CURL_|LD_|DYLD_|BASH_|NODE_|XDG_|COREPACK_)/.test(name) && name !== 'NODE_AUTH_TOKEN';
+        if (!/^[A-Z][A-Z0-9_]{0,127}$/.test(name) || reserved || /^(?:PATH|PATHEXT|HOME|USERPROFILE|HOMEDRIVE|HOMEPATH|APPDATA|LOCALAPPDATA|TMP|TEMP|TMPDIR|COMSPEC|SHELL|ENV|HTTP_PROXY|HTTPS_PROXY|ALL_PROXY|NO_PROXY|CI|CONTINUOUS_INTEGRATION|USER|USERNAME|LOGNAME)$/.test(name) || variables.has(name)) throw invalid();
         if (!['token', 'username', 'password', 'passwordBase64', 'basic', 'basicBase64'].includes(alias as string)) throw invalid();
         credentialValue(credential, alias as CredentialAlias);
         variables.add(name);

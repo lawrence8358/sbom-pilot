@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { createServer } from 'node:http';
 import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
@@ -17,19 +17,40 @@ async function main() {
   await mkdir(process.env.AGENT_TOOLSDIRECTORY, { recursive: true });
   await mkdir(process.env.AGENT_TEMPDIRECTORY, { recursive: true });
   const { prepareTools } = await import('../.test-build/src/tools.js');
-  const { runProcess } = await import('../.test-build/src/process.js');
+  const { runProcess: productionRun } = await import('../.test-build/src/process.js');
   const { runWorkflow } = await import('../.test-build/src/workflow.js');
   const { withPackageManager } = await import('../.test-build/src/install/manager.js');
   const { withNpmAuthentication, checkProjectAuthentication } = await import('../.test-build/src/install/npm-auth.js');
   const { projectCredentialEnvironment } = await import('../.test-build/src/install/npm-credentials.js');
   const { DEFAULT_EXCLUDES, parseExcludes } = await import('../.test-build/src/config.js');
-  const tools = await prepareTools({ nodeVersion: '24.x', cdxgenVersion: '13.6.0', tempDirectory: process.env.AGENT_TEMPDIRECTORY }, runProcess, console.log);
+  const tools = await prepareTools({ nodeVersion: '24.x', cdxgenVersion: '13.6.0', tempDirectory: process.env.AGENT_TEMPDIRECTORY }, productionRun, console.log);
   // Synthetic credentials are generated for this process and never written to fixtures.
   const token = `fixture-bearer-${createHash('sha256').update(String(Date.now())).digest('hex')}`;
   const username = 'fixture-user', password = `fixture-password-${process.pid}`;
   const basic = Buffer.from(`${username}:${password}`).toString('base64');
   const secretValues = [token, password, `${username}:${password}`, basic, Buffer.from(password).toString('base64'), 'invalid-fixture-token', 'invalid-fixture-password', Buffer.from(`${username}:invalid-fixture-password`).toString('base64')];
   const safe = text => secretValues.every(secret => !String(text).includes(secret));
+  // Production intentionally discards failure output. For this synthetic fixture
+  // alone, retain a bounded, redacted diagnostic so CLI compatibility is debuggable.
+  const runProcess = async command => {
+    try { return await productionRun(command); }
+    catch (error) {
+      const output = await new Promise(resolve => {
+        const child = spawn(command.executable, command.args, { cwd: command.cwd, env: command.env, windowsHide: true, shell: false });
+        let text = '';
+        const append = chunk => { text = (text + chunk).slice(-8192); };
+        child.stdout.on('data', append); child.stderr.on('data', append);
+        const timeout = setTimeout(() => { child.kill(); resolve('Diagnostic command timed out'); }, 30000);
+        child.on('error', () => { clearTimeout(timeout); resolve('Diagnostic command could not start'); });
+        child.on('close', () => { clearTimeout(timeout); resolve(text); });
+      });
+      let redacted = output;
+      for (const value of secretValues) redacted = redacted.replaceAll(value, '[redacted]');
+      redacted = redacted.replace(/(Bearer|Basic)\s+[^\s"']+/gi, '$1 [redacted]');
+      await writeFile(join(base, 'last-cli-diagnostic.txt'), redacted);
+      throw error;
+    }
+  };
   const hash = async path => createHash('sha256').update(await readFile(path)).digest('hex');
   const log = message => { if (!safe(message)) throw new Error('Secret found in Task log'); console.log(message); };
   const packages = new Map();
@@ -60,9 +81,11 @@ async function main() {
   });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   origin = `http://127.0.0.1:${server.address().port}`;
-  const evidence = [];
+  const requested = process.argv.find(arg => arg.startsWith('--scenarios='))?.split('=')[1]?.split(',');
+  let previous = [];
+  if (requested) { try { previous = JSON.parse(await readFile(join(base, 'evidence.json'), 'utf8')); } catch { /* first subset */ } }
+  const evidence = previous.filter(item => !requested?.includes(item.scenario));
   try {
-    const requested = process.argv.find(arg => arg.startsWith('--scenarios='))?.split('=')[1]?.split(',');
     const scenarios = requested ?? ['npm', 'pnpm10', 'pnpm12', 'yarn-classic', 'yarn-pnp', 'yarn-node-modules', 'combined'];
     assert.ok(scenarios.every(name => ['npm', 'pnpm10', 'pnpm12', 'yarn-classic', 'yarn-pnp', 'yarn-node-modules', 'combined'].includes(name)), 'Unknown scenario');
     for (const name of scenarios) {
@@ -83,9 +106,11 @@ async function main() {
       await writeFile(join(project, 'packages/web/package.json'), JSON.stringify({ name: '@fixture/web', version: '1.0.0', dependencies: { '@private/demo': '1.0.0', '@basic/demo': '1.0.0', '@public/helper': '1.0.0' } }));
       await writeFile(join(project, 'packages/web/index.js'), "const a = require('@private/demo'); const b = require('@basic/demo'); console.log(a + b);\n");
       const scopedKey = scope => `//127.0.0.1:${server.address().port}/${scope}/`;
-      const npmrc = `@private:registry=${origin}/private/\n@basic:registry=${origin}/basic/\n${scopedKey('private')}:_authToken=\${NPM_TOKEN}\n${scopedKey('basic')}:username=\${FEED_USER}\n${scopedKey('basic')}:_password=\${FEED_PASSWORD_B64}\nfetch-retries=0\n`;
+      // Native pnpm12 treats npm's userconfig as auth fallback; its registry
+      // routing belongs in project .npmrc or native global rc/config.yaml.
+      const npmrc = `@private:registry=${origin}/private/\n@basic:registry=${origin}/basic/\n${name === 'pnpm12' ? `@public:registry=${origin}/public/\n` : ''}${scopedKey('private')}:_authToken=\${NPM_TOKEN}\n${scopedKey('basic')}:username=\${FEED_USER}\n${scopedKey('basic')}:_password=\${FEED_PASSWORD_B64}\nfetch-retries=0\n`;
       if (modern) {
-        await writeFile(join(project, '.yarnrc.yml'), stringify({ nodeLinker: name === 'yarn-pnp' ? 'pnp' : 'node-modules', enableGlobalCache: false, cacheFolder: join(cache, 'yarn'), unsafeHttpWhitelist: ['127.0.0.1'], npmScopes: { private: { npmRegistryServer: `${origin}/private/`, npmAuthToken: '${NPM_TOKEN}', npmAlwaysAuth: false }, basic: { npmRegistryServer: `${origin}/basic/`, npmAuthIdent: '${FEED_IDENT}', npmAlwaysAuth: false }, public: { npmRegistryServer: `${origin}/public/` } } }));
+        await writeFile(join(project, '.yarnrc.yml'), stringify({ nodeLinker: name === 'yarn-pnp' ? 'pnp' : 'node-modules', enableGlobalCache: false, enableMirror: false, cacheFolder: join(cache, 'yarn'), unsafeHttpWhitelist: ['127.0.0.1'], npmRegistries: { [`${origin}/private/`]: { npmAuthToken: '${NPM_TOKEN:-}', npmAlwaysAuth: false } }, npmScopes: { private: { npmRegistryServer: `${origin}/private/`, npmAuthToken: 'stale-project-token', npmAlwaysAuth: false }, basic: { npmRegistryServer: `${origin}/basic/`, npmAuthIdent: '${FEED_IDENT}', npmAlwaysAuth: false }, public: { npmRegistryServer: `${origin}/public/` } } }));
       } else await writeFile(join(project, '.npmrc'), npmrc);
       if (manager === 'pnpm') await writeFile(join(project, 'pnpm-workspace.yaml'), stringify({ packages: ['packages/*'], storeDir: join(cache, 'pnpm'), minimumReleaseAge: 0 }));
       const originalUserconfig = join(state, 'user.npmrc'), originalAuth = join(state, 'auth.ini');
@@ -95,6 +120,7 @@ async function main() {
       // Modern Yarn rejects Classic-only env options, so keep its cache path in RC.
       if (modern) delete scopedTools.env.YARN_CACHE_FOLDER;
       const selected = { root: project, manager, version, reason: 'declaration', lockPath, ...(manager === 'yarn' ? { yarn: { generation: modern ? 'modern' : 'classic' } } : {}) };
+      if (manager === 'yarn') await writeFile(lockPath, ''); // Fixture authoring establishes its own project boundary.
       const authorOptions = { tempDirectory: join(state, 'author-tools'), npmCredentials: credential, log };
       const mapped = projectCredentialEnvironment(scopedTools.env, credential);
       await checkProjectAuthentication(selected, mapped, authorOptions);
