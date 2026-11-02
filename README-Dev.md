@@ -150,3 +150,11 @@ Microsoft 來源：[NuGet/MSBuild restore](https://learn.microsoft.com/en-us/nug
 fixture作者建立鎖檔；workflow仍嚴格安裝。Yarn fixture關閉globalmirror並隔離globalFolder，避免同名測試套件的metadata/tarball快取造成假成功。生產Repo快取政策不變。失敗診斷只在合成fixture保留受限且去識別的文字，不轉印真實子程序原始輸出。證據在忽略的`.smoke/npm-auth/evidence.json`，不提交完整產物或日誌。此驗證不等於公司feed、真實Azure發佈或private license metadata補充已驗收。
 
 工單09最終來源`a4b85be`：Windows完整七種private registry smoke及Linux Ubuntu24.04.3 x64的npm／nativepnpm12／YarnPnP／combined均通過；兩邊91/91測試。Typecheck、build、developer VSIX與隔離dist/VSIX啟動／原始及衍生npm秘密遮罩／manifest／notice檢查通過。重跑Docker命令見[私有來源文件](docs/npm-auth.md)；Linux證據`.smoke/npm-auth-linux-evidence.json`。這些是本機合成來源與artifact adapter，不代表liveAzure或公司feed已驗收。
+
+## 私有 NuGet 認證：開發與驗證
+
+使用者欄位／來源隔離／重跑命令見 [nuget-auth.md](docs/nuget-auth.md)。`src/dotnet/credentials.ts` 驗證 Secret Variable JSON 的 source、url、username、password，對整個 restore graph 的 ProjectReference 範圍檢查同名異址及大小寫衝突；`sources.ts` 以實際 SDK／MSBuild 的 NuGet.Configuration API 讀取 graph 的 configFilePaths，不自行模擬設定優先序。只有最終 restore 子程序取得 Basic 環境認證；finally 清除環境複本，不產生秘密檔案、不傳入掃描／SDK／npm／DT，沿用分層來源、source mapping、Proxy 與鎖檔。
+
+兩個 restore API 新增最後一個選填 `NuGetCredential[]` 參數；原有無認證呼叫保持有效。`DotnetInstallOptions.nugetCredentials` 由獨立 .NET Core／Framework／combined 流程轉交，`ToolContext.env` 不保留該認證。最前面的 `azure-secret-inputs.ts` 捕捉 NuGet 原始輸入，在 SDK debug 前登錄完整 JSON、帳密及 Basic 編碼；不呼叫 secret getInput。
+
+2026-11-03 Windows 四格式（.NET Core、非 SDK PackageReference、packages.config、SDK net48）及 Linux .NET Core 的 loopback v3 私有／公開 feed smoke 通過；每種包含認證成功／錯誤／缺少、冷快取真實 nupkg 請求、私有→公開邊、官方1.6 Schema、2個有效組件、一份本機 artifact、分層設定／既有鎖檔 hash 不變、秘密不進參數／日誌／成品及 helper 清理。真實 ProjectReference 同名異址負例在傳出認證前失敗。Windows／Linux 均95/95測試；Windows typecheck、build、developer VSIX、Node20.20.2與24.22.1的隔離 dist／VSIX啟動、manifest、license及NuGet／npm／DT秘密遮罩檢查通過。SDK6與9另有實際 helper 相容檢查，完整本工單認證矩陣使用 SDK10.0.101。Linux 容器來源55753c4、exited0，詳細 hash 與重跑方式見 checkpoint10／認證文件。仍不代表 live Azure、公司 feed 或企業 Proxy／CA 已驗收；既有公開封裝 notice／publisher gate 不變。

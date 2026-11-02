@@ -55,6 +55,25 @@ npm run test:smoke:nuget-auth -- --formats=dotnet
 
 腳本在記憶體產生合成帳密及 NuGet nupkg，以 loopback v3 feed 提供私有 Pilot.Private → 公開 Pilot.Public。公開來源不需認證；分層來源設定含 disabled sources 及 source mapping。各次正式 workflow 前清空隔離快取，以實際 nupkg 下載證明認證，不以暖快取當成功。PackageReference fixture 先由工具建立合法鎖檔，再驗證 Task 使用既有鎖檔且 hash 不變；packages.config 不要求額外鎖檔。檢查認證成功／錯誤／缺少、來源隔離、官方1.6 Schema、依賴邊、本機 artifact、輸入 hash、秘密不進日誌／參數／成品、helper 清理，以及真實 ProjectReference 同名異址拒絕。
 
-2026-11-03 Windows x64 初次實測已通過 .NET Core、非 SDK-style PackageReference、packages.config、SDK-style net48 四種格式；Node24.22.2、cdxgen13.6.0、SDK10.0.101、已安裝 Visual Studio MSBuild17.14。初次四格式已驗證成功／錯誤／缺少認證、SBOM 及來源隔離；強化的分層／既有鎖檔與 Linux 結果完成後記錄於本工單 checkpoint 及 `.smoke/nuget-auth/evidence.json`。
+2026-11-03 Windows x64 四種格式及 Linux x64 SDK-style .NET Core 均通過上述完整檢查，每份 SBOM 有2個套件及私有→公開依賴邊。Node24.22.2、cdxgen13.6.0、SDK10.0.101；Windows 傳統格式使用已安裝 Visual Studio MSBuild17.14。Windows／Linux 各95/95測試通過；typecheck、build、開發 VSIX 及隔離 dist／VSIX 的 Node20.20.2／24.22.1 啟動與 NuGet／npm 衍生秘密遮罩檢查通過。SDK6.0.428／9.0.316另實測官方來源解析 helper，包含舊加密密碼設定而不解密；這兩版沒有重跑本工單完整私人 feed SBOM 矩陣。精簡證據在本工單 checkpoint、`.smoke/nuget-auth/evidence.json` 及 `.smoke/nuget-auth-linux-evidence.json`。
 
 這是合成 feed 與本機 artifact adapter 的證據；實際 Azure Services／Server 安裝及 artifact 上傳、公司 feed、企業 Proxy／CA 仍需相應環境驗收。Task 不把還原帳密交給 cdxgen 的額外授權／metadata 連線，私有 metadata 不保證補齊。
+
+
+Linux 重跑（PowerShell，需 Docker；使用新 container／volume 名稱保存舊證據）：
+
+```powershell
+docker build -f scripts/docker/combined.Dockerfile -t sbom-pilot-10-linux scripts/docker
+New-Item -ItemType Directory -Force .smoke | Out-Null
+git archive --format=tar HEAD -o .smoke/10-source.tar
+$sourceArchive = (Resolve-Path .smoke/10-source.tar).Path
+docker volume create sbom-pilot-10-repro
+docker run --name sbom-pilot-10-repro `
+  --mount type=volume,source=sbom-pilot-10-repro,target=/work `
+  --mount "type=bind,source=$sourceArchive,target=/source.tar,readonly" `
+  sbom-pilot-10-linux sh -c 'tar -xf /source.tar -C /work && npm ci && npm test && npm run test:smoke:nuget-auth -- --formats=dotnet'
+docker inspect sbom-pilot-10-repro --format '{{.State.Status}} {{.State.ExitCode}}'
+docker cp sbom-pilot-10-repro:/work/.smoke/nuget-auth/evidence.json .smoke/nuget-auth-linux-evidence.json
+```
+
+實際通過來源為 `55753c4`，容器／volume `sbom-pilot-10-nuget-auth` exited0；映像沿用固定 Node／SDK digest 的 [combined.Dockerfile](../scripts/docker/combined.Dockerfile)。此流程使用已安裝 SDK；不宣稱本工單已驗收 Linux 冷 SDK 下載或 Linux .NET Framework。
