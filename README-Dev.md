@@ -148,3 +148,5 @@ Microsoft 來源：[NuGet/MSBuild restore](https://learn.microsoft.com/en-us/nug
 2026-11-03 Windows x64 已分段完成真實矩陣：npm4、pnpm10/12各3、Classic/PnP/node-modules各4、combined10個有效組件。每種情境有Bearer與Basic私有套件→公開套件依賴邊、官方1.6Schema、一次scan/localartifact、明確placeholder、wrong/missing安裝失敗、設定／鎖檔不變及清理／秘密檢查；合併另有Logging→Abstractions後端邊。Node24.22.2/cdxgen13.6.0，hostNode24.22.1。完整最終重跑與額外平台結果以checkpoint09最新紀錄為準。
 
 fixture作者建立鎖檔；workflow仍嚴格安裝。Yarn fixture關閉globalmirror並隔離globalFolder，避免同名測試套件的metadata/tarball快取造成假成功。生產Repo快取政策不變。失敗診斷只在合成fixture保留受限且去識別的文字，不轉印真實子程序原始輸出。證據在忽略的`.smoke/npm-auth/evidence.json`，不提交完整產物或日誌。此驗證不等於公司feed、真實Azure發佈或private license metadata補充已驗收。
+
+工單09最終來源`a4b85be`：Windows完整七種private registry smoke及Linux Ubuntu24.04.3 x64的npm／nativepnpm12／YarnPnP／combined均通過；兩邊91/91測試。Typecheck、build、developer VSIX與隔離dist/VSIX啟動／原始及衍生npm秘密遮罩／manifest／notice檢查通過。重跑Docker命令見[私有來源文件](docs/npm-auth.md)；Linux證據`.smoke/npm-auth-linux-evidence.json`。這些是本機合成來源與artifact adapter，不代表liveAzure或公司feed已驗收。
