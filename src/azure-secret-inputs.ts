@@ -8,7 +8,7 @@ export const agentNetworkCredentials = {
   clientCertPassword: process.env.AGENT_CLIENTCERTPASSWORD ?? process.env.SECRET_AGENT_CLIENTCERTPASSWORD,
 };
 // tool-lib reads Agent proxy variables during import. Register their masks first.
-const networkMasks = [agentNetworkCredentials.proxyPassword, agentNetworkCredentials.clientCertPassword];
+const networkMasks = [agentNetworkCredentials.proxyUsername, agentNetworkCredentials.proxyPassword, agentNetworkCredentials.clientCertPassword];
 if (agentNetworkCredentials.proxyUsername || agentNetworkCredentials.proxyPassword) networkMasks.push(Buffer.from(`${agentNetworkCredentials.proxyUsername ?? ''}:${agentNetworkCredentials.proxyPassword ?? ''}`).toString('base64'));
 for (const address of [process.env.AGENT_PROXYURL, process.env.HTTPS_PROXY, process.env.HTTP_PROXY]) {
   try { const url = new URL(address ?? ''); if (url.username || url.password) networkMasks.push(address); } catch { /* validated later */ }

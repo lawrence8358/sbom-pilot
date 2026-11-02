@@ -11,8 +11,8 @@ const root = await mkdtemp(join(tmpdir(), 'sbom-shipped-'));
 try {
   const standalone = join(root, 'standalone');
   await cp('dist', standalone, { recursive: true });
-  const file = (await readdir('packages')).find(name => name.endsWith('.vsix'));
-  assert.ok(file, 'Run npm run package:dev first');
+  const version = JSON.parse(await readFile('vss-extension.json', 'utf8')).version;
+  const file = `local-dev-placeholder.sbom-pilot-${version}.vsix`;
   const archive = await JSZip.loadAsync(await readFile(join('packages', file)));
   const unpacked = join(root, 'vsix');
   for (const [name, entry] of Object.entries(archive.files)) {
@@ -24,6 +24,7 @@ try {
   const taskEntry = Object.keys(archive.files).find(name => name.endsWith('dist/index.js'));
   assert.ok(taskEntry, 'VSIX task entry missing');
   const entries = [join(standalone, 'index.js'), join(unpacked, taskEntry)];
+  assert.deepEqual(await readFile(entries[0]), await readFile(entries[1]), 'VSIX handler differs from current dist; rebuild the package');
   for (const entry of entries) {
     const manifest = JSON.parse(await readFile(join(dirname(entry), 'task.json'), 'utf8'));
     assert.deepEqual(Object.keys(manifest.execution).sort(), ['Node20_1', 'Node24']);
