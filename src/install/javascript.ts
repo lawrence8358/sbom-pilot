@@ -8,6 +8,7 @@ import { withPackageManager } from './manager';
 import { npmAdapter } from './npm';
 import { pnpmAdapter } from './pnpm';
 import { yarnAdapter } from './yarn';
+import { checkProjectAuthentication, withNpmAuthentication } from './npm-auth';
 
 export async function installJavaScriptProject(project: JavaScriptProject, tools: ToolContext, run: ProcessRunner, options: InstallOptions = {}, adapters: Partial<Record<JavaScriptManager, JavaScriptAdapter>> = { npm: npmAdapter, pnpm: pnpmAdapter, yarn: yarnAdapter }): Promise<void> {
   const adapter = adapters[project.manager];
@@ -15,7 +16,8 @@ export async function installJavaScriptProject(project: JavaScriptProject, tools
   const digest = async () => createHash('sha256').update(await readFile(project.lockPath)).digest('hex');
   const before = await digest();
   try {
-    await withPackageManager(project, tools, run, options, command => adapter.install(project, command, tools, run));
+    await checkProjectAuthentication(project, tools.env, options);
+    await withPackageManager(project, tools, run, options, command => withNpmAuthentication(project, command, tools.env, options, authenticated => adapter.install(project, authenticated, tools, run)));
   } finally {
     let after;
     try { after = await digest(); } catch { throw new Error('安裝過程移除了 lockfile；請檢查專案安裝腳本。'); }
