@@ -36,7 +36,8 @@ export async function findSolutionDirectory(projectPath: string, root: string): 
 // version normalization to the same Microsoft libraries as the restore engine.
 const packageMetadataScript = `param([string]$InputFile)
 $ErrorActionPreference = 'Stop'
-$payload = Get-Content -LiteralPath $InputFile -Raw | ConvertFrom-Json
+$OutputEncoding = [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
+$payload = Get-Content -LiteralPath $InputFile -Raw -Encoding UTF8 | ConvertFrom-Json
 $assemblies = [string]$payload.assemblyDirectory
 foreach ($name in @('NuGet.Common.dll','NuGet.Configuration.dll','NuGet.Versioning.dll')) {
   [Reflection.Assembly]::LoadFrom((Join-Path $assemblies $name)) | Out-Null
@@ -111,7 +112,11 @@ export async function restoreFrameworkProject(projectPath: string, root: string,
       const lock = entry.restoreLockProperties?.nuGetLockFilePath ?? 'packages.lock.json';
       const lockPath = isAbsolute(lock) ? lock : resolve(dirname(entry.projectPath), lock);
       assets.push({ projectPath: entry.projectPath, assetsPath: join(resolve(dirname(entry.projectPath), entry.outputPath), 'project.assets.json'), lockPath, hasLock: await exists(lockPath) });
-    } else configs.push(...await packageFiles(entry, dirname(entry.projectPath), solutionDirectory, properties.RestoreRepositoryPath, properties.NuGetRestoreTargets, tool, run, tempDirectory));
+    } else {
+      const entryProperties = resolve(entry.projectPath) === resolve(projectPath) ? properties : await evaluateFrameworkProject(entry.projectPath, tool, run, dirname(entry.projectPath));
+      const entrySolution = entryProperties.RestoreSolutionDirectory || await findSolutionDirectory(entry.projectPath, root);
+      configs.push(...await packageFiles(entry, dirname(entry.projectPath), entrySolution, entryProperties.RestoreRepositoryPath, entryProperties.NuGetRestoreTargets, tool, run, tempDirectory));
+    }
   }
   const preserved = [...new Set([...configs.filter(path => /\.config$/i.test(path)), ...assets.filter(project => project.hasLock).map(project => project.lockPath)])];
   const hashes = await Promise.all(preserved.map(async path => [path, await hash(path)] as const));
