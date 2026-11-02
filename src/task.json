@@ -3,7 +3,7 @@
   "id": "ae7d525c-a209-48e5-8f3e-17b24500b7b5",
   "name": "SbomPilot",
   "friendlyName": "SBOM Pilot — Generate & Upload SBOM",
-  "description": "準備工具與 npm／pnpm 依賴，產生 CycloneDX SBOM 並發佈 Build Artifact。支援 Vue 與 pnpm workspace。",
+  "description": "準備工具與 npm／pnpm／Yarn 依賴，產生 CycloneDX SBOM 並發佈 Build Artifact。支援 Vue 與 workspace。",
   "helpMarkDown": "請參閱 Extension README 的前置條件與限制。",
   "category": "Utility",
   "author": "Lawrence Shen",
@@ -13,7 +13,7 @@
   "minimumAgentVersion": "3.232.1",
   "groups": [{ "name": "advanced", "displayName": "進階設定", "isExpanded": false }],
   "inputs": [
-    { "name": "environment", "type": "pickList", "label": "開發環境", "required": true, "defaultValue": "vue", "options": { "vue": "Vue（npm／pnpm）" } },
+    { "name": "environment", "type": "pickList", "label": "開發環境", "required": true, "defaultValue": "vue", "options": { "vue": "Vue（npm／pnpm／Yarn）" } },
     { "name": "nodeVersion", "type": "string", "label": "Node.js 版本", "required": true, "defaultValue": "24.x", "helpMarkDown": "下載最新符合範圍的版本；cdxgen 需要 Node >=24。Task handler 使用獨立的 Node20_1。" },
     { "name": "projectPath", "type": "filePath", "label": "專案路徑", "required": true, "defaultValue": "$(Build.SourcesDirectory)" },
     { "name": "excludes", "type": "multiLine", "label": "排除規則", "required": false, "defaultValue": "**/_Design{,Front}/**,**/bin/**,**/obj/**,**/node_modules/**,**/dist/**", "helpMarkDown": "相對於專案根目錄的 glob，以逗號分隔；花括號內的逗號會保留。清空欄位代表不加入自訂排除規則，cdxgen 自身忽略規則仍適用。" },

@@ -122,7 +122,7 @@ test('yarnPath version is probed and conflicting exact declaration fails before 
   await writeFile(join(root, 'package.json'), '{"packageManager":"yarn@4.18.1"}');
   await assert.rejects(javascriptInstaller.install(root, tools, fakeRunner(root, '3.8.7', []), { tempDirectory: temp }), /準備或嚴格安裝失敗/);
   await writeFile(join(root, '.yarnrc'), 'yarn-path "different.cjs"\n');
-  await assert.rejects(inspectJavaScriptProject(root), /互相矛盾/);
+  assert.equal((await inspectJavaScriptProject(root)).yarn?.path, join(root, '.yarn/releases/yarn.cjs'));
 }));
 
 test('Classic Corepack sha1 suffix is accepted and wrong-length hashes rejected', () => fixture(async root => {

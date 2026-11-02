@@ -52,10 +52,14 @@ for (const layout of ['classic', 'modern-pnp', 'modern-node-modules']) {
   const result = await runWorkflow(config(project), join(base, `${layout}-run`), { log: console.log, prepare: async () => tools, publish: async sbom => console.log(`Local artifact adapter received ${sbom.componentCount} validated components; live Agent publication not tested.`) });
   const bom = JSON.parse(await readFile(result.path, 'utf8'));
   for (const name of ['is-odd', 'is-number']) if (!bom.components.some(component => component.name === name)) throw new Error(`${layout} missing ${name}`);
+  for (const name of ['shared', 'web-product']) if (!bom.components.some(component => component.name === name && component.group === '@example')) throw new Error(`${layout} missing workspace ${name}`);
   const chalk = bom.components.find(component => component.name === 'chalk');
   if (chalk && chalk.scope !== 'required') throw new Error(`${layout} retained a non-required development component`);
   console.log(`${layout}: workspace dev-only chalk ${chalk ? 'retained because cdxgen marked it required' : 'excluded by cdxgen required scope'}.`);
   if (!bom.dependencies?.some(dependency => dependency.dependsOn?.length)) throw new Error(`${layout} graph empty`);
+  for (const [from, to] of [['pkg:npm/@example/web-product@1.0.0', 'pkg:npm/@example/shared@1.0.0'], ['pkg:npm/@example/shared@1.0.0', 'pkg:npm/is-odd@3.0.1'], ['pkg:npm/is-odd@3.0.1', 'pkg:npm/is-number@6.0.0']]) {
+    if (!bom.dependencies.some(dependency => dependency.ref === from && dependency.dependsOn?.includes(to))) throw new Error(`${layout} expected workspace/transitive edge missing`);
+  }
   if (before !== await digest(join(project, 'yarn.lock')) || rcBefore !== await readFile(rcPath, 'utf8')) throw new Error(`${layout} lock/config changed`);
   if (!await exists(join(project, 'install-marker.txt'))) throw new Error(`${layout} project install script did not run`);
   if (!await exists(join(project, modern && layout === 'modern-pnp' ? '.pnp.cjs' : 'node_modules'))) throw new Error(`${layout} installation layout missing`);

@@ -24,7 +24,7 @@ export async function inspectYarnProject(root: string, declaredVersion?: string)
   let modernPath: string | undefined, classicPath: string | undefined;
   let modernPathDefined = false, ignorePath: boolean | undefined;
   for (let directory = resolve(root); ; directory = dirname(directory)) {
-    if (await exists(join(directory, '.yarnrc.yml'))) {
+    if (generation === 'modern' && await exists(join(directory, '.yarnrc.yml'))) {
       let config;
       try { config = parse(await readFile(join(directory, '.yarnrc.yml'), 'utf8')); }
       catch { throw new Error('.yarnrc.yml 不是有效 YAML。'); }
@@ -37,7 +37,7 @@ export async function inspectYarnProject(root: string, declaredVersion?: string)
         }
       }
     }
-    if (!classicPath && await exists(join(directory, '.yarnrc'))) {
+    if (generation === 'classic' && !classicPath && await exists(join(directory, '.yarnrc'))) {
       const content = await readFile(join(directory, '.yarnrc'), 'utf8');
       const paths = [...content.matchAll(/^\s*(?:yarn-path|"yarn-path")\s+(?:"([^"]+)"|'([^']+)'|(\S+))\s*(?:#.*)?$/gm)];
       if (paths.length > 1) throw new Error('.yarnrc 包含多個 yarn-path 宣告。');
@@ -45,7 +45,6 @@ export async function inspectYarnProject(root: string, declaredVersion?: string)
     }
     if (await exists(join(directory, '.git')) || dirname(directory) === directory) break;
   }
-  if (modernPath && classicPath && modernPath !== classicPath) throw new Error('Yarn 設定的 yarnPath 與 yarn-path 互相矛盾。');
   const path = ignorePath ? undefined : modernPath ?? classicPath;
   if (path && !/\.(?:c?js|mjs)$/i.test(path)) throw new Error('目前 yarnPath 僅支援本機 JavaScript 發行檔。');
   if (!declaredVersion && !path && generation === 'modern' && metadataVersion !== '10') throw new Error('此現代 Yarn lockfile 沒有已驗證 fallback；請宣告精確 packageManager 或 yarnPath。');
