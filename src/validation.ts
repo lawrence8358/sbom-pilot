@@ -16,6 +16,17 @@ export const validateSbom: SbomValidator = async (path, specVersion) => {
   const ajv = new Ajv({ strict: false, allErrors: true, validateFormats: true });
   addFormats(ajv);
   addInternationalFormats(ajv);
+  // Every ASCII URI-reference is also an IRI-reference (RFC 3987 section 3.2).
+  // draft2019's validator incorrectly rejects unregistered schemes such as
+  // git+https and accepts malformed ASCII URLs. Use URI syntax for that subset;
+  // keep the international validator for references containing Unicode.
+  const syntax = new Ajv({ strict: false });
+  addFormats(syntax);
+  addInternationalFormats(syntax);
+  const uriReference = syntax.compile({ type: 'string', format: 'uri-reference' });
+  const internationalReference = syntax.compile({ type: 'string', format: 'iri-reference' });
+  ajv.addFormat('iri-reference', (reference: string) => /^[\x00-\x7f]*$/.test(reference)
+    ? uriReference(reference) === true : internationalReference(reference) === true);
   for (const name of ['spdx.schema.json', 'jsf-0.82.schema.json']) {
     ajv.addSchema(JSON.parse(await readFile(join(__dirname, 'schemas', name), 'utf8')));
   }

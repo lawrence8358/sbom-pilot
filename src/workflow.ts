@@ -2,7 +2,8 @@ import { join } from 'node:path';
 import { mkdir } from 'node:fs/promises';
 import { validateConfig, type TaskConfig } from './config';
 import { prepareTools, type ToolPreparer } from './tools';
-import { npmInstaller, type DependencyInstaller } from './install/npm';
+import type { DependencyInstaller } from './install/contracts';
+import { javascriptInstaller } from './install/javascript';
 import { generateSbom, type SbomGenerator } from './scan';
 import { validateSbom, type SbomValidator, type ValidatedSbom } from './validation';
 import { runProcess, type ProcessRunner } from './process';
@@ -32,7 +33,7 @@ export async function runWorkflow(input: TaskConfig, tempDirectory: string, serv
   const run = services.run ?? runProcess;
   await mkdir(tempDirectory, { recursive: true });
   const tools = await stage('工具準備', () => (services.prepare ?? prepareTools)({ nodeVersion: config.nodeVersion, cdxgenVersion: config.cdxgenVersion, tempDirectory }, run, services.log));
-  await stage('依賴安裝', () => (services.installer ?? npmInstaller).install(config.projectPath, tools, run));
+  await stage('依賴安裝', () => (services.installer ?? javascriptInstaller).install(config.projectPath, tools, run, { tempDirectory, log: services.log }));
   const outputPath = join(tempDirectory, 'sbom', 'bom.json');
   await mkdir(join(tempDirectory, 'sbom'), { recursive: true });
   await stage('SBOM 產生', () => (services.generate ?? generateSbom)({ config, tools, outputPath }, run));
