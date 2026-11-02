@@ -1,20 +1,15 @@
 import * as tl from 'azure-pipelines-task-lib/task';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { DEFAULT_EXCLUDES, parseExcludes, type TaskConfig } from './config';
-import { CDXGEN_VERSION } from './tools';
+import { readTaskConfig } from './config';
+import { readAzureInput } from './azure-inputs';
 import { runWorkflow } from './workflow';
 
 async function main(): Promise<void> {
   let tempDirectory: string | undefined;
   try {
     if (!tl.getVariable('Build.BuildId') || tl.getVariable('Release.ReleaseId')) throw new Error('此 Task 需要 Classic Build 或 YAML Build 工作；Classic Release 不支援 Build Artifact 上傳。');
-    const config: TaskConfig = {
-      environment: tl.getInput('environment', true)!, projectPath: tl.getPathInput('projectPath', true, true)!,
-      nodeVersion: tl.getInput('nodeVersion', true) ?? '24.x', cdxgenVersion: tl.getInput('cdxgenVersion') || CDXGEN_VERSION,
-      specVersion: tl.getInput('specVersion', true) ?? '1.6', excludes: parseExcludes(tl.getInput('excludes') ?? DEFAULT_EXCLUDES),
-      fetchLicense: tl.getBoolInput('fetchLicense'), noCache: tl.getBoolInput('noCache'), uploadToDt: tl.getBoolInput('uploadToDt'),
-    };
+    const config = readTaskConfig(readAzureInput);
     const agentTemp = tl.getVariable('Agent.TempDirectory');
     if (!agentTemp) throw new Error('缺少 Agent.TempDirectory。');
     tempDirectory = await mkdtemp(join(agentTemp, 'sbom-pilot-'));

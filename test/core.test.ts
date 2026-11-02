@@ -3,13 +3,14 @@ import assert from 'node:assert/strict';
 import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { parseExcludes, DEFAULT_EXCLUDES, type TaskConfig } from '../src/config';
+import { parseExcludes, readTaskConfig, validateConfig, DEFAULT_EXCLUDES, type TaskConfig } from '../src/config';
 import { npmInstaller, inspectNpmProject } from '../src/install/npm';
 import { scanArguments } from '../src/scan';
 import { runWorkflow } from '../src/workflow';
 import { validateSbom } from '../src/validation';
 import { runProcess, type ProcessRunner } from '../src/process';
 import { selectNodeVersion, type ToolContext } from '../src/tools';
+import { validateToolOptions, validateCdxgenPackage, parseCdxgenVersion, validateCdxgenHelp } from '../src/tool-options';
 
 const config = (projectPath: string): TaskConfig => ({ environment: 'vue', projectPath, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: parseExcludes(DEFAULT_EXCLUDES), fetchLicense: true, noCache: true, uploadToDt: false });
 const tools: ToolContext = { node: process.execPath, npmCli: 'npm-cli.js', cdxgenCli: 'cdxgen.js', nodeVersion: '24.22.1', cdxgenVersion: '13.6.0', env: process.env };
@@ -20,7 +21,67 @@ async function fixture(action: (root: string) => Promise<void>) {
 test('glob brace comma is retained, malformed braces rejected', () => {
   assert.deepEqual(parseExcludes('**/_Design{,Front}/**, src/**'), ['**/_Design{,Front}/**', 'src/**']);
   assert.throws(() => parseExcludes('a{,b'), /花括號/);
+  assert.deepEqual(parseExcludes(' , **/{a,{b,c}}/** ,, dir with spaces/**, '), ['**/{a,{b,c}}/**', 'dir with spaces/**']);
+  assert.deepEqual(parseExcludes('foo[{},]/**,bar\\{x\\,y\\}/**'), ['foo[{},]/**', 'bar\\{x\\,y\\}/**']);
+  assert.deepEqual(parseExcludes(' , , '), []);
+  assert.throws(() => parseExcludes('a}'), /花括號/);
 });
+test('runtime input parsing applies defaults, keeps blank excludes and rejects invalid YAML booleans', () => {
+  const defaults = readTaskConfig(name => name === 'projectPath' ? ' path with spaces ' : undefined);
+  assert.equal(defaults.projectPath, 'path with spaces');
+  assert.equal(defaults.fetchLicense, true);
+  assert.equal(defaults.noCache, true);
+  assert.equal(defaults.uploadToDt, false);
+  assert.equal(defaults.nodeVersion, '24.x');
+  assert.equal(defaults.specVersion, '1.6');
+  assert.equal(readTaskConfig(name => name === 'projectPath' ? 'root' : name === 'cdxgenVersion' ? '' : undefined).cdxgenVersion, '13.6.0');
+  const values: Record<string, string> = { projectPath: 'root', excludes: '', fetchLicense: 'FALSE', noCache: ' false ' };
+  const parsed = readTaskConfig(name => values[name]);
+  assert.deepEqual(parsed.excludes, []);
+  assert.equal(parsed.fetchLicense, false);
+  assert.equal(parsed.noCache, false);
+  for (const value of ['yes', '0', '', 'truthy']) {
+    assert.throws(() => readTaskConfig(name => name === 'projectPath' ? 'root' : name === 'fetchLicense' ? value : undefined), /true.*false/);
+  }
+});
+test('actual Azure SDK adapter preserves explicit blank input after SDK vault loading', async () => {
+  await runProcess({ executable: process.execPath,
+    args: ['-e', "const {readAzureInput}=require('./.test-build/src/azure-inputs');if(readAzureInput('excludes')!=='')process.exit(2);if(readAzureInput('nodeVersion')!=='24.x')process.exit(3)"],
+    cwd: process.cwd(), env: { ...process.env, INPUT_EXCLUDES: '', INPUT_NODEVERSION: '24.x' },
+  });
+});
+test('tool overrides reject old package names, prereleases and incompatible runtime before install', () => {
+  assert.doesNotThrow(() => validateToolOptions('24.x', '13.6.0'));
+  for (const version of ['12.0.0', '14.0.0', '13.x', '13.6.0-beta.1', 'latest']) assert.throws(() => validateToolOptions('24.x', version), /13.x/);
+  assert.throws(() => validateToolOptions('20.x', '13.6.0'), /Node/);
+  assert.throws(() => validateToolOptions('latest', '13.6.0'), /Node/);
+  assert.throws(() => validateCdxgenPackage({ version: '13.6.0', engines: { node: '>=26' } }, '13.6.0', '24.22.2'), /engines/);
+  assert.throws(() => validateCdxgenPackage({ version: '13.5.0', engines: { node: '>=24' } }, '13.6.0', '24.22.2'), /版本/);
+  assert.equal(parseCdxgenVersion('\u001b[1mCycloneDX Generator 13.6.0\u001b[0m\nRuntime: Node.js, Version: 24.22.2'), '13.6.0');
+  assert.equal(parseCdxgenVersion('Runtime Node24.22.2'), undefined);
+  assert.throws(() => validateCdxgenHelp('--required-only --install-deps --spec-version --exclude-type --recurse --type --output'), /exclude/);
+});
+test('unsupported spec and malformed runtime types fail before any tool preparation', () => fixture(async root => {
+  await assert.rejects(validateConfig({ ...config(root), specVersion: '1.7' }), /1.6/);
+  await assert.rejects(validateConfig({ ...config(root), noCache: 'true' as unknown as boolean }), /布林/);
+  await assert.rejects(validateSbom('does-not-exist', '../../1.6'), /1.6/);
+}));
+test('scan options set each environment switch independently without changing parent configuration', () => fixture(async root => {
+  const { generateSbom } = await import('../src/scan');
+  const captured: { env?: NodeJS.ProcessEnv; args: string[] }[] = [];
+  const syntheticTools = { ...tools, env: { PATH: 'fixture-path', npm_config_registry: 'https://example.invalid' } };
+  const run: ProcessRunner = async command => { captured.push(command); return { stdout: '', stderr: '' }; };
+  for (const fetchLicense of [true, false]) for (const noCache of [true, false]) {
+    await generateSbom({ config: { ...config(root), fetchLicense, noCache, excludes: [] }, tools: syntheticTools, outputPath: join(root, 'bom.json') }, run);
+    const command = captured.at(-1)!;
+    assert.equal(command.env?.FETCH_LICENSE, String(fetchLicense));
+    assert.equal(command.env?.CDXGEN_NO_CACHE, String(noCache));
+    assert.equal(command.env?.PATH, syntheticTools.env.PATH);
+    assert.equal(command.env?.npm_config_registry, syntheticTools.env.npm_config_registry);
+    assert.equal(command.args.includes('--exclude'), false);
+    assert.equal(command.args[1], root);
+  }
+}));
 test('latest compatible Node selection excludes incompatible runtime', () => {
   assert.equal(selectNodeVersion(['v24.1.0', 'v24.22.1', 'v26.0.0'], '24.x'), '24.22.1');
   assert.throws(() => selectNodeVersion(['v20.1.0'], '20.x'), /Node/);

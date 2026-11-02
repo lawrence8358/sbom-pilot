@@ -58,10 +58,10 @@ steps:
 | `environment` | `vue` | 本階段僅 Vue/npm |
 | `projectPath` | `$(Build.SourcesDirectory)` | 專案根目錄 |
 | `nodeVersion` | `24.x` | 最新符合 semver 範圍的 Node，必須 >=24 |
-| `excludes` | 見下列規則 | 相對根目錄 glob，逗號分隔，保留花括號內逗號 |
+| `excludes` | 見下列規則 | 相對根目錄 glob，逗號分隔，保留花括號內逗號；明確設定空字串代表不加自訂排除 |
 | `specVersion` | `1.6` | 固定以附帶的官方 1.6 JSON Schema 驗證 |
 | `uploadToDt` | `false` | 此階段設定 true 會清楚失敗；關閉不需要 DT 設定 |
-| `cdxgenVersion` | `13.6.0` | 進階精確版本覆寫；非預設版本需另行驗證相容性 |
+| `cdxgenVersion` | `13.6.0` | 進階精確版本覆寫，限 `@cdxgen/cdxgen` 13.x 穩定版；留空使用預設。實際套件版本、Node engines 與必要 CLI 選項會驗證，其他 major／預發版會於工具下載前失敗 |
 | `fetchLicense` | `true` | `FETCH_LICENSE`；可能需要額外網路存取 |
 | `noCache` | `true` | `CDXGEN_NO_CACHE`；不影響 npm 或 Node 工具快取 |
 
@@ -72,6 +72,10 @@ steps:
 ```
 
 輸出與工具路徑由 Task 管理。有效 SBOM 保留在 Agent 暫存空間直到工作清理，避免與非同步成品上傳競爭；不會將掃描工具目錄發佈為成品。
+
+掃描欄位不受 DT 開關影響。Classic 與 YAML 都接受 `true`／`false`（不分大小寫），錯誤的 `yes`、`0` 或空白布林值會失敗。`fetchLicense` 與 `noCache` 可以獨立關閉；關閉授權補充不會刪除 lockfile 原本已有的授權資料，也不承諾完全不連線。關閉快取停用選項只允許 cdxgen metadata 快取，不變更 npm registry、npm 快取或 Agent Node 工具快取。
+
+若需清除預填排除規則，YAML 使用 `excludes: ''`；Classic 清空該欄位。cdxgen 自身的內建忽略規則（例如 `.git`）仍適用。路徑可包含空白，不需在欄位值內再加引號。
 
 ## 疑難排解
 
