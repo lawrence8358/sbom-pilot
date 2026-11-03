@@ -13,6 +13,7 @@ npm ci
 npm run typecheck
 npm run format:check
 npm run check:source-comments
+npm run check:source-spacing
 npm test
 npm run package:dev
 npm run test:package
@@ -20,7 +21,7 @@ npm run test:package
 
 `npm test` 編譯到 `.test-build`，用 Node test runner 執行測試並複製 Schema。`package:dev` 會先 build，再產生 `packages/local-dev-placeholder.sbom-pilot-0.1.0.vsix`；`test:package` 將 dist 與真正 VSIX 解到 Repo 外，檢查執行入口與包裝資源。執行產物、快取及日誌留在忽略目錄，不提交。
 
-格式採鎖定的 Prettier，只作用於 `src/**/*.ts`，不排序 import；`npm run format` 修正格式。修改具名函式／方法／具名函式常數時，在實作前寫正體中文用途註解，說明責任及必要的不變條件；短匿名回呼不需逐個描述語法。`check:source-comments` 使用 TypeScript AST 找具名實作並檢查註解，仍需人工判斷說明是否有意義。
+格式採鎖定的 Prettier，只作用於 `src/**/*.ts`，不排序 import；`npm run format` 先以 AST 補具名函式用途註解前的必要空白行，再由 Prettier 修正格式；`check:source-spacing` 可獨立檢查。函式內依準備、判斷、執行、驗證及清理責任分段，避免逐行插空白。修改具名函式／方法／具名函式常數時，在實作前寫正體中文用途註解，說明責任及必要的不變條件；短匿名回呼不需逐個描述語法。`check:source-comments` 使用 TypeScript AST 找具名實作並檢查註解，仍需人工判斷說明是否有意義。
 
 ## 一次執行如何走完
 
@@ -30,9 +31,10 @@ npm run test:package
 flowchart TD
     Start["入口：先登錄秘密遮罩，再載入 Azure SDK"] --> Inputs["確認 Build 情境並讀取參數"]
     Inputs --> Validate["驗證參數與專案路徑"]
-    Validate --> Tools["準備並驗證 Node 及 cdxgen"]
+    Validate --> Logging["建立 Task 端遮罩的命令 runner；原 argv 不變"]
+    Logging --> Tools["準備並驗證 Node 及 cdxgen"]
     Tools --> Mode{"開發環境"}
-    Mode -->|vue| JS["JavaScript：選擇管理器並嚴格安裝"]
+    Mode -->|javascript 或舊 vue| JS["JavaScript／TypeScript：選擇管理器並嚴格安裝"]
     Mode -->|dotnet| Core[".NET Core：選擇 SDK 並還原"]
     Mode -->|netframework| Framework["Windows Framework：SDK 或 MSBuild 還原"]
     Mode -->|combined| Combined["共同根目錄：前端嚴格安裝，再還原 .NET Core"]
@@ -43,7 +45,7 @@ flowchart TD
     Scan --> Schema["驗證 CycloneDX 1.6 Schema 與組件"]
     Schema --> WantDT{"啟用 DT？"}
     WantDT -->|否| Publish["要求 Agent 發佈同一份有效 SBOM"]
-    WantDT -->|是| DT["上傳既有 DT 專案；接受即完成"]
+    WantDT -->|是| DT["記錄遮罩的原生 HTTP PUT；上傳既有 DT 專案"]
     DT -->|接受| Publish
     DT -->|失敗：保留錯誤| Publish
     Publish -->|已排入佇列| PriorDT{"是否有 DT 錯誤？"}
@@ -73,7 +75,7 @@ DT 錯誤會保留到有效成品發佈請求之後再拋出。入口發出 `art
 | --- | --- | --- |
 | Azure 入口／輸入 | `azure-secret-inputs.ts`、`azure-inputs.ts`、`index.ts` | 秘密模組第一個 import，SDK debug 前遮罩；秘密不經 getInput |
 | 參數與流程 | `config.ts`、`tool-options.ts`、`workflow.ts` | 嚴格布林、空排除、預設值、單次掃描、DT 失敗仍發佈 |
-| 子程序 | `process.ts` | 不用 shell，UTF-8 串流，逾時清理程序樹，不轉印秘密輸出 |
+| 子程序 | `process.ts`、`command-log.ts` | 不用 shell，UTF-8 串流，逾時清理程序樹，不轉印秘密輸出 |
 | 工具／快取 | `tools.ts`、`node-cache.ts` | 官方下載／checksum、實際版本、完整標記與原子快取、安全 ZIP／tar |
 | JavaScript 探索／版本 | `install/project.ts`、`yarn-project.ts`、`manager.ts` | workspace、唯一鎖檔、精確宣告、雜湊、管理器初始化認證與工具安裝環境分離 |
 | 安裝／npm 認證 | `install/javascript.ts`、各管理器 installer、`npm-auth.ts` | frozen／immutable／ci、來源範圍、Repo 設定、實體 sourceRoot 外暫存及清理 |
@@ -111,7 +113,7 @@ Node 快取僅公開驗證完成的暫存安裝目錄，並行寫入者驗證勝
 
 | `npm run` 命令 | 主要用途 |
 | --- | --- |
-| `test:smoke`／`test:options-smoke` | Vue/npm、required scope、預設／排除／版本與鎖檔 |
+| `test:smoke`／`test:options-smoke` | JavaScript/npm（含 Vue 範例）、required scope、預設／排除／版本與鎖檔 |
 | `test:smoke:pnpm`／`test:smoke:yarn` | workspace、各世代／格式、精確版本與嚴格安裝 |
 | `test:smoke:npm-auth` | loopback Bearer／Basic、公開並存、映射、來源隔離、清理；可用 `-- --scenarios=npm,pnpm12,yarn-pnp` |
 | `test:smoke:dotnet`／`test:smoke:framework` | SDK6／9／10、傳統三格式、鎖檔、assets／nupkg |
@@ -175,3 +177,5 @@ npm run package:release
 命令只建置 VSIX，不上傳 Marketplace。正式包裝要求有效 HTTPS repository URL，拒絕內嵌帳密、query／fragment、文件佔位及保留的測試網域；缺少身分、local placeholder 或未解決 runtime 告示也會拒絕。這是 metadata 的語法與秘密檢查，實際 Publisher 權限及 Repo 公開性仍須另行確認。package.json、src/task.json、vss-extension.json 同步改版；GUID／名稱固定，Task major 影響 SbomPilot@0。更新 [CHANGELOG](CHANGELOG.md)，保存 VSIX hash、版本與證據；公開前須完成獨立程式碼審查。
 
 外部 gate：實際 Publisher／公開 Repo、真實 Services/Server 安裝、Classic/YAML UI與工作、成品下載／失敗傳播、公司 feed／企業 Proxy/CA、arm64。SDK/workload 與 Yarn required scope 限制保持明示，未測項目保留 UNVERIFIED。
+
+命令診斷在 `runWorkflow` 統一包裝 ProcessRunner，所以注入的測試 runner 與實際 runner 都收到原始 Command；顯示副本先遮罩再 JSON 序列化，不排序 import、不啟用 shell。僅顯示兩個掃描開關，不列印整份環境或子程序輸出。DT 在原生 HTTP transport 前另記真實 PUT URL 與遮罩 Key，沒有增加 cdxgen 認證參數。前端 canonical 值為 `javascript`，`vue` 在驗證後正規化成同一路徑。

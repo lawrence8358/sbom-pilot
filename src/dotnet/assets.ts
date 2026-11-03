@@ -10,6 +10,7 @@ function record(value: unknown): value is Record<string, unknown> {
 export async function validRestoreAssets(path: string, projectPath: string): Promise<boolean> {
   try {
     const value: unknown = JSON.parse(await readFile(path, 'utf8'));
+
     if (
       !record(value) ||
       !record(value.targets) ||
@@ -18,7 +19,9 @@ export async function validRestoreAssets(path: string, projectPath: string): Pro
       !record(value.project.restore)
     )
       return false;
+
     const actual = value.project.restore.projectPath;
+
     return (
       typeof actual === 'string' && actual.length > 0 && resolve(actual) === resolve(projectPath)
     );

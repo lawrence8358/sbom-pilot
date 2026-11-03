@@ -1,3 +1,4 @@
+import { commandRedactor, withCommandLogging } from './command-log';
 import { join } from 'node:path';
 import { mkdir } from 'node:fs/promises';
 import { validateConfig, type TaskConfig } from './config';
@@ -33,6 +34,7 @@ export class StageError extends Error {
     super(`[${stage}] ${cause instanceof Error ? cause.message : '執行失敗'}`);
   }
 }
+
 /** 執行單一階段並統一包裝錯誤，不改變成功結果或吞掉失敗。 */
 async function stage<T>(name: string, action: () => Promise<T>): Promise<T> {
   try {
@@ -41,6 +43,7 @@ async function stage<T>(name: string, action: () => Promise<T>): Promise<T> {
     throw new StageError(name, error);
   }
 }
+
 /** 依開發環境派送依賴安裝，保留注入 installer 優先序及各路徑專用的認證／sourceRoot 設定。 */
 async function installDependencies(
   config: TaskConfig,
@@ -51,9 +54,11 @@ async function installDependencies(
 ): Promise<void> {
   const common = {
     tempDirectory,
+
     /** 各安裝路徑共用已約束為安全摘要的日誌輸出。 */
     log: services.log,
   };
+
   if (services.installer) {
     return services.installer.install(config.projectPath, tools, run, {
       ...common,
@@ -84,6 +89,7 @@ async function installDependencies(
       nugetCredentials: config.nugetCredentials,
     });
   }
+
   return javascriptInstaller.install(config.projectPath, tools, run, {
     ...common,
     npmCredentials: config.npmCredentials,
@@ -98,9 +104,13 @@ export async function runWorkflow(
   services: WorkflowServices,
 ): Promise<ValidatedSbom> {
   const config = await stage('參數驗證', () => validateConfig(input));
+
   /** 選用測試注入或正式子程序執行器，所有後續階段共用相同執行介面。 */
-  const run = services.run ?? runProcess;
+  const run = withCommandLogging(services.run ?? runProcess, services.log, commandRedactor(config));
+
   await mkdir(tempDirectory, { recursive: true });
+
+  // 工具與依賴準備完成後，才開始產生唯一一份掃描輸出。
   const tools = await stage('工具準備', () =>
     (services.prepare ?? prepareTools)(
       { nodeVersion: config.nodeVersion, cdxgenVersion: config.cdxgenVersion, tempDirectory },
@@ -108,17 +118,26 @@ export async function runWorkflow(
       services.log,
     ),
   );
+
   await stage('依賴安裝', () => installDependencies(config, tools, run, tempDirectory, services));
+
+  // 只掃描一次，再驗證同一份檔案；上傳與成品不能各自重建 BOM。
   const outputPath = join(tempDirectory, 'sbom', 'bom.json');
+
   await mkdir(join(tempDirectory, 'sbom'), { recursive: true });
   await stage('SBOM 產生', () =>
     (services.generate ?? generateSbom)({ config, tools, outputPath }, run),
   );
+
   const sbom = await stage('SBOM 驗證', () =>
     (services.validate ?? validateSbom)(outputPath, config.specVersion),
   );
+
   services.log(`CycloneDX ${config.specVersion} 驗證通過；組件數：${sbom.componentCount}。`);
+
+  // DT 失敗先保留，仍讓有效成品排入 Agent 上傳佇列。
   let uploadError: unknown;
+
   if (config.uploadToDt) {
     try {
       await stage('DT 上傳', () =>
@@ -130,9 +149,13 @@ export async function runWorkflow(
       uploadError = error;
     }
   }
+
+  // 成品請求結束後才傳遞先前 DT 錯誤，不能吞掉任一失敗。
   await stage('成品發佈', () => services.publish(sbom));
+
   if (uploadError) {
     throw uploadError;
   }
+
   return sbom;
 }

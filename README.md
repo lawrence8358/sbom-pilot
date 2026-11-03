@@ -20,7 +20,7 @@
 
 ## 第一次執行
 
-安裝擴充功能後，對含有效 npm lockfile 的 Vue 專案使用：
+安裝擴充功能後，對含有效 npm lockfile 的 JavaScript／TypeScript 前端專案（例如 Angular 或 Vue）使用：
 
 ```yaml
 steps:
@@ -28,7 +28,7 @@ steps:
   - task: SbomPilot@0
     displayName: 產生交付產品 SBOM
     inputs:
-      environment: vue
+      environment: javascript
       projectPath: '$(Build.SourcesDirectory)'
       uploadToDt: false
 ```
@@ -45,12 +45,14 @@ Classic Build：在 Agent job 選擇 **Add task → SBOM Pilot**，設定「開�
 
 | `environment` | 何時選用 | 專案路徑與依賴準備 |
 | --- | --- | --- |
-| `vue` | Vue／JavaScript，npm、pnpm 或 Yarn | 指向專案或 workspace 根目錄；以對應管理器嚴格安裝 |
+| `javascript` | JavaScript／TypeScript 前端（例如 Angular、Vue），npm、pnpm 或 Yarn | 指向專案或 workspace 根目錄；以對應管理器嚴格安裝 |
 | `dotnet` | SDK-style .NET Core | 指向含 csproj／fsproj／vbproj 的目錄；選擇 SDK 後執行 dotnet restore |
 | `netframework` | Windows .NET Framework | SDK-style、非 SDK PackageReference、packages.config；依格式使用 SDK 或 Agent 的 MSBuild |
 | `combined` | 前後端共同作為一個交付產品 | 指向前後端共同根目錄；先安裝各前端根目錄、再還原 .NET Core，最後一次遞迴掃描產生一份 SBOM |
 
-### Vue／npm／pnpm／Yarn
+### JavaScript／TypeScript：npm／pnpm／Yarn
+
+Task 依 `package.json`、workspace 設定與鎖檔工作，不要求 Vue、Angular 或其他框架標記；同樣適用一般 JavaScript／TypeScript 套件專案。舊 YAML `environment: vue` 仍是 `javascript` 的相容別名，並非第五種模式。
 
 npm 使用 `package-lock.json` 或 `npm-shrinkwrap.json`，pnpm 使用 `pnpm-lock.yaml`，Yarn 使用 `yarn.lock`。缺少鎖檔、競爭鎖檔或 manifest 不一致會失敗，不會自動修正。優先採用 `packageManager` 的精確版本及有效的 Yarn 專案執行檔；無宣告時使用固定 fallback。安裝腳本沿用所選管理器政策。
 
@@ -101,7 +103,7 @@ Task 從實際還原目錄向上讀取 `global.json`，支援註解、完整 `sd
 
 | 欄位 | 預設 | 說明 |
 | --- | --- | --- |
-| `environment` | `vue` | 上述四種模式 |
+| `environment` | `javascript` | 上述四種模式 |
 | `projectPath` | `$(Build.SourcesDirectory)` | 專案／workspace／合併產品共同根目錄；可含空白，不需在欄位值內加引號 |
 | `nodeVersion` | `24.x` | 最新符合 semver 範圍的掃描 Node，須 >=24；與 Agent handler 分別管理 |
 | `specVersion` | `1.6` | 以隨附官方 CycloneDX 1.6 Schema 驗證 |
@@ -143,7 +145,7 @@ YAML 使用 `excludes: ''` 或在 Classic 清空欄位，可取消自訂排除�
 ```yaml
 - task: SbomPilot@0
   inputs:
-    environment: vue
+    environment: javascript
     projectPath: '$(Build.SourcesDirectory)'
     uploadToDt: true
     dtApiUrl: 'https://<dt-service-host>'
@@ -172,3 +174,11 @@ Classic 勾選「推送到 DT」後顯示對應欄位。Task 將已驗證 SBOM �
 [相容矩陣與手動驗收](docs/compatibility.md)區分本機／容器證據及尚未驗證的 Azure、企業網路與 arm64 項目。[開發說明](README-Dev.md)提供建置、測試、架構與發佈準備。
 
 MIT License · Copyright © 2026 Lawrence Shen。第三方授權見 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。
+
+## 核對執行命令
+
+每個工具子程序開始前，Task 會以單行 `[command]` JSON 顯示實際 `executable`、完整 `argv` 清單與 `cwd`。JSON 保留空參數、空白、引號、Unicode 與 glob 的參數邊界；控制字元以跳脫表示。執行仍使用原始參數及 `shell: false`，日誌不是可直接貼入 shell 的命令字串。掃描時另列 `FETCH_LICENSE`／`CDXGEN_NO_CACHE`，可核對 `--required-only`、`--spec-version`、`--exclude` 與 `--install-deps false`。
+
+已知 DT、npm、NuGet 及代理帳密、常見編碼、URL userinfo 與認證旗標值會在 Task 輸出前改為 `***`；其餘參數與路徑會顯示，請勿把其他秘密自行放入專案名稱或非認證參數。Task 不列印整份環境或原始子程序 stdout／stderr。Agent 的 setsecret 控制命令仍用於提前登錄遮罩。
+
+掃描與 DT 上傳分開：`[http]` 顯示實際 `PUT` 目的 URL 和 `X-Api-Key: ***`，對應原始需求的獨立 REST 上傳，不會假造 cdxgen `--api-key` 命令。原始範例的 `-p true` 是 cdxgen 的 SBOM tree table 顯示選項；本 Task 提供有效成品與組件摘要，不轉印該子程序表格。

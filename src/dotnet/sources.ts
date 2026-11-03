@@ -64,6 +64,7 @@ if ($method) {
 }
 ConvertTo-Json -InputObject $sources -Compress
 `;
+
 /** 跳脫產生 helper 專案時的 XML 路徑屬性，避免特殊字元改變組件參照。 */
 const xml = (value: string) =>
   value
@@ -75,6 +76,7 @@ const xml = (value: string) =>
 /** 驗證官方 NuGet helper 的來源身分輸出，只接受名稱、URL 及啟用狀態。 */
 function decode(output: string): EffectiveNuGetSource[] {
   const sources = JSON.parse(output);
+
   if (
     !Array.isArray(sources) ||
     sources.some(
@@ -86,6 +88,7 @@ function decode(output: string): EffectiveNuGetSource[] {
   ) {
     throw new Error('Invalid NuGet sources');
   }
+
   return sources;
 }
 
@@ -97,6 +100,7 @@ export async function withSdkSourceReader<T>(
   action: (read: NuGetSourceReader) => Promise<T>,
 ): Promise<T> {
   const directory = await mkdtemp(join(temp, 'nuget-settings-'));
+
   try {
     const listed = await run({
       executable: sdk.executable,
@@ -108,14 +112,18 @@ export async function withSdkSourceReader<T>(
       .split(/\r?\n/)
       .map((line) => /^(\S+)\s+\[(.+)\]$/.exec(line.trim()))
       .find((match) => match?.[1] === sdk.version);
+
     if (!line) {
       throw new Error('SDK assemblies missing');
     }
+
     const assemblies = join(line[2], sdk.version);
     const major = Number(sdk.version.split('.')[0]);
+
     if (major < 6) {
       throw new Error('Unsupported SDK');
     }
+
     await writeFile(
       join(directory, 'global.json'),
       JSON.stringify({ sdk: { version: sdk.version, rollForward: 'disable' } }),
@@ -143,16 +151,21 @@ export async function withSdkSourceReader<T>(
       cwd: directory,
       env: sdk.env,
     });
+
     const executable = join(directory, 'bin', 'Debug', `net${major}.0`, 'Settings.dll');
+
     return await action(async (project) => {
       const input = join(directory, 'paths.json');
+
       await writeFile(input, JSON.stringify(project.configFilePaths));
+
       const output = await run({
         executable: sdk.executable,
         args: [executable, input],
         cwd: dirname(project.projectPath),
         env: sdk.env,
       });
+
       return decode(output.stdout);
     });
   } catch (error) {
@@ -163,6 +176,7 @@ export async function withSdkSourceReader<T>(
     ) {
       throw error;
     }
+
     throw new Error(
       'NuGet 認證來源評估失敗；請確認所選 SDK 的 NuGet.Configuration 元件及設定完整。',
     );
@@ -180,12 +194,17 @@ export async function withFrameworkSourceReader<T>(
   action: (read: NuGetSourceReader) => Promise<T>,
 ): Promise<T> {
   const directory = await mkdtemp(join(temp, 'nuget-settings-'));
+
   try {
     const script = join(directory, 'Settings.ps1');
+
     await writeFile(script, frameworkScript);
+
     return await action(async (project: NuGetRestoreSettings) => {
       const input = join(directory, 'paths.json');
+
       await writeFile(input, JSON.stringify(project.configFilePaths));
+
       try {
         const result = await run({
           executable: 'powershell.exe',
@@ -206,6 +225,7 @@ export async function withFrameworkSourceReader<T>(
           env: tool.env,
           timeoutMs: 60_000,
         });
+
         return decode(result.stdout);
       } catch {
         throw new Error(

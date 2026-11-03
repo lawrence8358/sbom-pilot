@@ -17,7 +17,7 @@ steps:
   - checkout: self
   - task: SbomPilot@0
     inputs:
-      environment: vue
+      environment: javascript
       projectPath: '$(Build.SourcesDirectory)/examples/pnpm-workspace'
       uploadToDt: false
 ```

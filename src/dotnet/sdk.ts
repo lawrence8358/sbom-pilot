@@ -17,6 +17,7 @@ const policies = [
   'latestMajor',
   'disable',
 ];
+
 /** 檢查 SDK 宣告與快取標記，區分未安裝和未完成的工具目錄。 */
 const exists = async (path: string) =>
   access(path).then(
@@ -51,10 +52,13 @@ async function readPolicyFile(path: string): Promise<SdkPolicy> {
     allowTrailingComma: true,
     disallowComments: false,
   });
+
   if (errors.length || !document || typeof document !== 'object' || Array.isArray(document)) {
     throw new Error('global.json 格式無效；請修正 JSON/JSONC。');
   }
+
   const sdk = document.sdk;
+
   if (sdk === undefined) {
     return { path };
   }
@@ -85,6 +89,7 @@ async function readPolicyFile(path: string): Promise<SdkPolicy> {
   if (!sdk.version && sdk.rollForward && sdk.rollForward !== 'latestMajor') {
     throw new Error('global.json rollForward 除 latestMajor 外必須同時宣告 sdk.version。');
   }
+
   return {
     path,
     version: sdk.version,
@@ -96,15 +101,20 @@ async function readPolicyFile(path: string): Promise<SdkPolicy> {
 /** 從真正還原目錄向上尋找最近的 global.json，沒有宣告時交由固定 SDK 預設處理。 */
 export async function readSdkPolicy(cwd: string): Promise<SdkPolicy> {
   let directory = resolve(cwd);
+
   for (;;) {
     const path = join(directory, 'global.json');
+
     if (await exists(path)) {
       return readPolicyFile(path);
     }
+
     const parent = dirname(directory);
+
     if (parent === directory) {
       return {};
     }
+
     directory = parent;
   }
 }
@@ -137,6 +147,7 @@ async function selectedVersion(
     const version = (
       await run({ executable, args: ['--version'], cwd, env, timeoutMs: 60_000 })
     ).stdout.trim();
+
     return valid(version) ? version : undefined;
   } catch {
     return undefined;
@@ -154,6 +165,7 @@ async function findInstalledSdk(
   const baseEnv = sdkEnvironment(options.env);
   const systemExecutable = options.env.DOTNET_HOST_PATH || 'dotnet';
   const installed = await selectedVersion(systemExecutable, cwd, baseEnv, run);
+
   if (
     installed &&
     (policy.version || installed === requested || policy.rollForward === 'latestMajor')
@@ -177,14 +189,17 @@ async function findInstalledSdk(
       ? join(directory, process.platform === 'win32' ? 'dotnet.exe' : 'dotnet')
       : systemExecutable;
     const env = sdkEnvironment(options.env, directory);
+
     if ((await selectedVersion(executable, cwd, env, run)) !== installed) {
       throw new Error(
         '.NET SDK 的實際 host 選擇不一致；請檢查 DOTNET_ROOT、global.json 與 Agent SDK 配置。',
       );
     }
+
     options.log?.(
       `.NET SDK ${installed}（由還原目錄套用 ${policy.path ? 'global.json' : 'Task 固定預設'}）。`,
     );
+
     return { executable, version: installed, env, policy };
   }
 }
@@ -202,11 +217,14 @@ async function installSdk(
   const executable = join(cache, executableName);
   const baseEnv = sdkEnvironment(options.env);
   let env: NodeJS.ProcessEnv;
+
   await mkdir(dirname(cache), { recursive: true });
   await mkdir(options.tempDirectory, { recursive: true });
+
   const staging = await mkdtemp(join(dirname(cache), `.install-${requested}-`));
   const extension = process.platform === 'win32' ? 'ps1' : 'sh';
   const script = join(options.tempDirectory, `dotnet-install.${extension}`);
+
   try {
     await writeFile(
       script,
@@ -247,12 +265,16 @@ async function installSdk(
       env: baseEnv,
       timeoutMs: 15 * 60_000,
     });
+
     const stagingEnv = sdkEnvironment(options.env, staging);
     const version = await selectedVersion(join(staging, executableName), cwd, stagingEnv, run);
+
     if (!version || (!policy.version && version !== requested)) {
       throw new Error('安裝後未能依 global.json 選到相容的 .NET SDK。');
     }
+
     await writeFile(join(staging, '.complete'), version);
+
     try {
       await rename(staging, cache);
     } catch (error) {
@@ -260,12 +282,17 @@ async function installSdk(
         throw error;
       }
     }
+
     env = sdkEnvironment(options.env, cache);
+
     const selected = await selectedVersion(executable, cwd, env, run);
+
     if (!selected) {
       throw new Error('.NET SDK 快取完成後的版本驗證失敗。');
     }
+
     options.log?.(`.NET SDK ${selected}（Task 自行準備，已驗證 host 選擇）。`);
+
     return { executable, version: selected, env, policy };
   } catch {
     throw new Error(
@@ -286,6 +313,7 @@ export async function prepareDotnetSdk(
   const policy = await readSdkPolicy(cwd);
   const requested = policy.version ?? FALLBACK_DOTNET_SDK;
   const installed = await findInstalledSdk(cwd, policy, run, options);
+
   if (installed) {
     return installed;
   }
@@ -293,6 +321,7 @@ export async function prepareDotnetSdk(
   if (!['x64', 'arm64'].includes(process.arch)) {
     throw new Error('.NET SDK 自動準備僅支援 x64/arm64。');
   }
+
   const cache = join(
     resolve(options.cacheDirectory),
     'sbom-pilot-dotnet',
@@ -302,16 +331,20 @@ export async function prepareDotnetSdk(
   const executableName = process.platform === 'win32' ? 'dotnet.exe' : 'dotnet';
   const executable = join(cache, executableName);
   let env = sdkEnvironment(options.env, cache);
+
   if (
     (await exists(join(cache, '.complete'))) &&
     (await selectedVersion(executable, cwd, env, run))
   ) {
     const version = (await selectedVersion(executable, cwd, env, run))!;
+
     options.log?.(`.NET SDK ${version}（Task 工具快取）。`);
+
     return { executable, version, env, policy };
   }
   if (await exists(cache)) {
     throw new Error('.NET SDK 工具快取不完整；請清理該版本的 sbom-pilot-dotnet 快取後重試。');
   }
+
   return installSdk(cwd, policy, requested, cache, run, options);
 }

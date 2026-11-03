@@ -23,9 +23,10 @@
     "package:dev": "npm run build && node scripts/package.mjs --local",
     "package:release": "npm run build && node scripts/package.mjs",
     "test:smoke:nuget-auth": "node scripts/smoke-nuget-auth.mjs",
-    "format": "prettier --write \"src/**/*.ts\"",
+    "format": "node scripts/check-source-comments.mjs --spacing --write && prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
-    "check:source-comments": "node scripts/check-source-comments.mjs"
+    "check:source-comments": "node scripts/check-source-comments.mjs",
+    "check:source-spacing": "node scripts/check-source-comments.mjs --spacing"
   },
   "dependencies": {
     "ajv": "8.20.0",

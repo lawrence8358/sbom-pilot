@@ -41,25 +41,32 @@ export type ToolPreparer = (
 export async function fetchBytes(url: string): Promise<Buffer> {
   return downloadBytes(url);
 }
+
 /** 在官方發行清單選最新符合範圍的穩定 Node，確保滿足 cdxgen 的 >=24 要求。 */
 export function selectNodeVersion(versions: string[], range: string): string {
   if (!validRange(range)) {
     throw new Error('Node.js 版本必須是有效的 semver 範圍。');
   }
+
   const version = versions
     .filter((version) => valid(version) && satisfies(version, range))
     .sort(rcompare)[0];
+
   if (!version || !satisfies(version, '>=24')) {
     throw new Error('找不到相容 Node.js，cdxgen 需要 Node >=24。');
   }
+
   return version.replace(/^v/, '');
 }
+
 /** 驗證官方 Node checksum／快取並隔離安裝固定 cdxgen，確認版本與 CLI 後回傳非秘密工具環境。 */
 export const prepareTools: ToolPreparer = async (request, run, log) => {
   validateToolOptions(request.nodeVersion, request.cdxgenVersion);
+
   if (!['x64', 'arm64'].includes(process.arch)) {
     throw new Error('工具準備僅支援 x64/arm64 Agent。');
   }
+
   const versions = JSON.parse(
     (await fetchBytes('https://nodejs.org/dist/index.json')).toString(),
   ) as { version: string }[];
@@ -87,12 +94,15 @@ export const prepareTools: ToolPreparer = async (request, run, log) => {
         .split('\n')
         .find((line) => line.trim().endsWith(` ${archive}`))
         ?.split(/\s+/)[0];
+
       if (!expected || createHash('sha256').update(bytes).digest('hex') !== expected) {
         throw new Error('Node.js 下載的 SHA-256 不符。');
       }
+
       const archivePath = join(request.tempDirectory, archive);
       await writeFile(archivePath, bytes);
       const extracted = await mkdtemp(join(request.tempDirectory, 'node-extract-'));
+
       try {
         await extractNodeArchive(archivePath, bytes, extracted, folder, request.tempDirectory, run);
         // 暫存與工具快取可能在不同磁碟，複製時仍須保留 npm 相對連結。
@@ -109,6 +119,7 @@ export const prepareTools: ToolPreparer = async (request, run, log) => {
     async (root) => {
       const paths = nodePaths(root);
       await access(paths.npmCli);
+
       if (
         (
           await run({
@@ -137,15 +148,19 @@ export const prepareTools: ToolPreparer = async (request, run, log) => {
       timeoutMs: 30_000,
     })
   ).stdout.trim();
+
   if (actualNode !== `v${nodeVersion}`) {
     throw new Error('實際 Node.js runtime 版本與選定版本不符；請檢查 Agent 工具快取。');
   }
+
   log(
     `Node.js ${nodeVersion}（掃描工具 runtime；Task handler Node ${process.versions.node}，分別管理）。`,
   );
+
   // cdxgen 安裝在隔離目錄，不使用任意全域工具或寫回來源。
   // 每次重新安裝，避免信任上次工作取消後留下的不完整目錄。
   const cdxgenRoot = join(request.tempDirectory, 'cdxgen');
+
   await mkdir(cdxgenRoot, { recursive: true });
   await writeFile(join(cdxgenRoot, 'package.json'), JSON.stringify({ private: true }));
   await run({
@@ -167,12 +182,16 @@ export const prepareTools: ToolPreparer = async (request, run, log) => {
     cwd: cdxgenRoot,
     env,
   });
+
   const cdxgenCli = join(cdxgenRoot, 'node_modules/@cdxgen/cdxgen/bin/cdxgen.js');
+
   await access(cdxgenCli);
   const pkg = JSON.parse(
     await readFile(join(cdxgenRoot, 'node_modules/@cdxgen/cdxgen/package.json'), 'utf8'),
   );
+
   validateCdxgenPackage(pkg, request.cdxgenVersion, nodeVersion);
+
   const versionOutput = (
     await run({
       executable: node,
@@ -183,9 +202,11 @@ export const prepareTools: ToolPreparer = async (request, run, log) => {
     })
   ).stdout;
   const actual = parseCdxgenVersion(versionOutput);
+
   if (actual !== request.cdxgenVersion) {
     throw new Error('cdxgen CLI 版本驗證失敗。');
   }
+
   const help = await run({
     executable: node,
     args: [cdxgenCli, '--help'],
@@ -193,7 +214,9 @@ export const prepareTools: ToolPreparer = async (request, run, log) => {
     env,
     timeoutMs: 120_000,
   });
+
   validateCdxgenHelp(`${help.stdout}\n${help.stderr}`);
   log(`cdxgen ${actual}（固定 npm 套件；自動安裝依賴將關閉）。`);
+
   return { node, npmCli, cdxgenCli, nodeVersion, cdxgenVersion: actual, env };
 };

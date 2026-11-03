@@ -16,8 +16,10 @@ const exists = async (path: string) =>
     () => true,
     () => false,
   );
+
 /** 將路徑轉為相對共同根目錄的斜線格式，供跨平台 glob 比對。 */
 const localPath = (root: string, path: string) => relative(root, path).replaceAll('\\', '/');
+
 /** 以 Azure glob 規則比對路徑，保留花括號與隱藏檔並遵循平台大小寫。 */
 const matches = (paths: string[], patterns: string[]) =>
   match(paths, patterns, undefined, {
@@ -25,9 +27,11 @@ const matches = (paths: string[], patterns: string[]) =>
     dot: true,
     nocase: process.platform === 'win32',
   });
+
 /** 判斷路徑是否位於共同根目錄內，避免採用外部 workspace。 */
 const within = (root: string, path: string) => {
   const value = relative(root, path);
+
   return (
     value !== '..' &&
     !value.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`) &&
@@ -48,15 +52,18 @@ async function manifest(directory: string): Promise<any> {
 async function workspacePatterns(project: JavaScriptProject): Promise<string[] | undefined> {
   if (await exists(join(project.root, 'pnpm-workspace.yaml'))) {
     const settings = parse(await readFile(join(project.root, 'pnpm-workspace.yaml'), 'utf8'));
+
     return settings?.packages ?? ['**'];
   }
   if (!(await exists(join(project.root, 'package.json')))) {
     return;
   }
+
   const settings = await manifest(project.root);
   const patterns = Array.isArray(settings.workspaces)
     ? settings.workspaces
     : settings.workspaces?.packages;
+
   if (patterns === undefined) {
     return;
   }
@@ -66,6 +73,7 @@ async function workspacePatterns(project: JavaScriptProject): Promise<string[] |
   ) {
     throw new Error('workspaces 必須是路徑 glob 清單。');
   }
+
   return patterns;
 }
 
@@ -77,10 +85,12 @@ export async function discoverJavaScriptProjects(
   const base = resolve(root),
     directories = new Set<string>();
   const ignored = new Set(['.git', 'node_modules', 'bin', 'obj', '.yarn', '.pnpm-store']);
+
   /** 收集未排除的前端宣告目錄，跳過符號連結及生成目錄，保留共同根目錄範圍。 */
   async function visit(directory: string): Promise<void> {
     for (const entry of await readdir(directory, { withFileTypes: true })) {
       const path = join(directory, entry.name);
+
       if (entry.isSymbolicLink()) {
         continue;
       }
@@ -99,8 +109,10 @@ export async function discoverJavaScriptProjects(
     }
   }
   await visit(base);
+
   const projects: JavaScriptProject[] = [];
   const owners: { project: JavaScriptProject; patterns: string[] }[] = [];
+
   for (const directory of [...directories].sort(
     (a, b) => a.split(/[\\/]/).length - b.split(/[\\/]/).length || a.localeCompare(b),
   )) {
@@ -109,6 +121,7 @@ export async function discoverJavaScriptProjects(
         within(owner.project.root, directory) &&
         matches([localPath(owner.project.root, directory)], owner.patterns).length,
     );
+
     if (owner) {
       if (
         (await Promise.all(lockCandidates.map(([name]) => exists(join(directory, name))))).some(
@@ -117,13 +130,18 @@ export async function discoverJavaScriptProjects(
       ) {
         throw new Error('workspace 子專案有獨立 lockfile；請統一根目錄鎖檔或修正 workspace 範圍。');
       }
+
       const declared = await readPackageManagerDeclaration(directory);
+
       if (declared && declarationsConflict(declared, owner.project)) {
         throw new Error('workspace 根目錄與子專案 packageManager 宣告互相矛盾。');
       }
+
       continue;
     }
+
     const project = await inspectJavaScriptProject(directory);
+
     if (!within(base, project.root)) {
       throw new Error(
         '前端 workspace 根目錄位於共同掃描根目錄外；請選擇同時涵蓋前後端及 workspace 的根目錄。',
@@ -134,16 +152,21 @@ export async function discoverJavaScriptProjects(
         '前端子目錄不在已辨識的 workspace 成員中；請修正 workspace 清單、排除規則或專案根目錄。',
       );
     }
+
     projects.push(project);
+
     const patterns = await workspacePatterns(project);
+
     if (patterns) {
       owners.push({ project, patterns });
     }
   }
+
   if (!projects.length) {
     throw new Error(
       '合併模式找不到前端 package.json／pnpm workspace；請選擇同時包含前後端的共同根目錄。',
     );
   }
+
   return projects;
 }

@@ -20,8 +20,10 @@ const networkMasks = [
 for (const credentialInput of [npmCredentialsInput, nugetCredentialsInput]) {
   if (credentialInput) {
     networkMasks.push(credentialInput);
+
     try {
       const entries = JSON.parse(credentialInput);
+
       if (Array.isArray(entries)) {
         for (const entry of entries) {
           for (const value of [entry?.token, entry?.username, entry?.password]) {
@@ -29,6 +31,7 @@ for (const credentialInput of [npmCredentialsInput, nugetCredentialsInput]) {
               networkMasks.push(value);
             }
           }
+
           if (typeof entry?.password === 'string') {
             networkMasks.push(Buffer.from(entry.password).toString('base64'));
           }
@@ -59,6 +62,7 @@ for (const address of [
 ]) {
   try {
     const url = new URL(address ?? '');
+
     if (url.username || url.password) {
       networkMasks.push(address);
     }

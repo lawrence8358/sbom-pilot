@@ -5,6 +5,7 @@ import type { JavaScriptProject } from './contracts';
 
 export const YARN_CLASSIC_FALLBACK_VERSION = '1.22.22';
 export const YARN_MODERN_FALLBACK_VERSION = '4.18.1';
+
 /** 檢查各層 Yarn 設定與 Git 標記，保留最近設定的擁有權。 */
 const exists = async (path: string) =>
   access(path).then(
@@ -29,35 +30,44 @@ function inspectLockFormat(lock: string): YarnLockFormat {
     if (/^__metadata:/m.test(lock)) {
       throw new Error('Yarn lockfile 同時宣告 Classic 與現代格式。');
     }
+
     return { generation: 'classic' };
   }
+
   let parsed;
+
   try {
     parsed = parse(lock);
   } catch {
     throw new Error('yarn.lock 不是有效 Yarn lockfile。');
   }
+
   if (!parsed?.__metadata || !Number.isInteger(Number(parsed.__metadata.version))) {
     throw new Error('無法辨識 Yarn lockfile 世代；請提交有效鎖檔。');
   }
+
   return { generation: 'modern', metadataVersion: String(parsed.__metadata.version) };
 }
 
 /** 只採用最近明定的 yarnPath／ignorePath，驗證本機路徑且保留 null 阻止繼承的語意。 */
 async function applyModernPath(directory: string, state: YarnPathState): Promise<void> {
   let config;
+
   try {
     config = parse(await readFile(join(directory, '.yarnrc.yml'), 'utf8'));
   } catch {
     throw new Error('.yarnrc.yml 不是有效 YAML。');
   }
+
   if (state.ignorePath === undefined && typeof config?.ignorePath === 'boolean') {
     state.ignorePath = config.ignorePath;
   }
   if (state.modernPathDefined || config?.yarnPath === undefined) {
     return;
   }
+
   state.modernPathDefined = true;
+
   if (config.yarnPath === null) {
     return;
   }
@@ -68,6 +78,7 @@ async function applyModernPath(directory: string, state: YarnPathState): Promise
   ) {
     throw new Error('yarnPath 必須是明確的本機 JavaScript 路徑。');
   }
+
   state.modernPath = resolve(directory, config.yarnPath);
 }
 
@@ -79,6 +90,7 @@ async function readClassicPath(directory: string): Promise<string | undefined> {
       /^\s*(?:yarn-path|"yarn-path")\s+(?:"([^"]+)"|'([^']+)'|(\S+))\s*(?:#.*)?$/gm,
     ),
   ];
+
   if (paths.length > 1) {
     throw new Error('.yarnrc 包含多個 yarn-path 宣告。');
   }
@@ -93,6 +105,7 @@ async function resolveYarnPath(
   generation: YarnLockFormat['generation'],
 ): Promise<string | undefined> {
   const state: YarnPathState = { modernPathDefined: false };
+
   for (let directory = resolve(root); ; directory = dirname(directory)) {
     if (generation === 'modern' && (await exists(join(directory, '.yarnrc.yml')))) {
       await applyModernPath(directory, state);
@@ -108,6 +121,7 @@ async function resolveYarnPath(
       break;
     }
   }
+
   return state.ignorePath ? undefined : (state.modernPath ?? state.classicPath);
 }
 
@@ -119,13 +133,16 @@ export async function inspectYarnProject(
   const { generation, metadataVersion } = inspectLockFormat(
     await readFile(join(root, 'yarn.lock'), 'utf8'),
   );
+
   if (
     declaredVersion &&
     (Number(declaredVersion.split('.')[0]) === 1) !== (generation === 'classic')
   ) {
     throw new Error('Yarn packageManager 版本與 lockfile 世代互相矛盾。');
   }
+
   const path = await resolveYarnPath(root, generation);
+
   if (path && !/\.(?:c?js|mjs)$/i.test(path)) {
     throw new Error('目前 yarnPath 僅支援本機 JavaScript 發行檔。');
   }
@@ -134,6 +151,7 @@ export async function inspectYarnProject(
       '此現代 Yarn lockfile 沒有已驗證 fallback；請宣告精確 packageManager 或 yarnPath。',
     );
   }
+
   return {
     version:
       declaredVersion ??

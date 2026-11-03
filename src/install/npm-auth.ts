@@ -16,11 +16,14 @@ const getEnv = (env: NodeJS.ProcessEnv, key: string) => {
   const matches = Object.entries(env)
     .filter(([name]) => name.toLowerCase() === key.toLowerCase())
     .map(([, value]) => value);
+
   if (new Set(matches).size > 1) {
     throw new Error('認證相關環境設定含大小寫重複且不同的值；請保留單一設定，避免來源設定被覆蓋。');
   }
+
   return matches[0];
 };
+
 /** 刪除同名的大小寫變體後設定單一子程序變數，避免平台行為不同。 */
 function setEnv(env: NodeJS.ProcessEnv, key: string, value: string): void {
   for (const name of Object.keys(env)) {
@@ -28,8 +31,10 @@ function setEnv(env: NodeJS.ProcessEnv, key: string, value: string): void {
       delete env[name];
     }
   }
+
   env[key] = value;
 }
+
 /** 將不存在的認證設定檔視為空白，其餘讀取錯誤保留給安全診斷。 */
 async function readOptional(path: string): Promise<string> {
   try {
@@ -38,28 +43,34 @@ async function readOptional(path: string): Promise<string> {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       return '';
     }
+
     throw error;
   }
 }
+
 /** 向上定位實體 Git 根目錄，找不到版本庫時使用實體專案根目錄作為暫存限制。 */
 async function repositoryBoundary(projectRoot: string): Promise<string> {
   for (let directory = resolve(projectRoot); ; directory = dirname(directory)) {
     try {
       await access(join(directory, '.git'));
+
       return await realpath(directory);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
         throw new NpmAuthenticationError('temp');
       }
     }
+
     if (dirname(directory) === directory) {
       return realpath(projectRoot);
     }
   }
 }
+
 /** 以相對路徑判定是否落在來源內，避免以字串前綴誤判相鄰目錄。 */
 const contains = (root: string, path: string) => {
   const value = relative(root, path);
+
   return value === '' || (!/^\.\.(?:[\\/]|$)/.test(value) && !isAbsolute(value));
 };
 
@@ -88,6 +99,7 @@ function invalidMapping(): Error {
 function registryIdentity(registry: string): string | undefined {
   try {
     const url = new URL(registry.startsWith('//') ? `https:${registry}` : registry);
+
     return `//${url.host}${url.pathname.replace(/\/+$/, '')}/`;
   } catch {
     return undefined;
@@ -104,6 +116,7 @@ function checkMapped(
 ): boolean {
   const variables = references(value),
     supplied = variables.filter((name) => mappings.has(name));
+
   if (!supplied.length) {
     return false;
   }
@@ -114,13 +127,16 @@ function checkMapped(
   ) {
     throw invalidMapping();
   }
+
   const credential = mappings.get(variables[0])!;
+
   if (
     registryIdentity(registry) !== registryIdentity(credential.registry) ||
     credential.environment?.[variables[0]] !== alias
   ) {
     throw invalidMapping();
   }
+
   return true;
 }
 
@@ -131,19 +147,24 @@ function checkNpmFile(
   context: AuthenticationContext,
 ): void {
   const { credentials, mappings, project } = context;
+
   for (const line of contents.split(/\r?\n/)) {
     if (/^\s*[;#]/.test(line)) {
       continue;
     }
+
     const match = line.match(
       /^\s*["']?(\/\/[^\s"']+\/):(_authToken|_auth|username|_password|tokenHelper)["']?\s*=\s*(.*)$/i,
     );
+
     if (!match) {
       if (references(line).some((name) => mappings.has(name))) {
         throw invalidMapping();
       }
+
       continue;
     }
+
     const target = credentials.some(
       (credential) => registryIdentity(credential.registry) === registryIdentity(match[1]),
     );
@@ -155,6 +176,7 @@ function checkNpmFile(
       _password: 'passwordBase64',
     };
     const alias = aliases[match[2].toLowerCase()];
+
     if (alias && checkMapped(value, match[1], alias, mappings)) {
       continue;
     }
@@ -182,6 +204,7 @@ function mergeYarnSettings(files: any[]): any {
     npmScopes: {},
     npmRegistries: {},
   };
+
   for (const file of files) {
     for (const key of ['npmRegistryServer', 'npmAuthToken', 'npmAuthIdent']) {
       if (file[key] !== undefined) {
@@ -194,6 +217,7 @@ function mergeYarnSettings(files: any[]): any {
       }
     }
   }
+
   return merged;
 }
 
@@ -215,6 +239,7 @@ function checkYarnAuthFields(
           );
         }
       }
+
       checkMapped(settings[key], registry, alias, context.mappings, true);
     }
   }
@@ -229,7 +254,9 @@ function checkNonAuthenticationReferences(
   if (!value || typeof value !== 'object' || visited.has(value)) {
     return;
   }
+
   visited.add(value);
+
   for (const [key, setting] of Object.entries(value)) {
     if (
       !['npmAuthToken', 'npmAuthIdent'].includes(key) &&
@@ -238,6 +265,7 @@ function checkNonAuthenticationReferences(
     ) {
       throw invalidMapping();
     }
+
     checkNonAuthenticationReferences(setting, mappings, visited);
   }
 }
@@ -245,6 +273,7 @@ function checkNonAuthenticationReferences(
 /** 核對合併後的全域、scope 及 registry 認證，避免來源秘密被全域設定擴散。 */
 function checkYarnSettings(files: any[], context: AuthenticationContext): void {
   const merged = mergeYarnSettings(files);
+
   if (
     ['npmAuthToken', 'npmAuthIdent'].some(
       (key) =>
@@ -254,7 +283,9 @@ function checkYarnSettings(files: any[], context: AuthenticationContext): void {
   ) {
     throw invalidMapping();
   }
+
   checkYarnAuthFields(merged, merged.npmRegistryServer, context);
+
   for (const scope of Object.values(merged.npmScopes)) {
     checkYarnAuthFields(
       scope,
@@ -265,7 +296,9 @@ function checkYarnSettings(files: any[], context: AuthenticationContext): void {
   for (const [registry, settings] of Object.entries(merged.npmRegistries)) {
     checkYarnAuthFields(settings, registry, context);
   }
+
   const visited = new WeakSet<object>();
+
   for (const file of files) {
     checkNonAuthenticationReferences(file, context.mappings, visited);
   }
@@ -275,6 +308,7 @@ function checkYarnSettings(files: any[], context: AuthenticationContext): void {
 async function readYarnSettings(path: string, errorMessage: string): Promise<object | undefined> {
   try {
     const settings = parse(await readOptional(path));
+
     if (settings && typeof settings === 'object') {
       return settings;
     }
@@ -292,6 +326,8 @@ export async function checkProjectAuthentication(
   if (!options.npmCredentials?.length) {
     return;
   }
+
+  // 先核對實體來源邊界，再建立只有本次安裝可使用的認證目錄。
   const credentials = validateNpmCredentials(options.npmCredentials);
   const mappings = new Map(
     credentials.flatMap((credential) =>
@@ -302,19 +338,24 @@ export async function checkProjectAuthentication(
   const modern = project.manager === 'yarn' && project.yarn?.generation === 'modern';
   const yarnFiles: any[] = [];
   const visitedFiles = new Set<string>();
+
   for (let directory = resolve(project.root); ; directory = dirname(directory)) {
     if (modern) {
       const path = join(directory, getEnv(env, 'YARN_RC_FILENAME') ?? '.yarnrc.yml');
+
       visitedFiles.add(path);
+
       const settings = await readYarnSettings(
         path,
         'Yarn 專案認證設定無法解析；請檢查 .yarnrc.yml，設定內容不會轉印。',
       );
+
       if (settings) {
         yarnFiles.unshift(settings);
       }
     } else {
       const path = join(directory, '.npmrc');
+
       visitedFiles.add(path);
       checkNpmFile(await readOptional(path), true, context);
     }
@@ -322,13 +363,16 @@ export async function checkProjectAuthentication(
       break;
     }
   }
+
   const childHome = getEnv(env, 'HOME') ?? getEnv(env, 'USERPROFILE') ?? homedir();
+
   if (!modern) {
     const user = resolve(
       project.root,
       getEnv(env, 'npm_config_userconfig') ?? join(childHome, '.npmrc'),
     );
     const auth = getEnv(env, 'PNPM_CONFIG_NPMRC_AUTH_FILE');
+
     for (const path of [
       user,
       ...(project.manager === 'pnpm' && auth ? [resolve(project.root, auth)] : []),
@@ -337,18 +381,23 @@ export async function checkProjectAuthentication(
         checkNpmFile(await readOptional(path), false, context);
       }
     }
+
     return;
   }
+
   const homeRc = join(childHome, getEnv(env, 'YARN_RC_FILENAME') ?? '.yarnrc.yml');
+
   if (!visitedFiles.has(homeRc)) {
     const settings = await readYarnSettings(
       homeRc,
       'Yarn 使用者認證設定無法解析；設定內容不會轉印。',
     );
+
     if (settings) {
       yarnFiles.unshift(settings);
     }
   }
+
   checkYarnSettings(yarnFiles, context);
 }
 
@@ -404,12 +453,16 @@ function npmRegistryOverlay(contents: string, credentials: NpmCredential[]): str
       const match = line.match(
         /^\s*["']?(\/\/[^\s"']+\/):(?:_authToken|_auth|username|_password|always-auth|tokenHelper)["']?\s*=/i,
       );
+
       if (!match) {
         return true;
       }
+
       const target = new URL(`https:${match[1]}`);
+
       return !credentials.some((credential) => {
         const url = new URL(credential.registry);
+
         return url.host === target.host && url.pathname === target.pathname;
       });
     })
@@ -427,14 +480,19 @@ async function authenticationDirectory(
     await repositoryBoundary(projectRoot),
     await realpath(sourceRoot ?? projectRoot),
   ];
+
   if (boundaries.some((boundary) => contains(boundary, base))) {
     throw new NpmAuthenticationError('temp');
   }
+
   await mkdir(base, { recursive: true });
+
   const physical = await realpath(base);
+
   if (boundaries.some((boundary) => contains(boundary, physical))) {
     throw new NpmAuthenticationError('temp');
   }
+
   return mkdtemp(join(base, 'sbom-npm-auth-'));
 }
 
@@ -448,19 +506,25 @@ export async function withNpmAuthentication(
 ): Promise<void> {
   if (!options.npmCredentials?.length) {
     await action(command);
+
     return;
   }
+
+  // 先核對實體來源邊界，再建立只有本次安裝可使用的認證目錄。
   const credentials = validateNpmCredentials(options.npmCredentials);
   const directory = await authenticationDirectory(
     project.root,
     options.sourceRoot,
     options.tempDirectory,
   );
+
   try {
     const env = { ...(command.env ?? inheritedEnv) };
     const variable = `SBOM_PILOT_NPM_${randomUUID().replaceAll('-', '')}`;
+
     if (project.manager === 'yarn' && project.yarn?.generation === 'modern') {
       const plugin = join(directory, 'registry-auth.cjs');
+
       await writeFile(plugin, yarnPlugin(variable), { mode: 0o600 });
       env[variable] = JSON.stringify(credentials);
       setEnv(env, 'YARN_PLUGINS', [getEnv(env, 'YARN_PLUGINS'), plugin].filter(Boolean).join(';'));
@@ -469,10 +533,12 @@ export async function withNpmAuthentication(
       const userconfig = getEnv(env, 'npm_config_userconfig') ?? join(childHome, '.npmrc');
       const original = await readOptional(resolve(project.root, userconfig));
       const lines: string[] = [];
+
       credentials.forEach((credential, index) => {
         const url = new URL(credential.registry),
           key = `//${url.host}${url.pathname}`;
         const secret = `${variable}_${index}`;
+
         env[secret] =
           credential.token ??
           Buffer.from(`${credential.username}:${credential.password}`).toString('base64');
@@ -481,17 +547,21 @@ export async function withNpmAuthentication(
           `${key}:always-auth=true`,
         );
       });
+
       const path = join(directory, 'npmrc');
+
       await writeFile(path, `${npmRegistryOverlay(original, credentials)}\n${lines.join('\n')}\n`, {
         mode: 0o600,
       });
       setEnv(env, 'NPM_CONFIG_USERCONFIG', path);
+
       if (project.manager === 'pnpm' && Number(project.version.split('.')[0]) >= 11) {
         const inheritedAuth = getEnv(env, 'PNPM_CONFIG_NPMRC_AUTH_FILE');
         const originalAuth = inheritedAuth
           ? await readOptional(resolve(project.root, inheritedAuth))
           : original;
         const authPath = join(directory, 'pnpm-auth.ini');
+
         await writeFile(
           authPath,
           `${npmRegistryOverlay(originalAuth, credentials)}\n${lines.join('\n')}\n`,
@@ -500,6 +570,8 @@ export async function withNpmAuthentication(
         setEnv(env, 'PNPM_CONFIG_NPMRC_AUTH_FILE', authPath);
       }
     }
+
+    // 設定只經子程序環境引用；日誌不顯示認證內容或完整環境。
     options.log?.(
       `已為 ${credentials.length} 個 npm registry 準備安裝階段認證（暫存設定，來源路由沿用專案）。`,
     );

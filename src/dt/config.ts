@@ -12,12 +12,15 @@ export function validateDtConfig(config: DtConfig | undefined): DtConfig {
   if (!config) {
     throw new Error('啟用 DT 時必須提供 DT 連線設定。');
   }
+
   let url: URL;
+
   try {
     url = new URL(config.apiUrl);
   } catch {
     throw new Error('DT API URL 必須是有效的 HTTP(S) 服務根網址。');
   }
+
   if (
     !['http:', 'https:'].includes(url.protocol) ||
     url.username ||
@@ -40,6 +43,7 @@ export function validateDtConfig(config: DtConfig | undefined): DtConfig {
   if (typeof config.skipTlsCertificateCheck !== 'boolean') {
     throw new Error('略過 DT TLS 憑證檢查必須是布林值。');
   }
+
   return { ...config, apiUrl: url.toString().replace(/\/$/, '') };
 }
 
