@@ -182,4 +182,3 @@ Classic 勾選「推送到 DT」後顯示對應欄位。Task 將已驗證 SBOM �
 [相容矩陣與手動驗收](docs/compatibility.md)區分本機／容器證據及尚未驗證的 Azure、企業網路與 arm64 項目。[開發說明](README-Dev.md)提供建置、測試、架構與發佈準備。
 
 MIT License · Copyright © 2026 Lawrence Shen。第三方授權見 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。
-

@@ -58,7 +58,7 @@ function decisions(body) {
 const inventory = [];
 const spacing = process.argv.includes('--spacing');
 const write = process.argv.includes('--write');
-const spacingFailures = []; 
+const spacingFailures = [];
 const files = await sourceFiles('src');
 const config = ts.readConfigFile('tsconfig.json', ts.sys.readFile);
 if (config.error) throw new Error('Cannot read TypeScript configuration');
