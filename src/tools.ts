@@ -1,8 +1,8 @@
-import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { access, cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { join, dirname, delimiter } from 'node:path';
 import { createHash } from 'node:crypto';
 import { satisfies, valid, validRange, rcompare } from 'semver';
-import * as toolLib from 'azure-pipelines-tool-lib/tool';
+import { acquireNodeCache, extractNodeArchive, nodePaths } from './node-cache';
 import type { ProcessRunner } from './process';
 import { validateToolOptions, validateCdxgenPackage, parseCdxgenVersion, validateCdxgenHelp } from './tool-options';
 import { downloadBytes } from './network/http';
@@ -38,8 +38,7 @@ export const prepareTools: ToolPreparer = async (request, run, log) => {
   if (!['x64', 'arm64'].includes(process.arch)) throw new Error('工具準備僅支援 x64/arm64 Agent。');
   const versions = JSON.parse((await fetchBytes('https://nodejs.org/dist/index.json')).toString()) as { version: string }[];
   const nodeVersion = selectNodeVersion(versions.map(item => item.version), request.nodeVersion);
-  let nodeRoot = toolLib.findLocalTool('sbom-pilot-node', nodeVersion, process.arch);
-  if (!nodeRoot) {
+  const nodeRoot = await acquireNodeCache({ directory: process.env.AGENT_TOOLSDIRECTORY || join(request.tempDirectory, 'tools-cache'), version: nodeVersion, arch: process.arch }, async stage => {
     const platform = process.platform === 'win32' ? 'win' : 'linux';
     const folder = `node-v${nodeVersion}-${platform}-${process.arch}`;
     const archive = `${folder}.${process.platform === 'win32' ? 'zip' : 'tar.gz'}`;
@@ -49,11 +48,18 @@ export const prepareTools: ToolPreparer = async (request, run, log) => {
     if (!expected || createHash('sha256').update(bytes).digest('hex') !== expected) throw new Error('Node.js 下載的 SHA-256 不符。');
     const archivePath = join(request.tempDirectory, archive);
     await writeFile(archivePath, bytes);
-    const extracted = process.platform === 'win32' ? await toolLib.extractZip(archivePath) : await toolLib.extractTar(archivePath);
-    nodeRoot = await toolLib.cacheDir(join(extracted, folder), 'sbom-pilot-node', nodeVersion, process.arch);
-  }
-  const node = join(nodeRoot, process.platform === 'win32' ? 'node.exe' : 'bin/node');
-  const npmCli = join(nodeRoot, process.platform === 'win32' ? 'node_modules/npm/bin/npm-cli.js' : 'lib/node_modules/npm/bin/npm-cli.js');
+    const extracted = await mkdtemp(join(request.tempDirectory, 'node-extract-'));
+    try {
+      await extractNodeArchive(archivePath, bytes, extracted, folder, request.tempDirectory, run);
+      // Temp and tool cache may live on different drives; preserve relative npm links.
+      await cp(join(extracted, folder), stage, { recursive: true, dereference: false, verbatimSymlinks: true });
+    } finally { await rm(extracted, { recursive: true, force: true }); await rm(archivePath, { force: true }); }
+  }, async root => {
+    const paths = nodePaths(root);
+    await access(paths.npmCli);
+    if ((await run({ executable: paths.node, args: ['--version'], cwd: request.tempDirectory, timeoutMs: 30_000 })).stdout.trim() !== `v${nodeVersion}`) throw new Error('Node 工具快取的實際版本與選定版本不符。');
+  });
+  const { node, npmCli } = nodePaths(nodeRoot);
   const env = await childNetworkEnvironment({ ...process.env, PATH: `${dirname(node)}${delimiter}${process.env.PATH ?? ''}` }, request.tempDirectory);
   const actualNode = (await run({ executable: node, args: ['--version'], cwd: request.tempDirectory, env, timeoutMs: 30_000 })).stdout.trim();
   if (actualNode !== `v${nodeVersion}`) throw new Error('實際 Node.js runtime 版本與選定版本不符；請檢查 Agent 工具快取。');

@@ -8,13 +8,29 @@ await rm('dist', { recursive: true, force: true });
 await mkdir('dist', { recursive: true });
 // jsonc-parser's UMD entry passes require through a factory, hiding relative
 // imports from the bundler. Its published ESM entry bundles those imports safely.
-const bundled = await build({ entryPoints: ['src/index.ts'], bundle: true, platform: 'node', target: 'node20', format: 'cjs', outfile: 'dist/index.js', external: ['azure-pipelines-task-lib', 'azure-pipelines-tool-lib'], alias: { 'jsonc-parser': 'jsonc-parser/lib/esm/main.js' }, metafile: true });
+const bundled = await build({ entryPoints: ['src/index.ts'], bundle: true, platform: 'node', target: 'node20', format: 'cjs', outfile: 'dist/index.js', external: ['azure-pipelines-task-lib'], alias: { 'jsonc-parser': 'jsonc-parser/lib/esm/main.js' }, metafile: true });
+// Keep the real SDK entry in its own package directory: __dirname and resource
+// lookup retain SDK semantics. Bundle its proven runtime closure, excluding the
+// unused mock-test harness and its downloader dependency, rather than stubbing it.
+const sdkRoot = 'dist/node_modules/azure-pipelines-task-lib';
+await mkdir(sdkRoot, { recursive: true });
+for (const entry of await readdir('node_modules/azure-pipelines-task-lib', { withFileTypes: true })) {
+  if (entry.name === 'node_modules' || /\.(?:js|ts)$/.test(entry.name)) continue;
+  await cp(`node_modules/azure-pipelines-task-lib/${entry.name}`, `${sdkRoot}/${entry.name}`, { recursive: true });
+}
+const sdk = await build({ entryPoints: ['node_modules/azure-pipelines-task-lib/task.js'], bundle: true, platform: 'node', target: 'node20', format: 'cjs', outfile: `${sdkRoot}/task.js`, metafile: true });
+// Every literal import must resolve to a Node builtin or into this bundle. The
+// SDK's remaining dynamic require loads user-specified resource JSON only.
+const { isBuiltin } = await import('node:module');
+for (const output of Object.values(sdk.metafile.outputs)) for (const dependency of output.imports) {
+  if (!dependency.external || !isBuiltin(dependency.path)) throw new Error(`Unexpected SDK runtime import: ${dependency.path}`);
+}
 await cp('src/task.json', 'dist/task.json');
 await cp('src/schemas', 'dist/schemas', { recursive: true });
 await cp('LICENSE', 'dist/LICENSE');
 await cp('THIRD-PARTY-NOTICES.md', 'dist/THIRD-PARTY-NOTICES.md');
 await mkdir('dist/licenses', { recursive: true });
-const bundledRoots = new Set(Object.keys(bundled.metafile.inputs).filter(path => path.startsWith('node_modules/')).map(path => {
+const bundledRoots = new Set([...Object.keys(bundled.metafile.inputs), ...Object.keys(sdk.metafile.inputs)].filter(path => path.startsWith('node_modules/')).map(path => {
   const parts = path.split('/');
   const offset = parts.lastIndexOf('node_modules');
   return parts.slice(0, offset + (parts[offset + 1].startsWith('@') ? 3 : 2)).join('/');
@@ -28,37 +44,5 @@ for (const source of bundledRoots) {
   await cp(`${source}/${licenseFile}`, `dist/licenses/${source.replaceAll('/', '_')}.txt`);
   attributions.push({ name: pkg.name, version: pkg.version, license: pkg.license, kind: 'bundled', licenseFile: `licenses/${source.replaceAll('/', '_')}.txt` });
 }
-// Azure SDKs load resource files and platform helpers at runtime. Preserve their
-// complete production dependency tree rather than flattening away those assets.
-const copied = new Set();
-async function copyDependency(name) {
-  if (copied.has(name)) return;
-  copied.add(name);
-  const root = `node_modules/${name}`;
-  const pkg = JSON.parse(await readFile(`${root}/package.json`, 'utf8'));
-  await cp(root, `dist/node_modules/${name}`, { recursive: true });
-  for (const dependency of Object.keys(pkg.dependencies ?? {})) await copyDependency(dependency);
-}
-await copyDependency('azure-pipelines-task-lib');
-await copyDependency('azure-pipelines-tool-lib');
-async function inventory(directory) {
-  for (const entry of await readdir(directory, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    const path = `${directory}/${entry.name}`;
-    if (entry.name.startsWith('@')) { await inventory(path); continue; }
-    let pkg;
-    try { pkg = JSON.parse(await readFile(`${path}/package.json`, 'utf8')); } catch { continue; }
-    if (pkg.name === 'truncate-utf8-bytes' && pkg.version === '1.0.2') await cp('third-party/truncate-utf8-bytes-1.0.2/LICENSE.WTFPL.txt', `${path}/LICENSE.WTFPL.txt`);
-    const files = await readdir(path);
-    const license = files.find(file => /^licen[sc]e(?:\.|$)/i.test(file));
-    const readmeLicense = !license && files.includes('README.md') && (await readFile(`${path}/README.md`, 'utf8')).includes('Permission is hereby granted');
-    const missingUpstreamNotice = !license && !readmeLicense && pkg.name === 'nodejs-file-downloader' && pkg.version === '4.13.0' && pkg.license === 'ISC';
-    if (!license && !readmeLicense && !missingUpstreamNotice) throw new Error(`External runtime license missing: ${pkg.name}`);
-    // The original package/repository declares ISC but supplies no full notice.
-    // Preserve its actual metadata; never invent a copyright holder or year.
-    attributions.push({ name: pkg.name, version: pkg.version, license: pkg.license, kind: 'external', licenseFile: `${path.replace(/^dist\//, '')}/${license || (readmeLicense ? 'README.md' : 'package.json')}`, ...(missingUpstreamNotice ? { upstreamNoticeMissing: true, source: 'https://github.com/ibrod83/nodejs-file-downloader', note: 'Original ISC declaration preserved; full upstream notice unavailable. Public-release review remains open.' } : {}) });
-    if (files.includes('node_modules')) await inventory(`${path}/node_modules`);
-  }
-}
-await inventory('dist/node_modules');
 await writeFile('dist/licenses/manifest.json', JSON.stringify(attributions.sort((a, b) => a.name.localeCompare(b.name) || a.version.localeCompare(b.version)), null, 2));
+await writeFile('dist/licenses/runtime-inputs.json', JSON.stringify({ handler: Object.keys(bundled.metafile.inputs), sdk: Object.keys(sdk.metafile.inputs) }, null, 2));

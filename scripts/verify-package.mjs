@@ -14,6 +14,19 @@ try {
   const version = JSON.parse(await readFile('vss-extension.json', 'utf8')).version;
   const file = `local-dev-placeholder.sbom-pilot-${version}.vsix`;
   const archive = await JSZip.loadAsync(await readFile(join('packages', file)));
+  // Check local Markdown links in shipped user/developer docs against the VSIX,
+  // including nested example/config files. Marketplace must not depend on an
+  // unpublished repository URL to make these relative links work.
+  for (const [name, entry] of Object.entries(archive.files)) {
+    if (entry.dir || !/^(?:README(?:-Dev)?\.md|CHANGELOG\.md|THIRD-PARTY-NOTICES\.md|docs\/[^/]+\.md)$/.test(name)) continue;
+    const contents = await entry.async('string');
+    for (const match of contents.matchAll(/\]\(([^)]+)\)/g)) {
+      const target = match[1].split('#')[0];
+      if (!target || /^[a-z][a-z\d+.-]*:|^\/\//i.test(target)) continue;
+      const path = resolve('/', dirname(name), decodeURIComponent(target)).replaceAll('\\', '/').replace(/^[A-Za-z]:/, '').replace(/^\//, '');
+      assert.ok(archive.files[path], `Broken packaged link ${name} -> ${target}`);
+    }
+  }
   const unpacked = join(root, 'vsix');
   for (const [name, entry] of Object.entries(archive.files)) {
     const target = resolve(unpacked, name);
@@ -32,7 +45,21 @@ try {
     const licenses = JSON.parse(await readFile(join(dirname(entry), 'licenses/manifest.json'), 'utf8'));
     for (const name of ['yaml', 'jsonc-parser', 'ajv', 'ajv-formats-draft2019', 'smtp-address-parser', 'https-proxy-agent', 'agent-base']) assert.ok(licenses.some(item => item.name === name), `Attribution missing: ${name}`);
     for (const item of licenses) await readFile(join(dirname(entry), item.licenseFile));
+    assert.ok(!licenses.some(item => item.upstreamNoticeMissing || ['nodejs-file-downloader', 'azure-pipelines-tool-lib'].includes(item.name)));
     for (const binary of nodes) {
+      // Probe the SDK's genuine dynamic resource loader, minimatch and Q-backed
+      // process runner from the shipped closure, outside host node_modules.
+      const sdk = join(dirname(entry), 'node_modules/azure-pipelines-task-lib');
+      const probe = spawnSync(binary, ['-e', `
+        const assert=require('node:assert/strict'),path=require('node:path');
+        const root=process.argv[1],tl=require(path.join(root,'task.js'));
+        tl.setResourcePath(path.join(root,'lib.json'));
+        assert.match(tl.loc('LIB_InputRequired','fixture'),/fixture/);
+        assert.equal(tl.getInput('probe'),'value');assert.equal(tl.getVariable('Build.BuildId'),'12');
+        assert.ok(tl.findMatch(root,['**/task.js']).some(file=>file.endsWith('task.js')));
+        tl.exec(process.execPath,['-e','process.stdout.write("sdk-exec-ok")'],{silent:true}).then(code=>{assert.equal(code,0)},()=>process.exitCode=1);
+      `, sdk], { cwd: root, encoding: 'utf8', env: { ...process.env, INPUT_PROBE: 'value', BUILD_BUILDID: '12' } });
+      assert.equal(probe.error, undefined); assert.equal(probe.status, 0, `SDK runtime resource/process probe failed: ${probe.stderr}`);
       const key = 'synthetic-shipped-package-key';
       const npmToken = 'synthetic-shipped-npm-token', npmPassword = 'synthetic-shipped-npm-password';
       const nugetPassword = 'synthetic-shipped-nuget-password', nugetUser = 'nuget-fixture-user';

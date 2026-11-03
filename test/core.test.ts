@@ -112,12 +112,17 @@ test('npm uses ci, preserves lockfile and suppresses credential-bearing errors',
 test('real npm ci succeeds on a locked empty project and fails on manifest mismatch without rewriting lockfile', () => fixture(async root => {
   const npmCli = process.env.npm_execpath;
   assert.ok(npmCli, 'Run tests via npm test');
-  const runtime = { ...tools, npmCli, env: { ...process.env, npm_config_offline: 'true' } };
+  const npmVersion = (await runProcess({ executable: process.execPath, args: [npmCli, '--version'], cwd: root })).stdout.trim();
+  const runtime = { ...tools, nodeVersion: process.versions.node, npmCli, env: { ...process.env, npm_config_offline: 'true' } };
+  // This offline install test uses its actual host npm. Handler Node20 runs the
+  // production workflow with a separately prepared Node24; do not pretend the
+  // test host itself is that scanner runtime or try provisioning npm11 offline.
+  const manifest = { name: 'fixture-product', version: '1.0.0', packageManager: `npm@${npmVersion}` };
   const lock = JSON.stringify({ name: 'fixture-product', version: '1.0.0', lockfileVersion: 3, requires: true, packages: { '': { name: 'fixture-product', version: '1.0.0' } } });
-  await writeFile(join(root, 'package.json'), '{"name":"fixture-product","version":"1.0.0"}');
+  await writeFile(join(root, 'package.json'), JSON.stringify(manifest));
   await writeFile(join(root, 'package-lock.json'), lock);
   await npmInstaller.install(root, runtime, runProcess);
-  await writeFile(join(root, 'package.json'), '{"name":"fixture-product","version":"1.0.0","dependencies":{"vue":"3.5.13"}}');
+  await writeFile(join(root, 'package.json'), JSON.stringify({ ...manifest, dependencies: { vue: '3.5.13' } }));
   await assert.rejects(npmInstaller.install(root, runtime, runProcess), /npm ci/);
   assert.equal(await readFile(join(root, 'package-lock.json'), 'utf8'), lock);
 }));

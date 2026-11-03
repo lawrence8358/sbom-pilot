@@ -31,6 +31,17 @@
     {
       "path": "docs/framework.md",
       "addressable": true
+    },
+    { "path": "docs/package-managers.md", "addressable": true },
+    { "path": "docs/yarn.md", "addressable": true },
+    { "path": "docs/combined.md", "addressable": true },
+    { "path": "docs/npm-auth.md", "addressable": true },
+    { "path": "docs/nuget-auth.md", "addressable": true },
+    { "path": "docs/compatibility.md", "addressable": true },
+    { "path": "README-Dev.md", "addressable": true },
+    { "path": "CHANGELOG.md", "addressable": true },
+    { "path": "examples", "addressable": true },
+    { "path": "scripts/docker/combined.Dockerfile", "addressable": true
     }
   ],
   "contributions": [
