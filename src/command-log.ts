@@ -89,9 +89,17 @@ export function commandRedactor(
 
   const known = secretVariants([...values, ...environmentSecrets(process.env)]);
 
-  /** 先移除 URL／旗標認證，再替換已知值；保留非秘密參數供使用者核對。 */
+  /** 先替換完整已知值，再移除 URL／旗標認證；保留非秘密參數供使用者核對。 */
   return (value, env) => {
-    let safe = value
+    let safe = value;
+    // 必須先替換完整已知值，否則通用 header／URL 規則會切碎含空白或斜線的秘密。
+    for (const secret of [...known, ...secretVariants(environmentSecrets(env ?? {}))].sort(
+      (a, b) => b.length - a.length,
+    )) {
+      safe = safe.split(secret).join('***');
+    }
+
+    safe = safe
       .replace(/(https?:\/\/)[^\s/]*@/gi, '$1***@')
       .replace(/([?&](?:api[_-]?key|access[_-]?token|token|password|secret)=)[^&#\s]*/gi, '$1***')
       .replace(
@@ -102,11 +110,6 @@ export function commandRedactor(
         /((?:--?|\/)(?:api[-_]?key|password|passwd|token|access[-_]?token|client[-_]?secret|_authToken|_auth)[:=])[^\s]*/gi,
         '$1***',
       );
-
-    for (const secret of [...known, ...secretVariants(environmentSecrets(env ?? {}))].sort(
-      (a, b) => b.length - a.length,
-    ))
-      safe = safe.split(secret).join('***');
 
     return safe;
   };

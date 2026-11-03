@@ -190,13 +190,14 @@ try {
     const runs = (await readdir(temp)).filter(file => file.startsWith('sbom-pilot-')); assert.equal(runs.length, 1);
     const bomFile = join(temp, runs[0], 'sbom', 'bom.json'), bytes = await readFile(bomFile), bom = JSON.parse(bytes); safe(bytes.toString());
     await validateSbom(bomFile, '1.6');
+    await writeFile(join(evidenceDirectory, `${name}.bom.json`), bytes);
     for (const dependency of expected) assert.ok(bom.components?.some(item => item.name === dependency), `Missing ${dependency}`);
     if (name.startsWith('angular-')) {
       assert.ok(!bom.components.some(item => item.name === 'vue'));
       const angularCore = bom.components.find(item => item.name === 'core' && item.group === '@angular');
-      const tslib = bom.components.find(item => item.name === 'tslib');
-      assert.ok(angularCore && tslib, 'Angular and its real runtime dependency must be present');
-      assert.ok(bom.dependencies.some(item => item.ref === angularCore['bom-ref'] && item.dependsOn.includes(tslib['bom-ref'])), 'Angular → tslib dependency edge missing');
+      const tslib = bom.components.filter(item => item.name === 'tslib');
+      assert.ok(angularCore && tslib.length, 'Angular and its real runtime dependency must be present');
+      assert.ok(bom.dependencies.some(item => item.ref === angularCore['bom-ref'] && tslib.some(target => item.dependsOn.includes(target['bom-ref']))), 'Angular → tslib dependency edge missing');
     }
     if (name === 'pnpm') assert.ok(!bom.components?.some(item => item.name === 'chalk'), 'Fixed cdxgen required scope must exclude this pnpm fixture dev-only chalk');
     assert.ok(bom.dependencies?.some(item => item.dependsOn?.length), 'Real dependency edges missing');

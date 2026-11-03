@@ -77,3 +77,15 @@ test('actual console receives only redacted command diagnostics before a real fa
   assert.match(actual.stdout, /\[command\].*\*\*\*/);
   assert.match(actual.stdout, /expected safe failure/);
 });
+
+test('complete known secrets are removed before generic header, URI and flag rules can fragment them', async () => {
+  const secret = 'prefix middle / suffix';
+  const redact = commandRedactor({ npmCredentials: [{ registry: 'https://registry.example.test', token: secret }] });
+  const args = [`Authorization: Bearer ${secret}`, `Proxy-Authorization: Basic ${secret}`, `https://name:${secret}@example.test/path`, `https://example.test/?token=${secret}`, `--api-key=${secret}`, `Authorization: Bearer ${encodeURIComponent(secret)}`];
+  const logs: string[] = [];
+  const command = { executable: process.execPath, args, cwd: process.cwd() };
+  const snapshot = structuredClone(command);
+  await withCommandLogging(async value => { assert.equal(value, command); return { stdout: '', stderr: '' }; }, line => logs.push(line), redact)(command);
+  for (const part of ['prefix', 'middle', 'suffix']) assert.ok(!logs[0].includes(part));
+  assert.deepEqual(command, snapshot);
+});
