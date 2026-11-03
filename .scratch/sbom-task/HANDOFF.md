@@ -12,7 +12,7 @@
 
 ## 工單 13 已完成；現在只做最終審查
 
-工單13已整合，以下保留範圍與中途證據供查核；不是尚未完成的實作派工。Standards 已完成，報告 reviews/standards.md 有一項註解不符與兩項重複政策建議，尚待集中修正。當前 reviewStatus 是 spec-in-progress，僅啟用 implement_01 做獨立唯讀 Spec review，不讀另一軸報告；兩者固定比較 e3a5bf6...8b6969d。審查輸出／commit清單在 reviews/，完成後集中修正，不能漏掉最終審查與安全清理。
+工單13已整合，以下保留範圍與中途證據供查核。Standards／Spec 初次審查均完成，固定比較 e3a5bf6...8b6969d，報告在 reviews/standards.md、spec.md、coordinator-findings.md。現在只處理工單14：單一 implement_01 在 D:/Project/Git/.sbom-pilot-worktrees/14-review-fixes、ticket/14-review-fixes 集中修正（一項註解、兩項重複政策、並行快取競爭、Windows有界rename重試、正式URL驗證）。先讀該worktree checkpoint14及Git實況；提交、驗證、唯一merger整合後才結案審查及安全清理，不能把初次報告當作已修正。
 
 使用者要求接續未完成工作，同時整理人類易讀的 README／README-Dev，DEV 加 Mermaid 執行流程圖，src TypeScript 加中文函式用途註解、換行排版及複雜度優化。已授權，無需重問。
 
