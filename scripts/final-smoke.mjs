@@ -127,7 +127,6 @@ try {
       const packageRoot = join(directory, 'node_modules', pkg);
       const manifest = JSON.parse(await readFile(join(packageRoot, 'package.json'), 'utf8'));
       let cli = join(packageRoot, typeof manifest.bin === 'string' ? manifest.bin : manifest.bin[manager]);
-      if (manager === 'pnpm' && Number(version.split('.')[0]) >= 12 && process.platform === 'win32') cli += '.exe';
       if (/\.(?:c?js|mjs)$/.test(cli)) prefix = [cli];
       else { executable = cli; prefix = []; }
     }

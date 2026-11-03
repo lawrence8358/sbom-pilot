@@ -69,6 +69,8 @@ flowchart TD
 
 DT 錯誤會保留到有效成品發佈請求之後再拋出。入口發出 `artifact.upload` 時只代表請求已排入 Agent 佇列；上圖的 Task 成功不代表 Azure 已完成非同步上傳。有效檔案必須保留到工作清理，不能在入口 finally 刪除。成品請求本身失敗也必須讓 Task 失敗。
 
+命令診斷在 `runWorkflow` 統一包裝 ProcessRunner，所以注入的測試 runner 與實際 runner 都收到原始 Command；顯示副本先遮罩再 JSON 序列化，不排序 import、不啟用 shell。僅顯示兩個掃描開關，不列印整份環境或子程序輸出。DT 在原生 HTTP transport 前另記真實 PUT URL 與遮罩 Key，沒有增加 cdxgen 認證參數。前端 canonical 值為 `javascript`，`vue` 在驗證後正規化成同一路徑。
+
 ## 從哪個模組開始讀
 
 | 維護工作 | 主要檔案 | 需要守住的行為 |
@@ -127,6 +129,8 @@ Node 快取僅公開驗證完成的暫存安裝目錄，並行寫入者驗證勝
 
 先執行 npm test、package:dev。`npm run test:final` 將目前 VSIX 解到 Repo 外，執行原始 handler。Windows 預設跑 npm、pnpm workspace、Yarn4 PnP、私有 .NET Core、私有前後端合併、三種 Framework 格式及成品轉接器故障；Linux 預設跑 npm、私有合併與 artifact 故障。可用 `npm run test:final -- --cases=pnpm,combined` 選擇受影響場景。
 
+前端通用性可用 `npm run test:final -- --cases=angular-npm,angular-yarn,angular-pnpm` 驗證：固定 [Angular core20.3.0](https://registry.npmjs.org/@angular%2fcore/20.3.0)、rxjs7.8.2 與 tslib2.8.1，由 npm11.19.1、Yarn4.18.1 PnP、原生 pnpm12.16.1 各自建立真實鎖檔，再執行解包 Task 的嚴格安裝與單次掃描。這是非 Vue 套件 fixture，不代表需要 Angular CLI 或推薦框架版本。驗證包含實際 Angular→tslib 圖邊（鎖檔可解析出多個 tslib 版本）、單行命令與設定、原生 DT PUT、同一成品及輸入 hash。不要同時在同一工作目錄執行 `npm test` 與此 harness，因為前者會重建 `.test-build` 的 Schema。
+
 Windows 可設 `SBOM_FINAL_NODE20` 為實際 Node20 執行檔，讓 npm 場景使用該入口。單獨入口檢查：
 
 ```powershell
@@ -177,5 +181,3 @@ npm run package:release
 命令只建置 VSIX，不上傳 Marketplace。正式包裝要求有效 HTTPS repository URL，拒絕內嵌帳密、query／fragment、文件佔位及保留的測試網域；缺少身分、local placeholder 或未解決 runtime 告示也會拒絕。這是 metadata 的語法與秘密檢查，實際 Publisher 權限及 Repo 公開性仍須另行確認。package.json、src/task.json、vss-extension.json 同步改版；GUID／名稱固定，Task major 影響 SbomPilot@0。更新 [CHANGELOG](CHANGELOG.md)，保存 VSIX hash、版本與證據；公開前須完成獨立程式碼審查。
 
 外部 gate：實際 Publisher／公開 Repo、真實 Services/Server 安裝、Classic/YAML UI與工作、成品下載／失敗傳播、公司 feed／企業 Proxy/CA、arm64。SDK/workload 與 Yarn required scope 限制保持明示，未測項目保留 UNVERIFIED。
-
-命令診斷在 `runWorkflow` 統一包裝 ProcessRunner，所以注入的測試 runner 與實際 runner 都收到原始 Command；顯示副本先遮罩再 JSON 序列化，不排序 import、不啟用 shell。僅顯示兩個掃描開關，不列印整份環境或子程序輸出。DT 在原生 HTTP transport 前另記真實 PUT URL 與遮罩 Key，沒有增加 cdxgen 認證參數。前端 canonical 值為 `javascript`，`vue` 在驗證後正規化成同一路徑。
