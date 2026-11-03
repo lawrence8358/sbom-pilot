@@ -22,19 +22,20 @@
     "11",
     "12",
     "13",
-    "14"
+    "14",
+    "15"
   ],
   "activeWorktrees": [
     {
       "ticket": "15",
-      "phase": "integrating",
+      "phase": "review-fixing",
       "branch": "ticket/15-frontend-command-logging",
       "worktree": "../.sbom-pilot-worktrees/15-frontend-command-logging",
       "checkpoint": ".scratch/sbom-task/checkpoints/15.md",
       "candidate": "87597bf462de8f5b0232cc7ed3c12f6648ff6246"
     }
   ],
-  "reviewStatus": "ticket15-integration-pending",
+  "reviewStatus": "ticket15-standards-fixes-in-progress",
   "reviewHead": "8b6969ded4884cb0a4d759dc70aabb2e246715dd",
   "externalValidation": [
     "live Azure Services/Server installation, Classic/YAML UI, artifact download and asynchronous failure propagation",
@@ -45,7 +46,7 @@
   ],
   "notesDirectory": "../.sbom-pilot-notes",
   "recheckHead": "917afff17e06795113fb31d6d05b28167ec1d393",
-  "localImplementationStatus": "ticket15-in-progress",
+  "localImplementationStatus": "ticket15-review-fixes",
   "cleanupStatus": "worktree-registrations-removed; five residual directories retained after deletion errors and policy rejection",
   "cleanupReport": ".scratch/sbom-task/reviews/worktree-cleanup.md"
 }

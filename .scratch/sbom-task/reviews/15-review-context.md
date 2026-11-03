@@ -14,3 +14,5 @@
 固定比較SHA、最後檢查／實際流程／套件hash與結論，待候選交回與獨立整合後保存至15整合及兩軸報告。
 
 固定候選：87597bf462de8f5b0232cc7ed3c12f6648ff6246（乾淨），Task runtime遮罩排序修正cc07bd3；兩項實作中查核均已加入回歸並修正。Windows/Linux Node20/24各114tests、175中文說明、間距／型別／格式／封裝、Angular三管理器與private combined／DT403真實流程通過。尚待獨立merger與兩軸增量複查；不可把候選通過當作已整合。
+
+第一次15整合已完成：merge f1a0a5f，root驗證42b5d25；114tests／175中文說明／spacing0及Node20/24封裝全過，27份證據已在root .smoke/review-15。初次增量Standards報告15-standards.md發現P3預檢用途註解與Duplicated Code旗標名稱模式；兩項由原唯一實作者在原15worktree集中修正，再獨立整合／複查，不宣告審查結案。兩處純空白已由merger獲授權修正。
