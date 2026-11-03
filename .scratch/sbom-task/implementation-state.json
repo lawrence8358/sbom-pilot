@@ -24,8 +24,16 @@
     "13",
     "14"
   ],
-  "activeWorktrees": [],
-  "reviewStatus": "complete",
+  "activeWorktrees": [
+    {
+      "ticket": "15",
+      "phase": "implementing",
+      "branch": "ticket/15-frontend-command-logging",
+      "worktree": "../.sbom-pilot-worktrees/15-frontend-command-logging",
+      "checkpoint": ".scratch/sbom-task/checkpoints/15.md"
+    }
+  ],
+  "reviewStatus": "ticket15-pending",
   "reviewHead": "8b6969ded4884cb0a4d759dc70aabb2e246715dd",
   "externalValidation": [
     "live Azure Services/Server installation, Classic/YAML UI, artifact download and asynchronous failure propagation",
@@ -36,7 +44,7 @@
   ],
   "notesDirectory": "../.sbom-pilot-notes",
   "recheckHead": "917afff17e06795113fb31d6d05b28167ec1d393",
-  "localImplementationStatus": "complete",
+  "localImplementationStatus": "ticket15-in-progress",
   "cleanupStatus": "worktree-registrations-removed; five residual directories retained after deletion errors and policy rejection",
   "cleanupReport": ".scratch/sbom-task/reviews/worktree-cleanup.md"
 }

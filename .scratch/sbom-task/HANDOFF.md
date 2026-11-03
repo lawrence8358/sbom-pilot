@@ -1,5 +1,9 @@
 # SBOM Pilot 續接入口
 
+## 最新追加：工單15進行中
+
+使用者新授權三項調整：函式／責任區塊空白行、通用JavaScript/TypeScript前端（Angular等，npm/Yarn/pnpm，vue相容）、console顯示實際命令及cwd（認證遮罩），另記錄真實DT HTTP方法／URL。已重讀需求.md。唯一worker在 `D:/Project/Git/.sbom-pilot-worktrees/15-frontend-command-logging`、branch `ticket/15-frontend-command-logging`；先讀issue15及該處checkpoint15，再接續。原01–14成果保留，以下「完成」為前一輪歷史；現在仍有15待實作／驗證／獨立整合／複查，不可沿用舊完成狀態。
+
 本機開發、文件整理與最終程式碼審查已完成。先執行 `node scripts/resume.mjs`，以 Git 實況與 implementation-state 為準；精確證據見 [最終檢查點](checkpoints/final.md)。
 
 ## 已完成

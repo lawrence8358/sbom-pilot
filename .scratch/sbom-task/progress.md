@@ -21,6 +21,7 @@ The user authorized implementation on a local branch, with no remote push or PR.
 | 12 | Implemented; local verification passed; external acceptance pending | b287e05 / merge 9debf04; 99 tests on Windows/Linux Node20/24, actual extracted VSIX matrix, cold Linux SDK, complete25 runtime notices, root devVSIX/test:package passed; real identities/live Azure external |
 | 13 | Implemented; local verification passed | 4818116 / merge 8b6969d; human README/Dev+Mermaid,38 TS formatted,167/167 Chinese-purpose checks, responsibility refactors; Windows/Linux Node20/24 99tests and affected real flows; root package checks passed |
 | 14 | Implemented; integrated; review closed | 30a2cae / merge c831001;108 tests and170 Chinese descriptions; Windows/Linux Node20/24, actual coldNode/privateNuGet/Framework passed; root package verified917afff; Standards3/Spec1 plus2 coordinator items fixed and independently rechecked; reviews/report.md |
+| 15 | In progress | Function/logical-block blank lines; generic JavaScript/TypeScript frontend and legacy vue compatibility; actual command/cwd logs with secret masking and native DT request visibility; see issue15 |
 
 ## Validation policy
 

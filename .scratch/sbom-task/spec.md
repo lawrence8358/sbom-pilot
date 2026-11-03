@@ -1,7 +1,7 @@
 # SBOM Pilot 需求規格
 
 Status: ready-for-agent
-Implementation: complete locally; external acceptance pending
+Implementation: tickets01-14 complete locally; ticket15 in progress; external acceptance pending
 
 原始需求：[需求.md](../../需求.md)。使用者已核可需求及工單拆分，並授權依本規格在本機開發分支實作；目前沒有遠端 Repo，不建立 PR。
 
@@ -144,6 +144,8 @@ Implementation: complete locally; external acceptance pending
 - DT 上傳 API 接受請求並回傳 token，不代表非同步匯入已完成；token 查詢的 `processing: false` 也不能單獨證明成功匯入。Task 採 Q12 的接受上傳邊界。[DT 官方 API 原始碼](https://github.com/DependencyTrack/dependency-track/blob/master/src/main/java/org/dependencytrack/resources/v1/BomResource.java)
 
 ## Comments
+
+- 2026-11-03 追加工單15：src具名函式之間與內部責任區塊必須保留空白行；前端擴為JavaScript/TypeScript的npm／Yarn／pnpm專案（含Angular等，保留vue相容）；Task顯示真實執行檔／argv／cwd與可核對掃描設定，秘密遮罩，DT原生API方法／URL明確記錄。不得為日誌改動實際命令、洩漏認證或假造上傳CLI。詳見issues/15-readability-generic-frontend-command-logging.md。
 
 - 2026-11-03 追加實作要求：README.md 與 README-Dev.md 須改為人類易讀的導讀文件；README-Dev 加入實際執行流程的 Mermaid 圖。src 下 TypeScript 須補中文函式用途說明，統一換行／排版，並拆解複雜邏輯。詳見 [工單 13](issues/13-documentation-and-source-readability.md)；保留原需求與執行行為，於最終審查前完成。
 - 2026-11-02：第一輪回覆為 Q1「需要可以支援全部」、Q2「A」、Q3「希望這個能完成，不要相依外部」、Q4「看不懂，請進一步說明」、Q5「同意」。其中 Q1 與 Q3 的細部邊界保留為待確認，避免將廣泛目標當作相容性或完全離線能力的保證。
