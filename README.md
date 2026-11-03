@@ -161,9 +161,9 @@ Classic 勾選「推送到 DT」後顯示對應欄位。Task 將已驗證 SBOM �
 
 每個工具子程序開始前，Task 會以單行 `[command]` JSON 顯示實際 `executable`、完整 `argv` 清單與 `cwd`。JSON 保留空參數、空白、引號、Unicode 與 glob 的參數邊界；控制字元以跳脫表示。執行仍使用原始參數及 `shell: false`，日誌不是可直接貼入 shell 的命令字串。掃描時另列 `FETCH_LICENSE`／`CDXGEN_NO_CACHE`，可核對 `--required-only`、`--spec-version`、`--exclude` 與 `--install-deps false`。
 
-已知 DT、npm、NuGet 及代理帳密、常見編碼、URL userinfo 與認證旗標值會在 Task 輸出前改為 `***`；其餘參數與路徑會顯示，請勿把其他秘密自行放入專案名稱或非認證參數。Task 不列印整份環境或原始子程序 stdout／stderr。Agent 的 setsecret 控制命令仍用於提前登錄遮罩。
+已知 DT、npm、NuGet 及代理帳密、常見編碼、URL userinfo 與認證旗標值會在 Task 輸出前改為 `***`；遮罩來源包含已驗證的 Task 認證設定及相關子程序／代理認證；其餘參數與路徑會顯示。Task 不列印整份環境或原始子程序 stdout／stderr。Agent 的 setsecret 控制命令仍用於提前登錄遮罩。
 
-掃描與 DT 上傳分開：`[http]` 顯示實際 `PUT` 目的 URL 和 `X-Api-Key: ***`，對應原始需求的獨立 REST 上傳，不會假造 cdxgen `--api-key` 命令。原始範例的 `-p true` 是 cdxgen 的 SBOM tree table 顯示選項；本 Task 提供有效成品與組件摘要，不轉印該子程序表格。
+掃描與 DT 上傳分開：`[http]` 顯示實際 `PUT` 目的 URL 和 `X-Api-Key: ***`，對應原始需求的獨立 REST 上傳，不會假造 cdxgen `--api-key` 命令。原始範例的 `-p true` 是 cdxgen 的 [SBOM tree table 顯示選項](https://github.com/cdxgen/cdxgen/blob/v13.6.0/bin/cdxgen.js#L249-L253)；本 Task 提供有效成品與組件摘要，不轉印該子程序表格。
 
 ## 問題排查與結果限制
 
