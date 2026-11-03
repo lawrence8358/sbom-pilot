@@ -7,7 +7,7 @@
   "dispatchPolicy": { "maxConcurrentSubagents": 1, "requireVerifiedIntegrationBeforeNextTicket": true },
   "integratedTickets": ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13"],
   "activeWorktrees": [],
-  "reviewStatus": "standards-in-progress",
+  "reviewStatus": "spec-in-progress",
   "reviewHead": "8b6969ded4884cb0a4d759dc70aabb2e246715dd",
   "externalValidation": ["live Azure DevOps Services/Server installation and artifact download", "real public Publisher ID confirmation", "public repository URL (no remote exists)"],
   "notesDirectory": "../.sbom-pilot-notes"

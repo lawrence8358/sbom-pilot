@@ -12,7 +12,7 @@
 
 ## 工單 13 已完成；現在只做最終審查
 
-工單13已整合，以下保留範圍與中途證據供查核；不是尚未完成的實作派工。當前 reviewStatus 是 standards-in-progress，僅啟用 explore_restore 做唯讀 Standards review，接著才由另一位既有代理做 Spec review；兩者固定比較 e3a5bf6...8b6969d。審查輸出／commit清單在 reviews/，完成後集中修正，不能漏掉最終審查與安全清理。
+工單13已整合，以下保留範圍與中途證據供查核；不是尚未完成的實作派工。Standards 已完成，報告 reviews/standards.md 有一項註解不符與兩項重複政策建議，尚待集中修正。當前 reviewStatus 是 spec-in-progress，僅啟用 implement_01 做獨立唯讀 Spec review，不讀另一軸報告；兩者固定比較 e3a5bf6...8b6969d。審查輸出／commit清單在 reviews/，完成後集中修正，不能漏掉最終審查與安全清理。
 
 使用者要求接續未完成工作，同時整理人類易讀的 README／README-Dev，DEV 加 Mermaid 執行流程圖，src TypeScript 加中文函式用途註解、換行排版及複雜度優化。已授權，無需重問。
 
