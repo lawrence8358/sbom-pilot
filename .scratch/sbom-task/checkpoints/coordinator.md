@@ -2,6 +2,8 @@
 
 ## Start here
 
+NEXT: Ticket13 final candidate `4818116617b2a8e9b2fcc619c80e2db7a80c52e6` is clean; sole merger next, then two final reviews. All38 TS formatted,167/167 Chinese named-purpose docs, readable README/Dev+Mermaid and targeted responsibility refactors complete. Windows/Linux Node20/24 99tests/probes and affected real private/package/cold acquisition flows passed; runtime tests at8ee196a remain AST-equivalent after later comment-only work. Record genuine product Windows cache-rename EPERM as an observed transient failure with successful unchanged retry; cause unknown, final review should assess bounded retry separately. No active worker commands.
+
 CURRENT: Ticket12 integrated at `9debf04d7e09bf3fcf110efda720762b639482d7`; product matches verified `b287e05`, npmci/typecheck/99tests/build/devVSIX/test:package passed in root. Candidate proved Windows/Linux Node20/24 and real packaged routes/coldSDK. Runtime notice gap resolved,25 genuine attributions. Only ticket13 is now active in `../.sbom-pilot-worktrees/13-readability`, branch `ticket/13-readability`: human-readable README/Dev + Mermaid, Chinese function docs, consistent src formatting and complexity refactor. Final Standards/Spec reviews follow13. Optional diagnostic temp cleanup was automatically rejected with “blocked by policy”; retained percheckpoint12. Current HANDOFF/state outrank history below.
 
 ## Historical milestones and preserved constraints
