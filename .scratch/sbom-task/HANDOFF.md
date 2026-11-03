@@ -17,6 +17,7 @@
 - 工單 `issues/13-documentation-and-source-readability.md`；規格 Comments 已補追加範圍。
 - worktree `D:/Project/Git/.sbom-pilot-worktrees/13-readability`，分支 `ticket/13-readability`。
 - 讀該 worktree checkpoint13、Git log/status。若 checkpoint 尚未建立表示剛派工，不能重置既有變更。
+- 13 已提交中途版本 `8ee196a`：兩份 README 重整與 Mermaid、38 個 TS 檔格式化、159/159 中文具名說明、主要複雜函式責任拆分；型別／格式／說明檢查及99項測試通過。真正 Windows／Linux 重構後套件與來源流程驗證仍在進行，不能視為工單已完成。較早責任拆分在 `2c8b22a`／`911e2aa`，精確指標與恢復命令見 checkpoint13。
 - 具名函式／方法／具名函式常數須有實質中文說明，避免模板註解；短匿名回呼不需逐個重述語法。提供可重跑格式化檢查，拆解複雜邏輯而保持原介面及行為。
 - 文件依用途、操作與維護順序整理，保留必要條件／參數／限制，把細節放在適當連結；Mermaid 必須反映四模式、單次掃描、驗證、DT 與有效成品／失敗路徑。
 
