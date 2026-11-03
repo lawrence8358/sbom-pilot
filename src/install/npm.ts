@@ -31,9 +31,11 @@ export const npmInstaller: DependencyInstaller = {
   /** 確認 npm 專案後委派共用安裝流程，保留認證、鎖檔及清理檢查。 */
   async install(root, tools, run, options) {
     const project = await inspectJavaScriptProject(root);
+
     if (project.manager !== 'npm') {
       throw new Error('此專案使用其他套件管理器，並非 npm。');
     }
+
     await installJavaScriptProject(project, tools, run, options);
   },
 };

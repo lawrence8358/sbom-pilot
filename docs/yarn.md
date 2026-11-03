@@ -1,6 +1,6 @@
 # Yarn 支援與限制
 
-使用 `environment: vue`，提供包含 `package.json` 與 `yarn.lock` 的專案／workspace 根目錄。Task 不使用任意全域 Yarn，也不要求 Corepack 或額外 install Task。
+使用 `environment: javascript`，提供包含 `package.json` 與 `yarn.lock` 的專案／workspace 根目錄。Task 不使用任意全域 Yarn，也不要求 Corepack 或額外 install Task。
 
 ## 版本與設定
 

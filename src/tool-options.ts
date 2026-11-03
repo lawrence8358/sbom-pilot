@@ -26,6 +26,7 @@ export function validateCdxgenPackage(
   nodeVersion: string,
 ): void {
   const range = pkg.engines?.node;
+
   if (
     pkg.version !== expected ||
     typeof range !== 'string' ||
@@ -42,6 +43,7 @@ export function parseCdxgenVersion(output: string): string | undefined {
   const version = text.match(
     /^(?:CycloneDX Generator\s+)?(\d+\.\d+\.\d+(?:-[\w.-]+)?)(?:\r?\n|$)/,
   )?.[1];
+
   return version && valid(version) ? version : undefined;
 }
 

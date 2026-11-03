@@ -19,27 +19,35 @@ export const frameworkInstaller = {
     if (process.platform !== 'win32') {
       throw new Error('.NET Framework 模式僅支援 Windows Agent。');
     }
+
     const projects = await discoverDotnetProjects(root, options.excludes);
+
     if (!projects.length) {
       throw new Error(
         '找不到可還原的 .NET Framework 專案；請指定包含 csproj/fsproj/vbproj 的根目錄。',
       );
     }
+
     const temp = options.tempDirectory ?? tools.env.AGENT_TEMPDIRECTORY;
+
     if (!temp) {
       throw new Error('.NET Framework 流程需要 Task 暫存目錄。');
     }
+
     const env = { ...tools.env };
     const msbuild = projects.some((project) => !project.sdkStyle)
       ? await findMSBuild(root, run, env)
       : undefined;
+
     if (msbuild) {
       options.log?.(
         `Visual Studio MSBuild ${msbuild.version}（Agent 預裝；使用內建 NuGet Restore）。`,
       );
     }
+
     const assets = new Set<string>();
     const packageFiles = new Set<string>();
+
     for (const project of projects) {
       if (project.sdkStyle) {
         const sdk = await prepareDotnetSdk(project.directory, run, {
@@ -55,6 +63,7 @@ export const frameworkInstaller = {
           join(temp, 'dotnet'),
           options.nugetCredentials,
         );
+
         restored.forEach((item) => assets.add(item.assetsPath));
         tools.env = { ...tools.env, ...sdk.env };
       } else {
@@ -66,11 +75,14 @@ export const frameworkInstaller = {
           join(temp, 'framework'),
           options.nugetCredentials,
         );
+
         restored.assets.forEach((item) => assets.add(item.assetsPath));
         restored.packageFiles.forEach((path) => packageFiles.add(path));
       }
+
       options.log?.('.NET Framework 依賴還原完成；已驗證實際 assets／套件資料。');
     }
+
     tools.dotnetAssets = [...assets];
     tools.dotnetPackageFiles = [...packageFiles];
   },

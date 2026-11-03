@@ -23,6 +23,7 @@ export class DtTransportError extends Error {
     super(message);
   }
 }
+
 // 沿用 Agent Proxy／CA／client certificate；DT 不跟隨重新導向，TLS 例外僅限該請求。
 /** 透過共用 Agent Proxy／CA 傳送一次 DT PUT，TLS 例外只限本請求且不跟隨重新導向。 */
 export const sendDtRequest: DtTransport = async (options) => {
@@ -32,6 +33,7 @@ export const sendDtRequest: DtTransport = async (options) => {
     if (error instanceof NetworkError) {
       throw new DtTransportError(error.retryable, error.message.replace(/^HTTP/, 'DT'));
     }
+
     throw new DtTransportError(false, 'DT 網路設定無效。');
   }
 };

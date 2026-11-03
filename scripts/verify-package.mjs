@@ -41,6 +41,10 @@ try {
   for (const entry of entries) {
     const manifest = JSON.parse(await readFile(join(dirname(entry), 'task.json'), 'utf8'));
     assert.deepEqual(Object.keys(manifest.execution).sort(), ['Node20_1', 'Node24']);
+    const frontend = manifest.inputs.find(input => input.name === 'environment');
+    assert.equal(frontend.defaultValue, 'javascript');
+    assert.match(frontend.options.javascript, /JavaScript.*TypeScript.*Angular.*Vue/);
+    assert.deepEqual(Object.keys(frontend.options), ['javascript', 'dotnet', 'netframework', 'combined']);
     assert.deepEqual(manifest.visibility, ['Build']); assert.equal(manifest.minimumAgentVersion, '3.238.0');
     const licenses = JSON.parse(await readFile(join(dirname(entry), 'licenses/manifest.json'), 'utf8'));
     for (const name of ['yaml', 'jsonc-parser', 'ajv', 'ajv-formats-draft2019', 'smtp-address-parser', 'https-proxy-agent', 'agent-base']) assert.ok(licenses.some(item => item.name === name), `Attribution missing: ${name}`);

@@ -1,4 +1,4 @@
-import { readFile, readdir } from 'node:fs/promises';
+import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import ts from 'typescript';
 
@@ -56,6 +56,9 @@ function decisions(body) {
 }
 
 const inventory = [];
+const spacing = process.argv.includes('--spacing');
+const write = process.argv.includes('--write');
+const spacingFailures = []; 
 const files = await sourceFiles('src');
 const config = ts.readConfigFile('tsconfig.json', ts.sys.readFile);
 if (config.error) throw new Error('Cannot read TypeScript configuration');
@@ -66,10 +69,22 @@ for (const file of files) {
   const text = await readFile(file, 'utf8');
   const source = program.getSourceFile(file);
   if (!source) throw new Error(`Missing source AST: ${file}`);
+  const gaps = new Set();
+  function gapBefore(position, name) {
+    const before = text.slice(0, position);
+    const previous = before.trimEnd();
+    if (!previous || /[({[]$/.test(previous)) return;
+    if (!/\r?\n[ \t]*\r?\n[ \t]*$/.test(before)) {
+      const lineStart = before.lastIndexOf("\n") + 1;
+      gaps.add(lineStart);
+      spacingFailures.push(`${file}:${source.getLineAndCharacterOfPosition(position).line + 1} ${name} 前缺少空白行`);
+    }
+  }
   function visit(node) {
     const found = implementation(node, source, checker);
     if (found) {
       const ranges = ts.getLeadingCommentRanges(text, found.anchor.getFullStart()) ?? [];
+      if (spacing) gapBefore(ranges[0]?.pos ?? found.anchor.getStart(source), found.name);
       const comments = ranges.map(range => text.slice(range.pos, range.end)).join('\n');
       inventory.push({ file: relative('.', file).replaceAll('\\', '/'), name: found.name,
         line: source.getLineAndCharacterOfPosition(found.anchor.getStart(source)).line + 1,
@@ -79,9 +94,18 @@ for (const file of files) {
     ts.forEachChild(node, visit);
   }
   visit(source);
+  if (spacing && write && gaps.size) {
+    let revised = text;
+    for (const position of [...gaps].sort((a, b) => b - a)) revised = revised.slice(0, position) + '\n' + revised.slice(position);
+    await writeFile(file, revised);
+  }
 }
 
-if (process.argv.includes('--inventory')) {
+if (spacing) {
+  if (!write) for (const message of spacingFailures) console.error(message);
+  console.log(`Source spacing: ${spacingFailures.length} ${write ? 'gaps inserted' : 'missing gaps'}.`);
+  if (spacingFailures.length && !write) process.exitCode = 1;
+} else if (process.argv.includes('--inventory')) {
   console.log(JSON.stringify(inventory, null, 2));
 } else {
   const missing = inventory.filter(item => !item.documented);

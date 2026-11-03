@@ -8,6 +8,7 @@ export interface MSBuildTool {
   version: string;
   env: NodeJS.ProcessEnv;
 }
+
 /** 檢查 Agent 宣告或 vswhere 找到的工具路徑，避免啟動不存在的 MSBuild。 */
 const exists = async (path: string) =>
   access(path).then(
@@ -25,7 +26,9 @@ export async function findMSBuild(
   if (platform !== 'win32') {
     throw new Error('.NET Framework 模式僅支援 Windows Agent。');
   }
+
   let executable = env.MSBUILD_EXE_PATH;
+
   if (!executable) {
     const vswhere = join(
       env['ProgramFiles(x86)'] ?? 'C:/Program Files (x86)',
@@ -33,6 +36,7 @@ export async function findMSBuild(
       'Installer',
       'vswhere.exe',
     );
+
     if (await exists(vswhere)) {
       try {
         executable = (
@@ -65,7 +69,9 @@ export async function findMSBuild(
       '找不到 Agent 預裝的 Visual Studio MSBuild；請安裝 Visual Studio 2022／Build Tools（MSBuild >=17.8）及專案所需 workloads，或設定 MSBUILD_EXE_PATH。Task 不會安裝整套 Visual Studio。',
     );
   }
+
   let version: string | undefined;
+
   try {
     version = (
       await run({ executable, args: ['-version', '-nologo'], cwd, env, timeoutMs: 30_000 })
@@ -75,11 +81,13 @@ export async function findMSBuild(
   } catch {
     /* 回報必要條件，不轉印原始工具輸出。 */
   }
+
   if (!version || !gte(version, '17.8.0')) {
     throw new Error(
       '需要可執行的 Visual Studio MSBuild >=17.8；此版本以 structured property evaluation 保留傳統專案設定。請更新 Agent 的 Visual Studio 2022／Build Tools。',
     );
   }
+
   return { executable, version, env: { ...env } };
 }
 
@@ -110,6 +118,7 @@ export async function evaluateFrameworkProject(
       env: tool.env,
     });
     const properties = JSON.parse(output.stdout).Properties as FrameworkProperties;
+
     if (
       !properties ||
       typeof properties.NuGetRestoreTargets !== 'string' ||
@@ -123,6 +132,7 @@ export async function evaluateFrameworkProject(
     ) {
       throw new Error('Framework not declared');
     }
+
     return properties;
   } catch {
     throw new Error(

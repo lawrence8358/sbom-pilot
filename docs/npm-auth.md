@@ -1,6 +1,6 @@
 # 私有 npm 來源認證
 
-Vue 與 .NET Core 前後端合併模式可使用選填進階欄位 `npmCredentials`，由同一 Task 完成 npm／pnpm／Yarn 的私有套件嚴格安裝、SBOM 驗證及成品發佈。認證欄位不設定來源路由：registry、scope、workspace、鎖檔與安裝腳本仍由 Repo 及所選管理器決定。
+JavaScript／TypeScript 與 .NET Core 前後端合併模式可使用選填進階欄位 `npmCredentials`，由同一 Task 完成 npm／pnpm／Yarn 的私有套件嚴格安裝、SBOM 驗證及成品發佈。認證欄位不設定來源路由：registry、scope、workspace、鎖檔與安裝腳本仍由 Repo 及所選管理器決定。
 
 ## Secret Pipeline Variable 與欄位
 
@@ -77,7 +77,7 @@ Task 輸入只填秘密變數參照：
 ```yaml
 - task: SbomPilot@0
   inputs:
-    environment: vue # 合併產品使用 combined，保留同一個共同 projectPath
+    environment: javascript # 合併產品使用 combined，保留同一個共同 projectPath
     projectPath: '$(Build.SourcesDirectory)'
     npmCredentials: '$(npmCredentials)'
     uploadToDt: false

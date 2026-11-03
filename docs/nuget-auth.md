@@ -25,7 +25,7 @@ steps:
     uploadToDt: false
 ```
 
-Classic Build 在「進階設定／私有 NuGet 來源認證」填 `$(nugetCredentials)`。只填秘密變數參照，不把實際 JSON 寫入 YAML。無需 Service Connection、Authenticate Task、外部 UseDotNet 或另一個 restore Task。Vue-only 不使用這組認證；combined 的 JavaScript 部分另用 `npmCredentials`，兩者不混用。
+Classic Build 在「進階設定／私有 NuGet 來源認證」填 `$(nugetCredentials)`。只填秘密變數參照，不把實際 JSON 寫入 YAML。無需 Service Connection、Authenticate Task、外部 UseDotNet 或另一個 restore Task。JavaScript-only 不使用這組認證；combined 的 JavaScript 部分另用 `npmCredentials`，兩者不混用。
 
 ## 來源解析及隔離
 

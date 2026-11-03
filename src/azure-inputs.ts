@@ -5,5 +5,6 @@ import type { InputReader } from './config';
 /** 保留 Azure SDK 未收進 vault 的空輸入，區分使用者清空欄位與未提供值。 */
 export const readAzureInput: InputReader = (name) => {
   const raw = process.env[`INPUT_${name.replace(/ /g, '_').toUpperCase()}`];
+
   return raw === undefined ? tl.getInput(name) : raw;
 };

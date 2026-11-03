@@ -1,3 +1,4 @@
+import { commandRedactor, diagnosticJson } from '../command-log';
 import { readFile } from 'node:fs/promises';
 import type { ValidatedSbom } from '../validation';
 import { bomEndpoint, validateDtConfig, UUID, type DtConfig } from './config';
@@ -25,6 +26,7 @@ export async function uploadToDependencyTrack(
 ): Promise<void> {
   const config = validateDtConfig(input);
   const policy = { ...DEFAULT_POLICY, ...services.policy };
+
   if (
     !Number.isInteger(policy.maxAttempts) ||
     policy.maxAttempts < 1 ||
@@ -38,6 +40,7 @@ export async function uploadToDependencyTrack(
   ) {
     throw new Error('DT 網路政策超出允許界限。');
   }
+
   const body = Buffer.from(
     JSON.stringify({
       project: config.projectUuid,
@@ -45,14 +48,22 @@ export async function uploadToDependencyTrack(
       autoCreate: false,
     }),
   );
+
   /** 取得可注入的單次 DT 傳輸函式；上層仍統一掌握有限重試政策。 */
   const transport = services.transport ?? sendDtRequest;
+
   /** 在可注入的重試等待點套用延遲，讓測試無須承受真實等待時間。 */
   const wait = services.wait ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+
   for (let attempt = 1; attempt <= policy.maxAttempts; attempt++) {
     let retryable = false;
     let failure = 'DT 上傳失敗。';
+
     try {
+      log(
+        `[http] ${diagnosticJson({ method: 'PUT', url: commandRedactor({ dt: config })(bomEndpoint(config).href), headers: { 'X-Api-Key': '***' } })}`,
+      );
+
       const response = await transport({
         url: bomEndpoint(config),
         headers: {
@@ -66,19 +77,25 @@ export async function uploadToDependencyTrack(
         timeoutMs: policy.timeoutMs,
         maxResponseBytes: 64 * 1024,
       });
+
       if ([200, 201, 202].includes(response.statusCode)) {
         let token: unknown;
+
         try {
           token = JSON.parse(response.body.toString()).token;
         } catch {
           /* 下方使用固定且不含回應內容的診斷。 */
         }
+
         if (typeof token !== 'string' || !UUID.test(token)) {
           throw new DtTransportError(false, 'DT 回應未提供有效接受 token，無法確認已接受上傳。');
         }
+
         log('DT 已接受上傳；未等待背景匯入或弱點分析。');
+
         return;
       }
+
       retryable = RETRY_STATUSES.has(response.statusCode);
       failure = `DT 上傳收到 HTTP ${response.statusCode}；未顯示可能含秘密的回應內容。`;
     } catch (error) {
@@ -91,9 +108,11 @@ export async function uploadToDependencyTrack(
         failure = 'DT 連線或傳輸失敗。';
       }
     }
+
     if (!retryable || attempt === policy.maxAttempts) {
       throw new Error(failure);
     }
+
     log(`DT 暫時無法接受上傳；準備重試 ${attempt + 1}/${policy.maxAttempts}。`);
     await wait(Math.min(2000, policy.retryDelayMs * attempt));
   }

@@ -14,6 +14,7 @@ const exists = async (path: string) =>
     () => true,
     () => false,
   );
+
 /** 計算既有設定／鎖檔的 SHA-256，以便還原完成或失敗後核對內容不變。 */
 const hash = async (path: string) =>
   createHash('sha256')
@@ -40,14 +41,18 @@ export async function findSolutionDirectory(
 ): Promise<string | undefined> {
   let directory = dirname(resolve(projectPath));
   const boundary = resolve(root);
+
   for (;;) {
     const projectRelative = relative(directory, projectPath).replaceAll('\\', '/').toLowerCase();
+
     for (const file of await readdir(directory, { withFileTypes: true })) {
       if (!file.isFile() || !/\.sln$/i.test(file.name)) {
         continue;
       }
+
       const content = await readFile(join(directory, file.name), 'utf8');
       const references = [...content.matchAll(/^Project\([^\r\n]*?=\s*"[^"]*",\s*"([^"]+)"/gm)];
+
       if (
         references.some(
           (reference) =>
@@ -58,13 +63,17 @@ export async function findSolutionDirectory(
         return directory;
       }
     }
+
     if (directory === boundary) {
       return undefined;
     }
+
     const parent = dirname(directory);
+
     if (parent === directory || relative(boundary, parent).startsWith('..')) {
       return undefined;
     }
+
     directory = parent;
   }
 }
@@ -120,9 +129,11 @@ async function packageFiles(
   if (!metadata.packagesConfigPath || !Array.isArray(metadata.configFilePaths)) {
     throw new Error('packages.config 還原圖缺少必要的來源設定／清單路徑。');
   }
+
   const token = randomUUID();
   const input = join(tempDirectory, `packages-${token}.json`);
   const script = join(tempDirectory, `packages-${token}.ps1`);
+
   try {
     await writeFile(
       input,
@@ -136,6 +147,7 @@ async function packageFiles(
       }),
     );
     await writeFile(script, packageMetadataScript);
+
     const output = await run({
       executable: 'powershell.exe',
       args: [
@@ -154,12 +166,14 @@ async function packageFiles(
       timeoutMs: 60_000,
     });
     const result = JSON.parse(output.stdout);
+
     if (
       !Array.isArray(result.files) ||
       result.files.some((path: unknown) => typeof path !== 'string')
     ) {
       throw new Error('Invalid package metadata');
     }
+
     return [metadata.packagesConfigPath, ...result.files];
   } catch {
     throw new Error(
@@ -181,6 +195,7 @@ async function readFrameworkGraph(
 ): Promise<GraphRestore[]> {
   const cwd = dirname(projectPath);
   const graphPath = join(tempDirectory, `framework-${randomUUID()}.json`);
+
   try {
     await run({
       executable: tool.executable,
@@ -195,10 +210,12 @@ async function readFrameworkGraph(
       cwd,
       env: tool.env,
     });
+
     const graph = JSON.parse(await readFile(graphPath, 'utf8'));
     const metadata: GraphRestore[] = Object.values(graph.projects ?? {}).map(
       (entry: any) => entry.restore,
     );
+
     if (
       !metadata.length ||
       metadata.some(
@@ -212,6 +229,7 @@ async function readFrameworkGraph(
     if (!metadata.some((entry) => resolve(entry.projectPath) === resolve(projectPath))) {
       throw new Error('Project missing from graph');
     }
+
     return metadata;
   } catch {
     throw new Error(
@@ -238,6 +256,7 @@ async function verifyRestoredInputs(assets: RestoreProject[], configs: string[])
       }
       if (/\.nupkg$/i.test(path)) {
         const bytes = await readFile(path);
+
         if (bytes.length < 4 || bytes.readUInt32LE(0) !== 0x04034b50) {
           throw new Error('Invalid package archive');
         }
@@ -268,18 +287,23 @@ export async function restoreFrameworkProject(
     '-p:RestoreUseSkipNonexistentTargets=false',
     ...(solutionDirectory ? [`-p:SolutionDir=${solutionDirectory}${sep}`] : []),
   ];
+
   await mkdir(tempDirectory, { recursive: true });
+
   const metadata = await readFrameworkGraph(projectPath, tool, run, tempDirectory, common);
 
   const assets: RestoreProject[] = [];
   const configs: string[] = [];
+
   for (const entry of metadata) {
     if (entry.projectStyle === 'PackageReference') {
       if (!entry.outputPath) {
         throw new Error('PackageReference 缺少評估後的還原輸出位置。');
       }
+
       const lock = entry.restoreLockProperties?.nuGetLockFilePath ?? 'packages.lock.json';
       const lockPath = isAbsolute(lock) ? lock : resolve(dirname(entry.projectPath), lock);
+
       assets.push({
         projectPath: entry.projectPath,
         assetsPath: join(
@@ -302,6 +326,7 @@ export async function restoreFrameworkProject(
       const entrySolution =
         entryProperties.RestoreSolutionDirectory ||
         (await findSolutionDirectory(entry.projectPath, root));
+
       configs.push(
         ...(await packageFiles(
           entry,
@@ -316,6 +341,7 @@ export async function restoreFrameworkProject(
       );
     }
   }
+
   const preserved = [
     ...new Set([
       ...configs.filter((path) => /\.config$/i.test(path)),
@@ -325,6 +351,7 @@ export async function restoreFrameworkProject(
   const hashes = await Promise.all(
     preserved.map(async (path) => [path, await hash(path)] as const),
   );
+
   try {
     /** 以評估後的 MSBuild 參數執行還原，只有既有鎖檔存在時要求 locked mode。 */
     const restore = (env: NodeJS.ProcessEnv) =>
@@ -341,6 +368,7 @@ export async function restoreFrameworkProject(
         cwd,
         env,
       });
+
     if (credentials?.length) {
       await withFrameworkSourceReader(
         properties.NuGetRestoreTargets,
@@ -356,6 +384,7 @@ export async function restoreFrameworkProject(
     if (error instanceof Error && error.message.startsWith('NuGet 認證')) {
       throw error;
     }
+
     throw new Error(
       'MSBuild/NuGet 還原失敗；請檢查來源／認證／連線、既有 lockfile 一致性、packages.config 套件版本及專案所需 workloads。未轉印可能含認證的原始輸出。',
     );
@@ -368,7 +397,9 @@ export async function restoreFrameworkProject(
       }
     }
   }
+
   await verifyRestoredInputs(assets, configs);
   await verifyFrameworkTargets(projectPath, properties.TargetFrameworkVersion, tool, run, cwd);
+
   return { assets, packageFiles: [...new Set(configs)] };
 }

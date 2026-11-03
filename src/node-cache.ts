@@ -15,8 +15,10 @@ function identity(options: NodeCacheOptions) {
   if (!/^\d+\.\d+\.\d+$/.test(options.version) || !['x64', 'arm64'].includes(options.arch)) {
     throw new Error('Node 工具快取版本或架構無效。');
   }
+
   return { version: options.version, arch: options.arch, platform: process.platform };
 }
+
 /** 依平台回傳 Node 與 npm 真正入口，不採用任意全域 npm。 */
 export function nodePaths(root: string) {
   return {
@@ -29,18 +31,22 @@ export function nodePaths(root: string) {
     ),
   };
 }
+
 /** 核對快取標記及必要入口為實體檔案，任何缺失都視為未完成。 */
 async function complete(root: string, options: NodeCacheOptions): Promise<boolean> {
   try {
     const value = JSON.parse(await readFile(join(root, marker), 'utf8'));
+
     if (JSON.stringify(value) !== JSON.stringify(identity(options))) {
       return false;
     }
+
     for (const file of Object.values(nodePaths(root))) {
       if (!(await lstat(file)).isFile()) {
         return false;
       }
     }
+
     return true;
   } catch {
     return false;
@@ -52,14 +58,18 @@ async function publishCache(stage: string, root: string, options: NodeCacheOptio
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
       await rename(stage, root);
+
       return;
     } catch (error) {
       const occupied = await access(root).then(
         () => true,
         () => false,
       );
+
       if (occupied && (await complete(root, options))) return;
+
       const code = (error as NodeJS.ErrnoException).code;
+
       if (
         occupied ||
         process.platform !== 'win32' ||
@@ -67,6 +77,7 @@ async function publishCache(stage: string, root: string, options: NodeCacheOptio
         attempt === 4
       )
         throw error;
+
       await new Promise((resolve) => setTimeout(resolve, 50 * 2 ** attempt));
     }
   }
@@ -79,21 +90,28 @@ export async function acquireNodeCache(
   verify: (root: string) => Promise<void>,
 ): Promise<string> {
   identity(options);
+
   const root = join(options.directory, 'sbom-pilot-node', options.version, options.arch);
+
   if (await complete(root, options)) {
     await verify(root);
+
     return root;
   }
+
   try {
     await access(root);
     // 相容讀取舊 tool-lib 建立的完整快取，仍需驗證實際入口與版本。
     await access(`${root}.complete`);
+
     for (const file of Object.values(nodePaths(root))) {
       if (!(await lstat(file)).isFile()) {
         throw new Error();
       }
     }
+
     await verify(root);
+
     return root;
   } catch {
     if (
@@ -105,22 +123,30 @@ export async function acquireNodeCache(
       // 另一工作可能在第一次檢查後原子發佈新格式快取；先驗證勝出者，不能誤判為損壞。
       if (await complete(root, options)) {
         await verify(root);
+
         return root;
       }
+
       throw new Error('Node 工具快取不完整或版本驗證失敗；請清理該版本快取後重試。');
     }
   }
+
   await mkdir(dirname(root), { recursive: true });
+
   const stage = await mkdtemp(join(dirname(root), '.node-install-'));
+
   try {
     await populate(stage);
     await verify(stage);
     await writeFile(join(stage, marker), JSON.stringify(identity(options)));
     await publishCache(stage, root, options);
+
     if (!(await complete(root, options))) {
       throw new Error('Node 工具快取完成標記無效。');
     }
+
     await verify(root);
+
     return root;
   } finally {
     await rm(stage, { recursive: true, force: true });
@@ -139,10 +165,13 @@ function safeEntry(name: string, folder: string): string {
   ) {
     throw new Error('Node 壓縮檔包含不安全路徑。');
   }
+
   const normalized = posix.normalize(name).replace(/\/$/, '');
+
   if (normalized !== folder && !normalized.startsWith(`${folder}/`)) {
     throw new Error('Node 壓縮檔路徑超出預期根目錄。');
   }
+
   return normalized;
 }
 interface TarRecord {
@@ -170,19 +199,25 @@ function tarString(data: Buffer): string {
 function* tarRecords(tar: Buffer): Generator<TarRecord> {
   for (let offset = 0; offset + 512 <= tar.length;) {
     const header = tar.subarray(offset, offset + 512);
+
     if (header.every((byte) => byte === 0)) {
       return;
     }
+
     const sizeText = tarString(header.subarray(124, 136)).trim();
+
     if (!/^[0-7]+$/.test(sizeText)) {
       throw new Error('Node tar 長度無效。');
     }
+
     const size = parseInt(sizeText, 8);
     const start = offset + 512,
       end = start + size;
+
     if (end > tar.length) {
       throw new Error('Node tar 檔案不完整。');
     }
+
     yield { header, body: tar.subarray(start, end), type: String.fromCharCode(header[156] || 48) };
     offset = start + Math.ceil(size / 512) * 512;
   }
@@ -192,9 +227,11 @@ function* tarRecords(tar: Buffer): Generator<TarRecord> {
 function paxAttributes(body: Buffer): Record<string, string> {
   const attributes: Record<string, string> = {};
   let index = 0;
+
   while (index < body.length) {
     const space = body.indexOf(32, index),
       length = Number(body.subarray(index, space).toString());
+
     if (
       space < index ||
       !Number.isSafeInteger(length) ||
@@ -203,8 +240,10 @@ function paxAttributes(body: Buffer): Record<string, string> {
     ) {
       throw new Error('Node tar PAX 資料無效。');
     }
+
     const field = body.subarray(space + 1, index + length - 1).toString('utf8'),
       equal = field.indexOf('=');
+
     if (equal < 1) {
       throw new Error('Node tar PAX 資料無效。');
     }
@@ -226,9 +265,11 @@ function paxAttributes(body: Buffer): Record<string, string> {
     ) {
       throw new Error('Node tar PAX 包含不支援的擷取屬性。');
     }
+
     attributes[field.slice(0, equal)] = field.slice(equal + 1);
     index += length;
   }
+
   return attributes;
 }
 
@@ -240,9 +281,11 @@ function recordTarPath(
   folder: string,
 ): void {
   const { header, type } = record;
+
   if (!['0', '1', '2', '5'].includes(type)) {
     throw new Error('Node tar 包含不支援的項目類型。');
   }
+
   const prefix = tarString(header.subarray(345, 500));
   const name = safeEntry(
     overrides.extended.path ||
@@ -250,15 +293,20 @@ function recordTarPath(
       `${prefix ? `${prefix}/` : ''}${tarString(header.subarray(0, 100))}`,
     folder,
   );
+
   paths.paths.push(name);
+
   if (type !== '1' && type !== '2') {
     return;
   }
+
   const target =
     overrides.extended.linkpath || overrides.longLink || tarString(header.subarray(157, 257));
+
   if (!target || target.includes('\\') || target.startsWith('/') || /^[A-Za-z]:/.test(target)) {
     throw new Error('Node tar 連結無效。');
   }
+
   safeEntry(
     posix.normalize(type === '2' ? posix.join(posix.dirname(name), target) : target),
     folder,
@@ -273,8 +321,10 @@ function validateTarLinks({ paths, links, targets }: TarPaths): void {
   if (!paths.length || paths.some((path) => links.some((link) => path.startsWith(`${link}/`)))) {
     throw new Error('Node tar 包含空內容或穿越連結的路徑。');
   }
+
   for (const target of targets) {
     const segments: string[] = [];
+
     for (const segment of target.split('/')) {
       if (segment === '..') {
         segments.pop();
@@ -292,6 +342,7 @@ function validateTarLinks({ paths, links, targets }: TarPaths): void {
 export function validateNodeTar(tar: Buffer, folder: string): void {
   const paths: TarPaths = { links: [], paths: [], targets: [] };
   let overrides: TarOverrides = { extended: {} };
+
   for (const record of tarRecords(tar)) {
     if (record.type === 'L') {
       overrides.longName = tarString(record.body).replace(/\n$/, '');
@@ -304,6 +355,7 @@ export function validateNodeTar(tar: Buffer, folder: string): void {
       overrides = { extended: {} };
     }
   }
+
   validateTarLinks(paths);
 }
 
@@ -344,9 +396,12 @@ export async function extractNodeArchive(
   run: ProcessRunner,
 ): Promise<void> {
   await mkdir(destination, { recursive: true });
+
   if (process.platform === 'win32') {
     const script = join(tempDirectory, 'extract-node.ps1');
+
     await writeFile(script, unzipScript);
+
     try {
       await run({
         executable: 'powershell.exe',
