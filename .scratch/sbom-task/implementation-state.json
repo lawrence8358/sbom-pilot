@@ -7,7 +7,7 @@
   "dispatchPolicy": { "maxConcurrentSubagents": 1, "requireVerifiedIntegrationBeforeNextTicket": true },
   "integratedTickets": ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13"],
   "activeWorktrees": [
-    { "ticket": "14", "phase": "implementing", "branch": "ticket/14-review-fixes", "worktree": "../.sbom-pilot-worktrees/14-review-fixes", "checkpoint": ".scratch/sbom-task/checkpoints/14.md" }
+    { "ticket": "14", "phase": "integrating", "branch": "ticket/14-review-fixes", "worktree": "../.sbom-pilot-worktrees/14-review-fixes", "checkpoint": ".scratch/sbom-task/checkpoints/14.md", "candidate": "30a2caec244daa800b3a9c61479332253d71138c" }
   ],
   "reviewStatus": "fixes-in-progress",
   "reviewHead": "8b6969ded4884cb0a4d759dc70aabb2e246715dd",

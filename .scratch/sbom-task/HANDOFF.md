@@ -12,6 +12,8 @@
 
 ## 工單 13 已完成；現在只做最終審查
 
+最新：14 候選 `30a2caec244daa800b3a9c61479332253d71138c` 乾淨，六項修正、Windows/Linux Node20/24 各108項測試、170中文說明及受影響真實冷Node/NuGet/Framework流程均已通過。額度中斷只留下文件EOF修正，root已核對並提交；程式沒有變動。現在由唯一 merger 整合、核對產品差異及重建最終VSIX，再確認審查結案與清理worktrees。14 checkpoint為精確證據來源，不重跑無關歷史矩陣。
+
 工單13已整合，以下保留範圍與中途證據供查核。Standards／Spec 初次審查均完成，固定比較 e3a5bf6...8b6969d，報告在 reviews/standards.md、spec.md、coordinator-findings.md。現在只處理工單14：單一 implement_01 在 D:/Project/Git/.sbom-pilot-worktrees/14-review-fixes、ticket/14-review-fixes 集中修正（一項註解、兩項重複政策、並行快取競爭、Windows有界rename重試、正式URL驗證）。先讀該worktree checkpoint14及Git實況；提交、驗證、唯一merger整合後才結案審查及安全清理，不能把初次報告當作已修正。
 
 使用者要求接續未完成工作，同時整理人類易讀的 README／README-Dev，DEV 加 Mermaid 執行流程圖，src TypeScript 加中文函式用途註解、換行排版及複雜度優化。已授權，無需重問。

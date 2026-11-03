@@ -2,6 +2,8 @@
 
 ## Start here
 
+LATEST INTEGRATION: Ticket14 candidate30a2caec244daa800b3a9c61479332253d71138c is clean. Six fixes complete; Windows/Linux Node20/24 each108tests,170Chinese purpose checks, package probes and affected real coldNode/privateNuGet/Framework passed. Quota interruption left only documentation EOF edits; root preserved/committed them and corrected README-Dev EOF, runtime unchanged. Dispatch sole separate merger explore_restore; root must remain unchanged while it integrates/rebuilds/verifies. Then targeted independent closure, final aggregate report and safe cleanup; prior LATEST below is historical.
+
 LATEST: Both initial reviews complete (reports under reviews/); active14-review-fixes is the sole slice, implement_01 in sibling14worktree. Read issue14/checkpoint14; fixed review product8b6969d/basee3a5bf6 retained. Fix all6 items, verify/commit, separate merger, then targeted review closure and safe cleanup. Current state/HANDOFF supersede earlier review-running paragraphs.
 
 CURRENT REVIEW: Tickets01–13 integrated. Product head8b6969ded4884cb0a4d759dc70aabb2e246715dd, root99tests/167Chinese docs/format/typecheck/build/devVSIX/package probes passed. Root code stays frozen during reviews. Standards review is sole active agent explore_restore, then independent Spec via implement_01; fixed basee3a5bf6ed57b74c519d0d64285f2929d0195688b. See reviews/commits.txt and review-context.md; persist reports before dispatching isolated single-worker fixes. Do not count reviews complete yet; no cleanup until verified fixes/integration. Prior CURRENT/NEXT paragraphs below are historical and superseded.
