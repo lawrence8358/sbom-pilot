@@ -39,53 +39,55 @@ async function workspaceRoot(requested: string): Promise<string> {
   }
 }
 
+const lockCandidates: [string, JavaScriptManager | 'unsupported'][] = [
+  ['package-lock.json', 'npm'], ['npm-shrinkwrap.json', 'npm'], ['pnpm-lock.yaml', 'pnpm'], ['yarn.lock', 'yarn'], ['bun.lock', 'unsupported'], ['bun.lockb', 'unsupported'],
+];
+
+async function findUniqueLock(root: string, requested: string): Promise<{ file: string; manager: JavaScriptManager }> {
+  for (let child = resolve(requested); child !== root; child = dirname(child)) {
+    if ((await Promise.all(lockCandidates.map(([file]) => exists(join(child, file))))).some(Boolean)) throw new Error('workspace 子目錄具有獨立 lockfile；請先統一 workspace 根目錄的鎖定資訊。');
+  }
+  const locks = (await Promise.all(lockCandidates.map(async ([file, manager]) => ({ file, manager, present: await exists(join(root, file)) })))).filter(lock => lock.present);
+  if (locks.length !== 1) throw new Error('必須有且僅有一份 lockfile；偵測到缺少或其他套件管理器的競爭 lockfile。');
+  const lock = locks[0];
+  if (lock.manager === 'unsupported') throw new Error('此 lockfile 的套件管理器尚未支援。');
+  return { file: lock.file, manager: lock.manager };
+}
+
+async function validatePnpmWorkspace(root: string, manager: JavaScriptManager): Promise<void> {
+  if (!await exists(join(root, 'pnpm-workspace.yaml'))) return;
+  if (manager !== 'pnpm') throw new Error('pnpm workspace 與其他套件管理器 lockfile 互相矛盾。');
+  try {
+    const workspace = parse(await readFile(join(root, 'pnpm-workspace.yaml'), 'utf8'));
+    if (workspace !== null && (typeof workspace !== 'object' || Array.isArray(workspace) || (workspace.packages !== undefined && (!Array.isArray(workspace.packages) || !workspace.packages.every((entry: unknown) => typeof entry === 'string'))))) throw new Error();
+  } catch { throw new Error('pnpm-workspace.yaml 必須是有效 YAML；packages 若有設定，必須是路徑清單。'); }
+}
+
+async function selectPnpmVersion(root: string, file: string, declaredVersion?: string): Promise<string> {
+  let lockVersion, documentCount;
+  try {
+    const documents = parseAllDocuments(await readFile(join(root, file), 'utf8'));
+    if (!documents.length || documents.some(document => document.errors.length)) throw new Error();
+    const versions = documents.map(document => String(document.toJSON()?.lockfileVersion));
+    if (new Set(versions).size !== 1) throw new Error();
+    lockVersion = versions[0]; documentCount = documents.length;
+  } catch { throw new Error('pnpm-lock.yaml 不是有效 YAML。'); }
+  if (lockVersion === 'undefined') throw new Error('pnpm lockfile 缺少 lockfileVersion。');
+  if (declaredVersion) return declaredVersion;
+  if (documentCount !== 1 || (lockVersion !== '9.0' && lockVersion !== '9')) throw new Error('此 pnpm lockfile 格式沒有已驗證的 fallback；請以 packageManager 宣告精確 pnpm 版本。');
+  return PNPM_FALLBACK_VERSION;
+}
+
 export async function inspectJavaScriptProject(requested: string): Promise<JavaScriptProject> {
   const root = await workspaceRoot(requested);
   const declared = await readPackageManagerDeclaration(root);
   const childDeclared = root !== resolve(requested) ? await readPackageManagerDeclaration(requested) : undefined;
-  if (childDeclared && (!declared || declarationsConflict(childDeclared, declared))) {
-    throw new Error('workspace 根目錄與子專案的 packageManager 宣告互相矛盾；請統一於 workspace 根目錄宣告。');
-  }
+  if (childDeclared && (!declared || declarationsConflict(childDeclared, declared))) throw new Error('workspace 根目錄與子專案的 packageManager 宣告互相矛盾；請統一於 workspace 根目錄宣告。');
   if (!await exists(join(root, 'package.json')) && !await exists(join(root, 'pnpm-workspace.yaml'))) throw new Error('找不到 package.json；請指定專案或 workspace 根目錄。');
-  const candidates: [string, JavaScriptManager | 'unsupported'][] = [
-    ['package-lock.json', 'npm'], ['npm-shrinkwrap.json', 'npm'], ['pnpm-lock.yaml', 'pnpm'], ['yarn.lock', 'yarn'], ['bun.lock', 'unsupported'], ['bun.lockb', 'unsupported'],
-  ];
-  for (let child = resolve(requested); child !== root; child = dirname(child)) {
-    if ((await Promise.all(candidates.map(([file]) => exists(join(child, file))))).some(Boolean)) throw new Error('workspace 子目錄具有獨立 lockfile；請先統一 workspace 根目錄的鎖定資訊。');
-  }
-  const locks = (await Promise.all(candidates.map(async ([file, manager]) => ({ file, manager, present: await exists(join(root, file)) })))).filter(lock => lock.present);
-  if (locks.length !== 1) throw new Error('必須有且僅有一份 lockfile；偵測到缺少或其他套件管理器的競爭 lockfile。');
-  const lock = locks[0];
-  if (lock.manager === 'unsupported') throw new Error('此 lockfile 的套件管理器尚未支援。');
+  const lock = await findUniqueLock(root, requested);
   if (declared && declared.manager !== lock.manager) throw new Error('packageManager 與 lockfile 的套件管理器互相矛盾。');
-  if (await exists(join(root, 'pnpm-workspace.yaml'))) {
-    if (lock.manager !== 'pnpm') throw new Error('pnpm workspace 與其他套件管理器 lockfile 互相矛盾。');
-    try {
-      const workspace = parse(await readFile(join(root, 'pnpm-workspace.yaml'), 'utf8'));
-      if (workspace !== null && (typeof workspace !== 'object' || Array.isArray(workspace) || (workspace.packages !== undefined && (!Array.isArray(workspace.packages) || !workspace.packages.every((entry: unknown) => typeof entry === 'string'))))) throw new Error();
-    } catch { throw new Error('pnpm-workspace.yaml 必須是有效 YAML；packages 若有設定，必須是路徑清單。'); }
-  }
-  let version = declared?.version;
-  if (!version && lock.manager === 'npm') version = NPM_FALLBACK_VERSION;
-  if (lock.manager === 'pnpm') {
-    let lockVersion, documentCount;
-    try {
-      const documents = parseAllDocuments(await readFile(join(root, lock.file), 'utf8'));
-      if (!documents.length || documents.some(document => document.errors.length)) throw new Error();
-      const versions = documents.map(document => String(document.toJSON()?.lockfileVersion));
-      if (new Set(versions).size !== 1) throw new Error();
-      lockVersion = versions[0]; documentCount = documents.length;
-    }
-    catch { throw new Error('pnpm-lock.yaml 不是有效 YAML。'); }
-    if (lockVersion === 'undefined') throw new Error('pnpm lockfile 缺少 lockfileVersion。');
-    if (!version) {
-      if (documentCount !== 1 || (lockVersion !== '9.0' && lockVersion !== '9')) throw new Error('此 pnpm lockfile 格式沒有已驗證的 fallback；請以 packageManager 宣告精確 pnpm 版本。');
-      version = PNPM_FALLBACK_VERSION;
-    }
-  }
-  if (lock.manager === 'yarn') {
-    return { root, manager: 'yarn', ...(await inspectYarnProject(root, declared?.version)), integrity: declared?.integrity, lockPath: join(root, lock.file) };
-  }
-  if (!version) throw new Error('無法決定套件管理器版本。');
+  await validatePnpmWorkspace(root, lock.manager);
+  if (lock.manager === 'yarn') return { root, manager: 'yarn', ...(await inspectYarnProject(root, declared?.version)), integrity: declared?.integrity, lockPath: join(root, lock.file) };
+  const version = lock.manager === 'pnpm' ? await selectPnpmVersion(root, lock.file, declared?.version) : declared?.version ?? NPM_FALLBACK_VERSION;
   return { root, manager: lock.manager, version, reason: declared ? 'declaration' : 'fallback', integrity: declared?.integrity, lockPath: join(root, lock.file) };
 }
