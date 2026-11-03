@@ -1,0 +1,109 @@
+8b6969d merge: 整合文件與原始碼可讀性重構
+aac3615 docs: 記錄可讀性重構候選與最終審查前檢查點
+4818116 docs: finalize readability verification and recovery checkpoint
+1c7a700 docs: complete typed callable comments and packaged regression evidence
+8154b5d docs: checkpoint cross-platform readability regression evidence
+81aa8ef docs: checkpoint packaged readability verification and active runs
+95cacda docs: 保存中文說明與可讀性重構驗證進度
+8ee196a refactor: document and format source responsibilities in Chinese
+911e2aa refactor: separate authentication preflight and network archive lifecycles
+2c8b22a refactor: separate manager provisioning and project identification
+931ff72 docs: reorganize user and maintainer guides with workflow diagram
+547b6a5 docs: checkpoint documentation and source readability work
+1002429 docs: 記錄最終驗收整合並續接可讀性重構
+9debf04 merge: 整合最終交付驗證與原生工具快取
+afe79ee docs: 保存最終驗收候選並準備整合
+b287e05 完成最終交付驗證與相容矩陣紀錄
+fad80ab docs: 納入文件流程圖與中文註解重構需求
+1ea647f 讓離線 npm 回歸測試使用實際 host 版本
+488ed76 完成正體中文交付文件與 VSIX 連結檢查
+198078a docs: 保存最終套件與 Linux 冷啟動驗收進度
+c03b79d 記錄最終 VSIX 私有來源與冷啟動整合驗證
+499e866 實作原生 Node 快取並精簡封裝 SDK 執行相依
+7b4a02a docs: checkpoint final packaged delivery implementation
+81b186a docs: 記錄 NuGet 整合並啟動最終交付驗收
+7f81211 merge: 整合已驗證的私有 NuGet 來源認證
+fdf41e0 docs: 記錄 NuGet 認證候選與整合檢查點
+b5e8ee1 docs: record verified cross-platform NuGet authentication
+394fa22 docs: checkpoint Windows NuGet layering and lock evidence
+55753c4 test: prove private NuGet restore and SBOM across Windows formats
+a243556 feat: isolate NuGet credentials to validated restore sources
+91fc09a docs: checkpoint NuGet authentication implementation plan
+2fd3f12 docs: 記錄私有 npm 整合並續接 NuGet 認證
+b79f7ca merge: integrate verified private npm registry authentication
+c46c722 docs: 保存私有 npm 認證完成提交與合併驗證階段
+bd1c483 docs: record verified private registry matrix and final handoff
+a4b85be fix: keep registry credentials outside repository and product boundaries
+687d5b4 docs: checkpoint active private registry verification runs
+fa34eb9 docs: document private registry credentials and verified manager behavior
+2b97a9a fix: enforce registry mapping isolation across inherited settings
+a4a5de8 test: exercise private registry credentials with real package managers
+b38ba3b feat: map explicit registry secret variables before manager initialization
+99bd599 docs: 從保存的私有 npm 認證 WIP 恢復序列實作
+7ba0797 docs: 保存五小時額度交接與私有認證 WIP 續接點
+d4dc049 docs: preserve private npm auth WIP and quota recovery steps
+33c4e58 feat: isolate private registry authentication for project installs
+ebdd90a docs: checkpoint private npm authentication implementation
+95a5326 docs: 記錄合併模式與 Linux 實測並派發私有 npm 認證
+972bb96 merge: integrate verified common-root combined product SBOM
+4777481 docs: 保存合併產品實測提交與最後驗收待辦
+99a359f chore: finalize combined product verification checkpoint
+efebaa0 docs: record real Windows and Linux combined restore evidence
+3c7f69b fix: compare workspace declarations by parsed manager identity
+20da459 test: add reproducible combined product smoke fixtures
+5b94e4a feat: add common-root combined restore and scan dispatch
+fc03754 docs: checkpoint combined product implementation start
+5a00a99 docs: 記錄跨平台驗證並派發單一合併產品任務
+3e4d1aa merge: integrate verified host compatibility and package checks
+833f2e5 docs: 保存相容性驗證結果與 Linux Docker 測試邊界
+5cc6c11 feat: finish host compatibility and shipped artifact checks
+8819f90 test: checkpoint cross-platform shipped artifact verification
+9fb239b test: inventory runtime notices and verify isolated shipped package
+1ce2d33 merge: refresh compatibility work with serial integration baseline
+209ac6c docs: 記錄 Framework 整合驗證並續接相容性工作
+ba15e11 merge: integrate verified Windows Framework support
+b865fd8 docs: 保存 Framework 完成提交與待合併階段
+a2d5c63 docs: complete verified Windows Framework delivery
+1d4a75a test: verify real Framework formats and preserve restore inputs
+0df036b merge: update Framework work with verified serial integration
+96b2b78 docs: 記錄 Yarn 整合驗證並續接 Framework
+330425d merge: integrate Yarn support with dotnet and DT workflows
+d9a9151 docs: finalize verified Yarn support and recovery evidence
+8c212b8 docs: 改回 .NET Core 用語並改採序列續接
+db9eb49 chore: preserve existing manifest and compiler formatting changes
+25a2a09 wip: preserve network verification and park serial worktree
+940ff8b wip: preserve framework tests and park serial worktree
+7818d89 wip: preserve Yarn smoke findings before serial recovery
+a476259 feat: add Windows framework restore adapters and prerequisites
+a3d447e docs: refresh coordinator handoff with integrated evidence and remaining graph
+3fa706f test: add Yarn workspace smoke and Classic integrity enforcement
+13b08ce wip: add shared Agent proxy and certificate transport
+c943566 wip: checkpoint framework implementation scope and restore plan
+f80ff71 docs: checkpoint dotnet and DT integration and next worker leases
+5e9bb16 feat: add Yarn generation selection and strict install adapter
+bedcdf8 merge: integrate modern dotnet restore and SBOM scanning
+dc92ec8 merge: integrate optional Dependency Track upload
+2c16f29 docs: checkpoint Yarn adapter implementation start
+b53f68c docs: checkpoint pnpm integration and dispatch Yarn support
+e96721b merge: integrate pnpm workspace and package manager preparation
+293d5a5 fix: preserve dotnet dependency metadata during excluded scans
+f5ca0d6 feat: complete DT upload validation and failure-path evidence
+b7cc991 fix: include workspace packages in committed pnpm example
+d73e973 feat: validate pnpm workspaces and native manager installs end to end
+b24b18a test: verify DT HTTP contract secret masking and failure artifacts
+2ec51e9 wip: add optional Dependency Track upload with recovery checkpoint
+fc9fe7b feat: add modern dotnet SDK and public restore workflow
+621863b docs: record options verification and dispatch DT upload slice
+313200f merge: integrate scan and tool option contracts
+c3bc8ad feat: verify actual scan tools and complete option validation evidence
+1f8073a feat: add pinned JavaScript manager dispatch and pnpm adapter
+1aaccab test: preserve explicit Azure input blanks and checkpoint option smoke
+7eb17b0 docs: checkpoint integration evidence and interrupted worker recovery
+caa7f3c chore: persist recoverable worker dispatch and checkpoint workflow
+2d02f77 wip: preserve package manager adapters after quota interruption
+75ddc45 wip: checkpoint modern dotnet implementation plan
+944d6aa wip: validate scan and tool option contracts with recovery checkpoint
+a9dfc73 docs: record baseline smoke evidence and next implementation frontier
+f8abe50 Merge ticket 01: Vue npm SBOM task foundation
+a543dc9 feat: implement Vue npm SBOM task foundation
+42056dd docs: record approved implementation and local branch workflow

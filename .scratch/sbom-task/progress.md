@@ -19,7 +19,7 @@ The user authorized implementation on a local branch, with no remote push or PR.
 | 10 | Implemented; local verification passed | b5e8ee1 / merge 7f81211; 95 tests; Windows4 formats/Linux .NET Core real private/public feed auth, layered config/lock preservation, closure isolation, schema/edge/local artifact; Node20/24 package masks passed |
 | 11 | Implemented; local verification passed; live acceptance pending | 5cc6c11 / merge 3e4d1aa; Windows/Linux 67 tests, isolated dist/VSIX on Node20/24; Proxy/CA and UTF-8 regression; live Azure unverified; upstream notice blocks public packaging |
 | 12 | Implemented; local verification passed; external acceptance pending | b287e05 / merge 9debf04; 99 tests on Windows/Linux Node20/24, actual extracted VSIX matrix, cold Linux SDK, complete25 runtime notices, root devVSIX/test:package passed; real identities/live Azure external |
-| 13 | In progress | User-authorized readable README/Dev, Mermaid flow, Chinese function comments, consistent src TypeScript formatting and complexity refactoring |
+| 13 | Implemented; local verification passed | 4818116 / merge 8b6969d; human README/Dev+Mermaid,38 TS formatted,167/167 Chinese-purpose checks, responsibility refactors; Windows/Linux Node20/24 99tests and affected real flows; root package checks passed |
 
 ## Validation policy
 
@@ -27,4 +27,4 @@ Record commands and their actual outcomes. Local automated tests, local real-too
 
 ## Dispatch policy
 
-User requested serial work after quota interruptions: at most one subagent (implementation, merge or review) at a time.13 is the sole active slice.01–12 are integrated and locally verified. Live Azure acceptance is still pending. Do not start the next slice until the current one is committed, integrated and verified. Unintegrated WIP is preserved and never counted as a completed ticket.
+User requested serial work after quota interruptions: at most one subagent (implementation, merge or review) at a time.01–13 are integrated and locally verified; final Standards/Spec reviews run sequentially against fixed product head8b6969d and initial basee3a5bf6. Live Azure acceptance is still pending. Findings must be fixed and verified before cleanup. Unintegrated WIP is preserved and never counted as a completed ticket.

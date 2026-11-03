@@ -6,11 +6,13 @@
 
 - 整合分支 `feature/sbom-pilot`；無遠端，不 push、不建立 PR。
 - 同時最多一個子代理，包含實作、合併、審查。每張提交、整合、驗證後才換階段。
-- 01–12 已整合。最新產品合併 `9debf04d7e09bf3fcf110efda720762b639482d7`，與候選 `b287e05` 一致；root npm ci／typecheck／99 項測試／build／devVSIX／test:package 通過。
+- 01–13 已整合。最新產品合併 `8b6969ded4884cb0a4d759dc70aabb2e246715dd`，與候選 `4818116` 一致；root npm ci／typecheck／format／167項中文說明／99項測試／build／devVSIX／test:package 通過。
 - 原名稱 SBOM Pilot／sbom-pilot，Task 顯示 SBOM Pilot — Generate & Upload SBOM；MIT，Lawrence Shen，正體中文。使用原需求「.NET Core」，避免「現代 .NET」。
 - 執行技能 `C:/Users/lawrence/.codex/skills/implement-spec/SKILL.md`；使用者序列與無 PR 要求優先。
 
-## 只處理追加工單 13
+## 工單 13 已完成；現在只做最終審查
+
+工單13已整合，以下保留範圍與中途證據供查核；不是尚未完成的實作派工。當前 reviewStatus 是 standards-in-progress，僅啟用 explore_restore 做唯讀 Standards review，接著才由另一位既有代理做 Spec review；兩者固定比較 e3a5bf6...8b6969d。審查輸出／commit清單在 reviews/，完成後集中修正，不能漏掉最終審查與安全清理。
 
 使用者要求接續未完成工作，同時整理人類易讀的 README／README-Dev，DEV 加 Mermaid 執行流程圖，src TypeScript 加中文函式用途註解、換行排版及複雜度優化。已授權，無需重問。
 
