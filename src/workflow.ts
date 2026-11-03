@@ -49,7 +49,11 @@ async function installDependencies(
   tempDirectory: string,
   services: WorkflowServices,
 ): Promise<void> {
-  const common = { tempDirectory, log: services.log };
+  const common = {
+    tempDirectory,
+    /** 各安裝路徑共用已約束為安全摘要的日誌輸出。 */
+    log: services.log,
+  };
   if (services.installer) {
     return services.installer.install(config.projectPath, tools, run, {
       ...common,
@@ -94,6 +98,7 @@ export async function runWorkflow(
   services: WorkflowServices,
 ): Promise<ValidatedSbom> {
   const config = await stage('參數驗證', () => validateConfig(input));
+  /** 選用測試注入或正式子程序執行器，所有後續階段共用相同執行介面。 */
   const run = services.run ?? runProcess;
   await mkdir(tempDirectory, { recursive: true });
   const tools = await stage('工具準備', () =>

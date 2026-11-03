@@ -132,6 +132,7 @@ export async function sendHttpRequest(options: HttpRequest): Promise<HttpRespons
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await new Promise<HttpResponse>((resolve, reject) => {
+      /** 依目的協定選擇 Node 原生傳輸函式，讓共用生命週期處理 HTTP 與 HTTPS。 */
       const request = options.url.protocol === 'https:' ? httpsRequest : httpRequest;
       const pending = request(
         options.url,

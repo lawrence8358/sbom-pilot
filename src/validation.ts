@@ -33,7 +33,9 @@ export const validateSbom: SbomValidator = async (path, specVersion) => {
   const syntax = new Ajv({ strict: false });
   addFormats(syntax);
   addInternationalFormats(syntax);
+  /** 驗證 ASCII 參照的 URI 語法，補足上游 IRI 格式檢查的誤判。 */
   const uriReference = syntax.compile({ type: 'string', format: 'uri-reference' });
+  /** 保留含 Unicode 參照的國際化驗證，不以 ASCII URL 規則誤拒合法內容。 */
   const internationalReference = syntax.compile({ type: 'string', format: 'iri-reference' });
   ajv.addFormat('iri-reference', (reference: string) =>
     /^[\x00-\x7f]*$/.test(reference)
@@ -46,6 +48,7 @@ export const validateSbom: SbomValidator = async (path, specVersion) => {
   const schema = JSON.parse(
     await readFile(join(__dirname, 'schemas', `bom-${specVersion}.schema.json`), 'utf8'),
   );
+  /** 以已註冊的官方子 Schema 及格式規則驗證整份 BOM。 */
   const validate = ajv.compile<any>(schema);
   if (!validate(value)) {
     // 只回報 Schema 路徑；組件內容可能包含敏感來源 URL。

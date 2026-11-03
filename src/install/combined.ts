@@ -37,4 +37,7 @@ export async function installCombinedProject(
   // 只將已驗證 SDK 環境與 assets 留在本次工具資訊，不保留來源秘密。
   await installers.dotnet.install(root, tools, run, options);
 }
-export const combinedInstaller = { install: installCombinedProject };
+export const combinedInstaller = {
+  /** 以統一 installer 介面公開前後端安裝順序，不額外建立另一套工作流程。 */
+  install: installCombinedProject,
+};

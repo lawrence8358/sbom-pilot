@@ -23,7 +23,7 @@ function callableBody(node) {
 }
 
 // 依 AST 找到實際具名函式體，排除只有型別的宣告及短匿名回呼。
-function implementation(node, source) {
+function implementation(node, source, checker) {
   if (ts.isFunctionDeclaration(node) && node.body && node.name) {
     return { name: node.name.text, body: node, anchor: node };
   }
@@ -32,7 +32,7 @@ function implementation(node, source) {
     return { name: node.name?.getText(source) ?? 'constructor', body: node, anchor: node };
   }
   if ((ts.isVariableDeclaration(node) || ts.isPropertyAssignment(node)) && node.initializer &&
-      callableBody(node.initializer)) {
+      (callableBody(node.initializer) || checker.getTypeAtLocation(node.initializer).getCallSignatures().length)) {
     const anchor = ts.isVariableDeclaration(node) && ts.isVariableDeclarationList(node.parent) &&
       ts.isVariableStatement(node.parent.parent) ? node.parent.parent : node;
     return { name: node.name.getText(source), body: callableBody(node.initializer), anchor };
@@ -56,17 +56,24 @@ function decisions(body) {
 }
 
 const inventory = [];
-for (const file of await sourceFiles('src')) {
+const files = await sourceFiles('src');
+const config = ts.readConfigFile('tsconfig.json', ts.sys.readFile);
+if (config.error) throw new Error('Cannot read TypeScript configuration');
+const parsed = ts.parseJsonConfigFileContent(config.config, ts.sys, '.');
+const program = ts.createProgram(files, parsed.options);
+const checker = program.getTypeChecker();
+for (const file of files) {
   const text = await readFile(file, 'utf8');
-  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
+  const source = program.getSourceFile(file);
+  if (!source) throw new Error(`Missing source AST: ${file}`);
   function visit(node) {
-    const found = implementation(node, source);
+    const found = implementation(node, source, checker);
     if (found) {
       const ranges = ts.getLeadingCommentRanges(text, found.anchor.getFullStart()) ?? [];
       const comments = ranges.map(range => text.slice(range.pos, range.end)).join('\n');
       inventory.push({ file: relative('.', file).replaceAll('\\', '/'), name: found.name,
         line: source.getLineAndCharacterOfPosition(found.anchor.getStart(source)).line + 1,
-        decisions: decisions(found.body), documented: /[\u3400-\u9fff]/u.test(comments) &&
+        decisions: found.body ? decisions(found.body) : null, documented: /[\u3400-\u9fff]/u.test(comments) &&
           comments.replace(/[\s/*]/g, '').length >= 8 });
     }
     ts.forEachChild(node, visit);
@@ -79,6 +86,6 @@ if (process.argv.includes('--inventory')) {
 } else {
   const missing = inventory.filter(item => !item.documented);
   for (const item of missing) console.error(`${item.file}:${item.line} ${item.name} 缺少中文用途註解`);
-  console.log(`Source comments: ${inventory.length - missing.length}/${inventory.length} named implementations documented.`);
+  console.log(`Source comments: ${inventory.length - missing.length}/${inventory.length} named functions/callables documented.`);
   if (missing.length) process.exitCode = 1;
 }

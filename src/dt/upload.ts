@@ -45,6 +45,7 @@ export async function uploadToDependencyTrack(
       autoCreate: false,
     }),
   );
+  /** 取得可注入的單次 DT 傳輸函式；上層仍統一掌握有限重試政策。 */
   const transport = services.transport ?? sendDtRequest;
   /** 在可注入的重試等待點套用延遲，讓測試無須承受真實等待時間。 */
   const wait = services.wait ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
