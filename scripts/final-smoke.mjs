@@ -119,15 +119,20 @@ try {
     const version = manager === 'yarn' ? '4.18.1' : manager === 'pnpm' ? '12.16.1' : '11.19.1';
     await writeFile(join(product, 'package.json'), JSON.stringify({ name: 'angular-delivery-fixture', version: '1.0.0', private: true, packageManager: `${manager}@${version}`, dependencies: { '@angular/core': '20.3.0', rxjs: '7.8.2', tslib: '2.8.1' } }));
     await writeFile(join(product, 'main.ts'), "import { Component } from '@angular/core'; import { of } from 'rxjs'; of(Component);\n");
-    let cli = npmCli;
+    let executable = process.execPath, prefix = [npmCli];
     if (manager !== 'npm') {
       const directory = join(root, `author-${manager}`); await mkdir(directory);
       const pkg = manager === 'yarn' ? '@yarnpkg/cli-dist' : 'pnpm';
-      await checked(process.execPath, [npmCli, 'install', '--prefix', directory, '--no-audit', '--no-fund', '--ignore-scripts', `${pkg}@${version}`], root);
-      cli = join(directory, 'node_modules', ...(manager === 'yarn' ? ['@yarnpkg', 'cli-dist', 'bin', 'yarn.js'] : ['pnpm', 'bin', 'pnpm.cjs']));
+      await checked(process.execPath, [npmCli, 'install', '--prefix', directory, '--no-audit', '--no-fund', ...(manager === 'yarn' ? ['--ignore-scripts'] : []), `${pkg}@${version}`], root);
+      const packageRoot = join(directory, 'node_modules', pkg);
+      const manifest = JSON.parse(await readFile(join(packageRoot, 'package.json'), 'utf8'));
+      let cli = join(packageRoot, typeof manifest.bin === 'string' ? manifest.bin : manifest.bin[manager]);
+      if (manager === 'pnpm' && Number(version.split('.')[0]) >= 12 && process.platform === 'win32') cli += '.exe';
+      if (/\.(?:c?js|mjs)$/.test(cli)) prefix = [cli];
+      else { executable = cli; prefix = []; }
     }
     if (manager === 'yarn') await writeFile(join(product, '.yarnrc.yml'), 'nodeLinker: pnp\n');
-    await checked(process.execPath, [cli, 'install', ...(manager === 'npm' ? ['--package-lock-only', '--ignore-scripts', '--no-audit', '--no-fund'] : [])], product);
+    await checked(executable, [...prefix, 'install', ...(manager === 'npm' ? ['--package-lock-only', '--ignore-scripts', '--no-audit', '--no-fund'] : [])], product);
   }
   async function dotnet(product, format = 'dotnet') {
     const directory = join(product, '交付產品'); await mkdir(directory, { recursive: true });
