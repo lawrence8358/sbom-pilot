@@ -19,6 +19,7 @@ The user authorized implementation on a local branch, with no remote push or PR.
 | 10 | Implemented; local verification passed | b5e8ee1 / merge 7f81211; 95 tests; Windows4 formats/Linux .NET Core real private/public feed auth, layered config/lock preservation, closure isolation, schema/edge/local artifact; Node20/24 package masks passed |
 | 11 | Implemented; local verification passed; live acceptance pending | 5cc6c11 / merge 3e4d1aa; Windows/Linux 67 tests, isolated dist/VSIX on Node20/24; Proxy/CA and UTF-8 regression; live Azure unverified; upstream notice blocks public packaging |
 | 12 | In progress | Final packaged-flow regression, Linux cold SDK acquisition, documentation and public preparation; real public identifiers/live Azure remain external |
+| 13 | Waiting for 12 | User-authorized readable README/Dev, Mermaid flow, Chinese function comments, consistent src TypeScript formatting and complexity refactoring |
 
 ## Validation policy
 

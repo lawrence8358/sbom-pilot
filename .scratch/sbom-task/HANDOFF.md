@@ -32,7 +32,7 @@
 
 ## 最終審查與外部邊界
 
-12 完成後另派唯一 merger 整合並驗證，再固定以 `e3a5bf6ed57b74c519d0d64285f2929d0195688b` 執行 Standards／Spec code review，兩軸序列執行。發現問題由單一隔離 implementer 修正、驗證、整合，最後才安全清理已整合 worktrees。
+使用者追加的工單 13 已授權：整理 README／DEV、加入 Mermaid 執行圖，以及 src TypeScript 中文函式說明、排版與複雜度重構。12 完成後先另派唯一 merger 整合並驗證，再於新隔離分支完成 13；不能漏掉這項新要求。13 整合後固定以 `e3a5bf6ed57b74c519d0d64285f2929d0195688b` 執行 Standards／Spec code review，兩軸序列執行。發現問題由單一隔離 implementer 修正、驗證、整合，最後才安全清理已整合 worktrees。
 
 公開交付仍需實際 Publisher ID／公開 Repo URL，目前為 local-dev-placeholder；不得從作者姓名猜測。Services／Server 真實安裝、UI、成品下載缺環境，保持未驗證。固定 cdxgen13.6.0 部分 Yarn workspace 的 dev-only 組件會標為 required，依使用者指定保留上游 required scope 行為，不自行新增篩選。
 
