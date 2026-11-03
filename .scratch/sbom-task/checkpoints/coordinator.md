@@ -2,6 +2,8 @@
 
 ## Start here
 
+CURRENT ADDENDUM: Ticket12 final candidate `b287e058cefe63a350b05c31025aa4b8fb5c1199` is clean; merger next. Windows/Linux Node20/24 99tests and shipped runtime/VSIX checks passed, actual final product routes/cold SDK passed. Runtime notice gap resolved by genuine SDK closure (25 attributions). User added ticket13: human-readable README/Dev + Mermaid, Chinese function docs and src formatting/complexity refactor. Do13 only after12 verified integration, then final reviews. Optional diagnostic temp cleanup was automatically rejected with “blocked by policy”; retained, see checkpoint12. No active worker commands.
+
 CURRENT: Ticket10 integrated at `7f81211b4d73b7f73885c1afb18f57790f2caeec`; product matches verified `b5e8ee1`, typecheck/95 tests passed. Tickets01–11 are integrated. Only ticket12 is active in `../.sbom-pilot-worktrees/12-final-delivery`, branch `ticket/12-final-delivery`. Current HANDOFF and implementation-state take precedence over historical notes below. Final Standards/Spec reviews remain unstarted.
 
 ## Historical milestones and preserved constraints
