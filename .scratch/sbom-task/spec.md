@@ -1,6 +1,7 @@
 # SBOM Pilot 需求規格
 
 Status: ready-for-agent
+Implementation: complete locally; external acceptance pending
 
 原始需求：[需求.md](../../需求.md)。使用者已核可需求及工單拆分，並授權依本規格在本機開發分支實作；目前沒有遠端 Repo，不建立 PR。
 

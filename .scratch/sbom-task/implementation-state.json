@@ -25,13 +25,17 @@
     "14"
   ],
   "activeWorktrees": [],
-  "reviewStatus": "functional-recheck-in-progress",
+  "reviewStatus": "complete",
   "reviewHead": "8b6969ded4884cb0a4d759dc70aabb2e246715dd",
   "externalValidation": [
-    "live Azure DevOps Services/Server installation and artifact download",
+    "live Azure Services/Server installation, Classic/YAML UI, artifact download and asynchronous failure propagation",
     "real public Publisher ID confirmation",
-    "public repository URL (no remote exists)"
+    "public repository URL (no remote exists)",
+    "Windows/Linux arm64",
+    "company feeds and enterprise Proxy/CA/client certificates"
   ],
   "notesDirectory": "../.sbom-pilot-notes",
-  "recheckHead": "917afff17e06795113fb31d6d05b28167ec1d393"
+  "recheckHead": "917afff17e06795113fb31d6d05b28167ec1d393",
+  "localImplementationStatus": "complete",
+  "cleanupStatus": "pending"
 }

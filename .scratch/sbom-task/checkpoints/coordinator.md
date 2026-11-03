@@ -2,6 +2,8 @@
 
 ## Start here
 
+FINAL: 01–14 locally complete, merged and verified; independent Standards/Spec rechecks closed all findings. Read HANDOFF and checkpoints/final.md first. Only verified worktree cleanup and final state confirmation remain; previous LATEST/CURRENT/NEXT paragraphs are historical. No active agent or session; root product917afff unchanged after reviews. Preserve external acceptance gaps and the protected diagnostic temp.
+
 LATEST INTEGRATION: Ticket14 candidate30a2caec244daa800b3a9c61479332253d71138c is clean. Six fixes complete; Windows/Linux Node20/24 each108tests,170Chinese purpose checks, package probes and affected real coldNode/privateNuGet/Framework passed. Quota interruption left only documentation EOF edits; root preserved/committed them and corrected README-Dev EOF, runtime unchanged. Dispatch sole separate merger explore_restore; root must remain unchanged while it integrates/rebuilds/verifies. Then targeted independent closure, final aggregate report and safe cleanup; prior LATEST below is historical.
 
 LATEST: Both initial reviews complete (reports under reviews/); active14-review-fixes is the sole slice, implement_01 in sibling14worktree. Read issue14/checkpoint14; fixed review product8b6969d/basee3a5bf6 retained. Fix all6 items, verify/commit, separate merger, then targeted review closure and safe cleanup. Current state/HANDOFF supersede earlier review-running paragraphs.

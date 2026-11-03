@@ -20,7 +20,7 @@ The user authorized implementation on a local branch, with no remote push or PR.
 | 11 | Implemented; local verification passed; live acceptance pending | 5cc6c11 / merge 3e4d1aa; Windows/Linux 67 tests, isolated dist/VSIX on Node20/24; Proxy/CA and UTF-8 regression; live Azure unverified; upstream notice blocks public packaging |
 | 12 | Implemented; local verification passed; external acceptance pending | b287e05 / merge 9debf04; 99 tests on Windows/Linux Node20/24, actual extracted VSIX matrix, cold Linux SDK, complete25 runtime notices, root devVSIX/test:package passed; real identities/live Azure external |
 | 13 | Implemented; local verification passed | 4818116 / merge 8b6969d; human README/Dev+Mermaid,38 TS formatted,167/167 Chinese-purpose checks, responsibility refactors; Windows/Linux Node20/24 99tests and affected real flows; root package checks passed |
-| 14 | In progress | Final Standards1hard/2smells, Spec1P2 cache race, coordinator release-URL validation/Windows bounded rename resilience; reports under reviews/ |
+| 14 | Implemented; integrated; review closed | 30a2cae / merge c831001;108 tests and170 Chinese descriptions; Windows/Linux Node20/24, actual coldNode/privateNuGet/Framework passed; root package verified917afff; Standards3/Spec1 plus2 coordinator items fixed and independently rechecked; reviews/report.md |
 
 ## Validation policy
 
@@ -28,4 +28,4 @@ Record commands and their actual outcomes. Local automated tests, local real-too
 
 ## Dispatch policy
 
-User requested serial work after quota interruptions: at most one subagent (implementation, merge or review) at a time.01–13 are integrated and locally verified; final Standards/Spec reviews run sequentially against fixed product head8b6969d and initial basee3a5bf6. Live Azure acceptance is still pending. Findings must be fixed and verified before cleanup. Unintegrated WIP is preserved and never counted as a completed ticket.
+User requested serial work after quota interruptions: at most one subagent (implementation, merge or review) at a time.01–14 are integrated and locally verified. Initial reviews use fixed product8b6969d/basee3a5bf6; all findings were fixed, integrated and independently rechecked at product917afff. See reviews/report.md. Live Azure acceptance and public identities remain pending. Only clean, merged task worktrees may be cleaned up; branches and committed checkpoints remain available.
