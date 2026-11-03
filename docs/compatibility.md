@@ -8,9 +8,10 @@
 
 | 組合 | 當前證據與狀態 |
 | --- | --- |
-| Windows 11 Pro x64／10.0.26200 build26200／Node20.20.2、24.22.1 | 最終99/99測試；隔離 dist／實際 VSIX 入口、SDK 資源、秘密遮罩；Node20 入口完整 npm 流程及冷 Node24 下載；Node24 最終封裝 pnpm、Yarn4 PnP、三種 Framework 格式、私有 .NET Core／combined、DT／成品故障 |
+| Windows 11 Pro x64／10.0.26200 build26200／Node20.20.2、24.22.1 | 審查修正後108/108測試；隔離 dist／實際 VSIX 入口、SDK 資源、秘密遮罩；Node20 入口完整 npm 流程及冷 Node24 下載；既有 pnpm、Yarn4 PnP、三種 Framework 格式、私有 .NET Core／combined矩陣，修正後重驗受影響 NuGet／Framework及DT失敗成品 |
+| Linux x64／Ubuntu24.04.3 SDK10.0.101 容器 Node24.22.2 | 審查修正後fresh ci、108/108測試、型別／格式／170中文說明、建置／封裝／隔離入口；空Node工具快取下載及私有.NET Core掃描／同檔成品／DT失敗通過；本映像預裝SDK，不當作冷SDK下載證據 |
 | Linux x64／Debian12 Docker Node24.22.2 | fresh ci/build/package、最終99/99測試；實際 VSIX 冷 Node 下載；未安裝 SDK 的 plain Node 映像以官方腳本安裝10.0.101，再私有 npm＋NuGet restore／combined掃描、DT接受同一成品；本機 adapter 故障 |
-| Linux x64／Docker Node20.20.2 | 最終99/99測試、SDK／網路／DT／UTF-8、實際 dist／VSIX 檢查；最終 packaged npm 在空快取下載校驗 Node24、嚴格安裝／掃描／有效成品；本機 adapter 故障通過 |
+| Linux x64／Docker Node20.20.2 | 審查修正後108/108測試及實際 dist／VSIX 檢查；涵蓋SDK／網路／DT／UTF-8，既有 packaged npm 冷快取／有效成品及本機adapter故障證據保留 |
 | Windows x64／.NET Core | 先前 SDK6.0.428／9.0.316／10.0.101 真實 restore及掃描；最終 VSIX10.0.101 私有來源驗收 |
 | Windows x64／.NET Framework | MSBuild17.14.51；SDK net48、非 SDK PackageReference、packages.config；最終 VSIX 私有還原／依賴圖通過 |
 | Windows/Linux x64／管理器與私有來源 | npm11.19.1、pnpm10.34.2／native12.16.1、Classic1.22.22、Yarn4.18.1 PnP/node-modules 完整先前矩陣；Linux 私有 npm/nativepnpm12/PnP/combined及 NuGet 真實矩陣見認證文件 |

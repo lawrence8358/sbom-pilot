@@ -6,6 +6,8 @@
 
 使用 Node >=24、npm 與 Git；Windows 目前實測 Node24.22.1／npm11.19.1，Linux Docker 為 Node24.22.2／npm11.19.1。.NET／Framework 真實測試另需相應 SDK 或 Visual Studio；一般單元測試不需預裝整套工具鏈。
 
+Linux 打包環境另需提供 tfx 用來判定檔案類型的 `file` 指令，Debian／Ubuntu 對應 `file` 套件。
+
 ```powershell
 npm ci
 npm run typecheck
