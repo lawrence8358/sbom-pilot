@@ -13,7 +13,7 @@
 
 ## 最後收尾
 
-目前程式與審查皆結案，只剩確認安全清理結果及保存最終狀態。清理前已核對14個工單worktree全部乾淨且HEAD為整合分支祖先；只清理由本次建立、已合併的worktree，保留分支與提交歷史。精確清理結果以final checkpoint／implementation-state及實際git worktree list為準，不依此段假定已刪除。舊checkpoint所列worktree可能已清理，不要因此重做完成的工單。
+程式、審查與最後核對皆完成，沒有待派工任務。14個工單worktree均已解除Git註冊，只有root工作區仍註冊；分支與提交歷史保留。9個目錄完全移除，03／05／07／09／13有Git刪檔失敗殘留；03直接刪除又被自動審查以blocked by policy拒絕，因此保留五個殘留，不再重試替代刪除。[清理結果](reviews/worktree-cleanup.md)記錄範圍及證據。舊checkpoint所列工作區可能已清理或解除註冊，不代表任務未完成，不要重做工單。
 
 最終開發VSIX位於 `packages/local-dev-placeholder.sbom-pilot-0.1.0.vsix`，443939bytes；SHA-256 `110e443bcc9cfb8e3fa0f974d05939b18db3fc736033f9660df1cbb88eb91e26`。本次去秘密證據另存root忽略目錄 `.smoke/review-14/`，不會隨工單worktree清理消失。
 

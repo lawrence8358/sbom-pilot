@@ -10,7 +10,7 @@
 
 ## 清理接續
 
-清理前核對14個worktree皆位於已明確命名的 `D:/Project/Git/.sbom-pilot-worktrees`（非連結目錄），沒有未提交變更、HEAD都是整合分支祖先。只對本次01–14工單執行原生git worktree remove；不force、不刪branch、不reset/clean、不動其他資料夾。必要證據已複製root `.smoke/review-14/`，清理前後記錄在root忽略目錄 `.smoke/worktree-cleanup/`。目前清理待執行，續接先核對git worktree list與該目錄紀錄，再更新本段及implementation-state；不得單靠舊worker路徑判斷工作未完成。
+清理前核對14個worktree皆位於已明確命名的 `D:/Project/Git/.sbom-pilot-worktrees`（非連結目錄），沒有未提交變更、HEAD都是整合分支祖先。原生git worktree remove未使用force、不刪branch、不reset/clean。14個註冊均已解除，只有root仍註冊；9個目錄完整移除，03／05／07／09／13有刪檔失敗殘留，直接刪除03遭自動審查拒絕後保留所有同類殘留。詳見 [清理結果](../reviews/worktree-cleanup.md)，不再重試替代刪除。必要證據已複製root `.smoke/review-14/`，清理前後記錄在root忽略目錄 `.smoke/worktree-cleanup/`；不得單靠舊worker路徑判斷工作未完成。
 
 保留本機Docker測試證據：14共用volume `sbom-pilot-14-work`，容器 `sbom-pilot-14-linux`／`sbom-pilot-14-linux-recheck`／`sbom-pilot-14-node20` 都已退出。最終實況查核：原缺file容器目前ExitCode255（原host session報1），接續封裝容器0、Node20容器0；不從後來的狀態改寫原測試失敗原因。未清理無關容器或volume。
 
@@ -20,4 +20,6 @@
 
 舊診斷暫存 `C:/Users/lawrence/AppData/Local/Temp/sbom-final-GP4o3T` 的可選刪除曾遭自動審查拒絕，理由僅「blocked by policy」；保留且不再嘗試。此項不影響產品測試或套件。
 
-如再次中斷，先跑 `node scripts/resume.mjs`，核對Git/status與此文件，只接續尚未執行的清理／最終狀態確認。所有原始工單與checkpoint已保留Git提交，不依賴代理記憶。
+如再次續接，先跑 `node scripts/resume.mjs`，核對Git/status與此文件。本機程式與審查已完成，沒有待派工工作；檔案殘留保留原因如上，外部驗收只在有對應環境後進行。所有原始工單與checkpoint已保留Git提交，不依賴代理記憶。
+
+清理中途：01/02原生git移除成功；03 git已解除註冊但刪除回報Directory not empty。核對明確範圍與原clean/merged證據後，PowerShell刪除殘留操作被自動核准審查拒絕，理由僅blocked by policy；03保留，不再嘗試替代刪除。繼續其他已驗證工作區的原生git移除，必要時保留殘留。

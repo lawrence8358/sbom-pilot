@@ -37,5 +37,6 @@
   "notesDirectory": "../.sbom-pilot-notes",
   "recheckHead": "917afff17e06795113fb31d6d05b28167ec1d393",
   "localImplementationStatus": "complete",
-  "cleanupStatus": "pending"
+  "cleanupStatus": "worktree-registrations-removed; five residual directories retained after deletion errors and policy rejection",
+  "cleanupReport": ".scratch/sbom-task/reviews/worktree-cleanup.md"
 }
