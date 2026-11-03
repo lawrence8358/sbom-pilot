@@ -18,6 +18,26 @@ async function fixture(action: (root: string) => Promise<void>): Promise<void> {
 const response = (stdout = '') => ({ stdout, stderr: '' });
 const tools: ToolContext = { node: process.execPath, npmCli: 'npm', cdxgenCli: 'cdxgen', nodeVersion: '24.22.2', cdxgenVersion: '13.6.0', env: { ...process.env } };
 
+test('SDK restore rejects the same malformed assets as Framework and preserves SDK diagnostics', () => fixture(async root => {
+  const projectPath = join(root, 'Product.csproj'), outputPath = join(root, 'obj');
+  await mkdir(outputPath);
+  const sdk: DotnetSdk = { executable: 'dotnet', version: '10.0.101', env: {}, policy: {} };
+  for (const payload of [
+    { targets: 'truthy', libraries: {}, project: { restore: { projectPath } } },
+    { targets: {}, libraries: [], project: { restore: { projectPath } } },
+    { targets: {}, libraries: {}, project: { restore: { projectPath: join(root, 'Other.csproj') } } },
+  ]) {
+    const run: ProcessRunner = async command => {
+      if (command.args[0] === 'msbuild') {
+        const file = command.args.find(value => value.startsWith('-p:RestoreGraphOutputPath='))!.slice('-p:RestoreGraphOutputPath='.length);
+        await writeFile(file, JSON.stringify({ projects: { [projectPath]: { restore: { projectPath, outputPath, projectStyle: 'PackageReference' } } } }));
+      } else await writeFile(join(outputPath, 'project.assets.json'), JSON.stringify(payload));
+      return response();
+    };
+    await assert.rejects(restoreDotnetProject(projectPath, sdk, run, join(root, 'temp')), /dotnet restore 未產生有效的 project.assets.json/);
+  }
+}));
+
 test('nearest JSONC global.json is used; full SDK policy is validated', () => fixture(async root => {
   const nested = join(root, 'a', 'b');
   await mkdir(nested, { recursive: true });

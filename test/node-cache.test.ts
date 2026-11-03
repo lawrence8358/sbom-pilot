@@ -7,6 +7,77 @@ import { acquireNodeCache, extractNodeArchive, nodePaths, validateNodeTar } from
 import { runProcess } from '../src/process';
 import { gzipSync } from 'node:zlib';
 import JSZip from 'jszip';
+import fs = require('node:fs/promises');
+
+async function populateNode(root: string): Promise<void> {
+  for (const file of Object.values(nodePaths(root))) {
+    await mkdir(dirname(file), { recursive: true });
+    await writeFile(file, 'verified');
+  }
+}
+
+test('initial cache read racing atomic publication rechecks and verifies the complete new-format winner', async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'pilot-initial-race-'));
+  const options = { directory, version: '24.22.2', arch: 'x64' };
+  const root = join(directory, 'sbom-pilot-node', options.version, options.arch);
+  const originalRead = fs.readFile;
+  let raced = false, verified = 0;
+  t.mock.method(fs, 'readFile', async (...args: Parameters<typeof fs.readFile>) => {
+    if (!raced && String(args[0]) === join(root, '.sbom-pilot-complete.json')) {
+      raced = true;
+      await populateNode(root);
+      await writeFile(join(root, '.sbom-pilot-complete.json'), JSON.stringify({ version: options.version, arch: options.arch, platform: process.platform }));
+      throw Object.assign(new Error('Read began before winner publication'), { code: 'ENOENT' });
+    }
+    return originalRead(...args);
+  });
+  try {
+    const result = await acquireNodeCache(options, async () => assert.fail('Complete winner must be reused'), async path => {
+      assert.equal(path, root); assert.equal(await readFile(nodePaths(path).node, 'utf8'), 'verified'); verified++;
+    });
+    assert.equal(result, root); assert.equal(verified, 1); assert.ok(raced);
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
+
+test('Windows publication retries transient locks and stops after five attempts on permanent failure', async t => {
+  const descriptor = Object.getOwnPropertyDescriptor(process, 'platform')!;
+  Object.defineProperty(process, 'platform', { value: 'win32' });
+  const directory = await mkdtemp(join(tmpdir(), 'pilot-rename-'));
+  const originalRename = fs.rename;
+  let attempts = 0, permanent = false;
+  t.mock.method(fs, 'rename', async (...args: Parameters<typeof fs.rename>) => {
+    attempts++;
+    if (permanent || attempts < 3) throw Object.assign(new Error('Synthetic Windows lock'), { code: 'EPERM' });
+    return originalRename(...args);
+  });
+  try {
+    const options = { directory, version: '24.22.2', arch: 'x64' };
+    const root = await acquireNodeCache(options, populateNode, async path => { assert.equal(await readFile(nodePaths(path).node, 'utf8'), 'verified'); });
+    assert.equal(attempts, 3); assert.ok(await readFile(join(root, '.sbom-pilot-complete.json')));
+    permanent = true; attempts = 0;
+    const failed = { ...options, version: '24.22.3' };
+    await assert.rejects(acquireNodeCache(failed, populateNode, async () => {}), (error: NodeJS.ErrnoException) => error.code === 'EPERM');
+    assert.equal(attempts, 5);
+    assert.deepEqual(await readdir(join(directory, 'sbom-pilot-node', failed.version)), []);
+    assert.equal(await readFile(nodePaths(root).node, 'utf8'), 'verified');
+  } finally { Object.defineProperty(process, 'platform', descriptor); await rm(directory, { recursive: true, force: true }); }
+});
+
+test('publication never retries over an incomplete destination created by another writer', async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'pilot-occupied-'));
+  let attempts = 0;
+  t.mock.method(fs, 'rename', async (_stage: Parameters<typeof fs.rename>[0], destination: Parameters<typeof fs.rename>[1]) => {
+    attempts++; await mkdir(destination); await writeFile(join(String(destination), 'partial'), 'other writer');
+    throw Object.assign(new Error('Occupied'), { code: 'EPERM' });
+  });
+  try {
+    const options = { directory, version: '24.22.2', arch: 'x64' };
+    await assert.rejects(acquireNodeCache(options, populateNode, async () => {}));
+    const parent = join(directory, 'sbom-pilot-node', options.version);
+    assert.equal(attempts, 1); assert.deepEqual(await readdir(parent), ['x64']);
+    assert.equal(await readFile(join(parent, 'x64', 'partial'), 'utf8'), 'other writer');
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
 
 test('Node cache publishes complete verified tools atomically under concurrent writers and reuses them', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'pilot-cache-'));

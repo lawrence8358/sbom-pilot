@@ -1,5 +1,6 @@
 import { access, mkdir, readFile, rm } from 'node:fs/promises';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { validRestoreAssets } from './assets';
 import { createHash, randomUUID } from 'node:crypto';
 import type { ProcessRunner } from '../process';
 import type { DotnetSdk } from './sdk';
@@ -168,19 +169,7 @@ export async function restoreDotnetProject(
     }
   }
   for (const project of projects) {
-    try {
-      const assets = JSON.parse(await readFile(project.assetsPath, 'utf8'));
-      if (
-        !assets.targets ||
-        typeof assets.targets !== 'object' ||
-        !assets.libraries ||
-        typeof assets.libraries !== 'object' ||
-        !assets.project?.restore?.projectPath ||
-        resolve(assets.project.restore.projectPath) !== resolve(project.projectPath)
-      ) {
-        throw new Error('invalid assets');
-      }
-    } catch {
+    if (!(await validRestoreAssets(project.assetsPath, project.projectPath))) {
       throw new Error(
         'dotnet restore 未產生有效的 project.assets.json；不會將缺少還原資料的掃描結果當作完整 SBOM。請檢查自訂還原輸出位置與專案設定。',
       );

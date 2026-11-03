@@ -19,7 +19,7 @@ export function validateToolOptions(nodeRange: string, cdxgenVersion: string): v
   }
 }
 
-/** 核對實際套件名稱、版本與 Node engines，拒絕安裝後內容與宣告不一致。 */
+/** 核對實際套件版本與 Node engines，拒絕安裝後版本或執行環境不相容。 */
 export function validateCdxgenPackage(
   pkg: { version?: unknown; engines?: { node?: unknown } },
   expected: string,

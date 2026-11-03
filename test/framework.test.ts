@@ -37,7 +37,7 @@ test('solution context is derived from an actual project reference, not an unrel
   assert.equal(await findSolutionDirectory(project, root), root);
 }));
 
-async function restoreFixture(root: string, style: string, options: { lock?: boolean; failRestore?: boolean; missingPayload?: boolean; changeConfig?: boolean; missingTargets?: boolean } = {}): Promise<{ run: ProcessRunner; calls: Command[]; project: string; tool: MSBuildTool; config: string }> {
+async function restoreFixture(root: string, style: string, options: { lock?: boolean; failRestore?: boolean; missingPayload?: boolean; changeConfig?: boolean; missingTargets?: boolean; invalidAssets?: 'targets' | 'libraries' | 'identity' } = {}): Promise<{ run: ProcessRunner; calls: Command[]; project: string; tool: MSBuildTool; config: string }> {
   const project = join(root, 'Product.csproj');
   const config = join(root, 'packages.config');
   const lock = join(root, 'custom.lock.json');
@@ -59,7 +59,7 @@ async function restoreFixture(root: string, style: string, options: { lock?: boo
     if (command.args.includes('-target:Restore')) {
       if (options.failRestore) throw new Error('SECRET source/token');
       await mkdir(dirname(asset), { recursive: true });
-      await writeFile(asset, JSON.stringify({ targets: {}, libraries: {}, project: { restore: { projectPath: project } } }));
+      await writeFile(asset, JSON.stringify({ targets: options.invalidAssets === 'targets' ? 'truthy' : {}, libraries: options.invalidAssets === 'libraries' ? [] : {}, project: { restore: { projectPath: options.invalidAssets === 'identity' ? join(root, 'Other.csproj') : project } } }));
       if (!options.missingPayload) { await mkdir(dirname(archive), { recursive: true }); await writeFile(archive, Buffer.from([0x50, 0x4b, 0x03, 0x04])); }
       if (options.changeConfig) await writeFile(config, '<packages changed="true"/>');
     }
@@ -68,6 +68,14 @@ async function restoreFixture(root: string, style: string, options: { lock?: boo
   };
   return { run, calls, project, tool, config };
 }
+
+test('Framework rejects malformed assets through the shared predicate while keeping its own diagnostic', () => fixture(async root => {
+  for (const invalidAssets of ['targets', 'libraries', 'identity'] as const) {
+    const directory = join(root, invalidAssets); await mkdir(directory);
+    const f = await restoreFixture(directory, 'PackageReference', { invalidAssets });
+    await assert.rejects(restoreFrameworkProject(f.project, directory, f.tool, f.run, join(directory, 'temp')), /非 SDK-style PackageReference 未產生有效 project.assets.json/);
+  }
+}));
 
 test('traditional PackageReference preserves custom existing lock and evaluated assets using MSBuild', () => fixture(async root => {
   const f = await restoreFixture(root, 'PackageReference', { lock: true });

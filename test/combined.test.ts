@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { discoverJavaScriptProjects } from '../src/install/javascript-projects';
+import { inspectJavaScriptProject, lockCandidates } from '../src/install/project';
 import { discoverDotnetProjects } from '../src/dotnet/projects';
 import { installCombinedProject } from '../src/install/combined';
 import { runWorkflow } from '../src/workflow';
@@ -22,6 +23,21 @@ async function manifest(directory: string, value: Record<string, unknown> = {}) 
   await mkdir(directory, { recursive: true });
   await writeFile(join(directory, 'package.json'), JSON.stringify({ name: 'fixture', version: '1.0.0', ...value }));
 }
+
+test('standalone and combined workspace reject every shared competing lock candidate', () => fixture(async root => {
+  const child = join(root, 'packages/app');
+  await manifest(root, { packageManager: 'pnpm@10.34.2' });
+  await writeFile(join(root, 'pnpm-workspace.yaml'), "packages:\n  - 'packages/*'\n");
+  await writeFile(join(root, 'pnpm-lock.yaml'), "lockfileVersion: '9.0'\n");
+  await manifest(child);
+  for (const [name] of lockCandidates) {
+    const file = join(child, name); await writeFile(file, 'competing lock');
+    await assert.rejects(inspectJavaScriptProject(child), /子目錄具有獨立 lockfile/);
+    await assert.rejects(discoverJavaScriptProjects(root), /子專案有獨立 lockfile/);
+    assert.equal(await readFile(file, 'utf8'), 'competing lock');
+    await rm(file);
+  }
+}));
 
 test('original common-root pnpm workspace installs once despite member manifests', () => fixture(async root => {
   await manifest(root, { packageManager: 'pnpm@10.34.2' });
