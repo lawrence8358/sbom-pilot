@@ -1,39 +1,37 @@
 # SBOM Pilot 續接入口
 
-五小時額度交接保存於 `7ba0797`；使用者其後要求繼續。現在 01–11 均已整合，只處理 12。以最新 Git、implementation-state 與 worker checkpoint 為準。
+先在 `D:/Project/Git/sbom-pilot` 執行 `node scripts/resume.mjs`，再讀 implementation-state、coordinator 與當前 worktree 的 checkpoint。最新 Git／checkpoint 優先於歷史摘要。
 
-## 恢復事實
+## 現況與固定約束
 
-在 `D:/Project/Git/sbom-pilot` 執行 `node scripts/resume.mjs`，再讀 implementation-state、coordinator 與當前 worktree 的 checkpoint。
+- 整合分支 `feature/sbom-pilot`；無遠端，不 push、不建立 PR。
+- 同時最多一個子代理，包含實作、合併、審查。每張提交、整合、驗證後才換階段。
+- 01–12 已整合。最新產品合併 `9debf04d7e09bf3fcf110efda720762b639482d7`，與候選 `b287e05` 一致；root npm ci／typecheck／99 項測試／build／devVSIX／test:package 通過。
+- 原名稱 SBOM Pilot／sbom-pilot，Task 顯示 SBOM Pilot — Generate & Upload SBOM；MIT，Lawrence Shen，正體中文。使用原需求「.NET Core」，避免「現代 .NET」。
+- 執行技能 `C:/Users/lawrence/.codex/skills/implement-spec/SKILL.md`；使用者序列與無 PR 要求優先。
 
-- 整合分支 `feature/sbom-pilot`；沒有遠端，不 push、不建立 PR。
-- 同時最多一個子代理，包含實作、合併、審查。提交、整合並核對驗證後才換階段。
-- 使用原需求「.NET Core」；名稱 SBOM Pilot／sbom-pilot，MIT，作者 Lawrence Shen。
-- 實作技能 `C:/Users/lawrence/.codex/skills/implement-spec/SKILL.md`；使用者序列執行與不建 PR 的要求優先。
+## 只處理追加工單 13
 
-## 已整合證據
+使用者要求接續未完成工作，同時整理人類易讀的 README／README-Dev，DEV 加 Mermaid 執行流程圖，src TypeScript 加中文函式用途註解、換行排版及複雜度優化。已授權，無需重問。
 
-最新產品合併 `7f81211b4d73b7f73885c1afb18f57790f2caeec`；產品與已驗證候選 `b5e8ee1` 一致，typecheck／95 項測試通過。
+- 工單 `issues/13-documentation-and-source-readability.md`；規格 Comments 已補追加範圍。
+- worktree `D:/Project/Git/.sbom-pilot-worktrees/13-readability`，分支 `ticket/13-readability`。
+- 讀該 worktree checkpoint13、Git log/status。若 checkpoint 尚未建立表示剛派工，不能重置既有變更。
+- 具名函式／方法／具名函式常數須有實質中文說明，避免模板註解；短匿名回呼不需逐個重述語法。提供可重跑格式化檢查，拆解複雜邏輯而保持原介面及行為。
+- 文件依用途、操作與維護順序整理，保留必要條件／參數／限制，把細節放在適當連結；Mermaid 必須反映四模式、單次掃描、驗證、DT 與有效成品／失敗路徑。
 
-- 四模式、npm/pnpm/Yarn、各 .NET 格式、單次合併掃描、DT 與本機成品流程已有實測。
-- 09：Windows 七種／Linux 四種私有 npm 場景，認證隔離、依賴邊、清理、鎖檔不變；詳見 docs/npm-auth.md／checkpoint09。
-- 10：Windows 四種 .NET 格式／Linux .NET Core 的真實私有及公開 NuGet 還原、SBOM／Schema／依賴邊／本機成品通過；錯誤及缺認證、分層設定、既有鎖檔、ProjectReference 同名異網址拒絕均通過。Windows/Linux 各 95 項測試；Node20/24 套件秘密遮罩通過。詳見 docs/nuget-auth.md／checkpoint10。
-- Docker 已實際用於 Linux Node20/24、SDK10.0.101 還原／合併掃描及兩種私有來源。Linux 冷 SDK 下載仍待 12。
-- 本機 artifact adapter、容器、解包啟動不等於真實 Azure 安裝／成品下載；live 驗收保持未驗證。
+## 不可回歸的產品行為
 
-## 下一步：12
+保留 sourceRoot／實體暫存邊界、secret module 首先載入、安裝／還原限定來源認證、鎖檔、obj/assets 例外、Framework nupkg 完整性、jsonc-parser ESM alias、單次合併掃描、DT 失敗仍交付有效成品、UTF8 串流及安全工具快取。
 
-- 工單 `issues/12-integrated-public-release.md`。
-- worktree `D:/Project/Git/.sbom-pilot-worktrees/12-final-delivery`，分支 `ticket/12-final-delivery`。
-- 先讀該 worktree checkpoint12、Git log/status；若 checkpoint 尚未建立，表示剛派工，不能重置既有變更。
-- 12 中途提交 `c03b79d` 已保存最終解包 VSIX 的 Windows 各模式／私有來源／DT 失敗仍有有效成品／成品 adapter 故障證據，以及 Linux 無 SDK 冷取得 Node＋官方 SDK＋私有合併／DT 接受上傳證據。98 項測試已通過；runtime-only SDK 封裝為 25 個具真實告示的相依，已移除未使用 downloader／tool-lib。這仍是候選分支，尚未整合，文件／最後套件檢查還在進行。
-- 最終套件流程回歸、Linux 冷 SDK 取得、完整文件與公開交付準備。評估移除僅用於 Node 快取／解壓的 azure-pipelines-tool-lib，解決其 nodejs-file-downloader4.13.0 缺完整 ISC 告示的公開打包阻擋；保留版本／checksum／跨平台／完成標記驗證，不能捏造告示或關閉 gate。
-- 保留 sourceRoot／實體暫存邊界、secret module 首先載入、obj/assets 例外、Framework nupkg 驗證、jsonc-parser ESM alias、DT 失敗仍交付有效成品及 UTF8 串流修正。
+12 已用真正解包 VSIX 在 Windows／Linux 驗證各管理器、私有 NuGet／npm、合併與 Framework、DT 接受／拒絕、有效成品及本機 adapter 故障；Linux 從無 SDK 的 Node 容器自行取得 Node／官方 SDK10.0.101 後完成私有合併流程。Node20/24 各99項測試與 SDK 動態資源／秘密／告示／文件連結檢查通過。詳見 checkpoint12／docs/compatibility.md。
 
-## 最終審查與外部邊界
+SDK runtime-only 封裝保留實際資源與25筆真實告示，未使用 downloader/tool-lib 不分發，原 ISC 告示缺件 gate 已解除；不要恢復未使用相依，也不要捏造告示。npm audit 留一項上游 minimatch moderate advisory（兩個受影響條目），未強制 major override。
 
-使用者追加的工單 13 已授權：整理 README／DEV、加入 Mermaid 執行圖，以及 src TypeScript 中文函式說明、排版與複雜度重構。12 完成後先另派唯一 merger 整合並驗證，再於新隔離分支完成 13；不能漏掉這項新要求。13 整合後固定以 `e3a5bf6ed57b74c519d0d64285f2929d0195688b` 執行 Standards／Spec code review，兩軸序列執行。發現問題由單一隔離 implementer 修正、驗證、整合，最後才安全清理已整合 worktrees。
+## 之後與外部邊界
 
-公開交付仍需實際 Publisher ID／公開 Repo URL，目前為 local-dev-placeholder；不得從作者姓名猜測。Services／Server 真實安裝、UI、成品下載缺環境，保持未驗證。固定 cdxgen13.6.0 部分 Yarn workspace 的 dev-only 組件會標為 required，依使用者指定保留上游 required scope 行為，不自行新增篩選。
+13 完成後由唯一 merger 整合並驗證，再以 `e3a5bf6ed57b74c519d0d64285f2929d0195688b` 為固定基準執行 Standards／Spec code-review，序列執行；問題集中由單一隔離 implementer 修正。最終檢查通過後才安全清理已整合 worktrees。
 
-舊代理 ID 可復用，完成依據是提交及驗證。長命令/session/PID/Docker 資源先核對 checkpoint 與實際程序，避免重跑未受變更影響的檢查。研究筆記位於 `D:/Project/Git/.sbom-pilot-notes`。
+實際 Publisher ID／公開 Repo URL 尚缺，devVSIX 明確使用 local-dev-placeholder。Services／Server 安裝、Classic／YAML UI 與真實成品下載／非同步失敗傳播仍 UNVERIFIED；本機 adapter／容器不替代 Azure 實測。arm64、企業網路／公司 feed 未提供對應環境。Yarn required scope 保留上游已知行為，不自行新增篩選。
+
+12 的可選診斷暫存清理曾遭自動核准審查拒絕（blocked by policy），該目錄保留；不要混同產品失敗。精確路徑／Docker 資源／命令與 hash 在 checkpoint12。先核對實際程序，避免重跑未受變更影響的檢查。研究筆記在 `D:/Project/Git/.sbom-pilot-notes`。五小時舊交接 `7ba0797` 已由後續進度取代。

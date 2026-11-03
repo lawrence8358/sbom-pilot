@@ -18,8 +18,8 @@ The user authorized implementation on a local branch, with no remote push or PR.
 | 09 | Implemented; local verification passed | bd1c483 / merge b79f7ca; 91 tests; Windows7/Linux4 real private auth cases, public isolation/edges/cleanup/locks; build/devVSIX/secret masking passed |
 | 10 | Implemented; local verification passed | b5e8ee1 / merge 7f81211; 95 tests; Windows4 formats/Linux .NET Core real private/public feed auth, layered config/lock preservation, closure isolation, schema/edge/local artifact; Node20/24 package masks passed |
 | 11 | Implemented; local verification passed; live acceptance pending | 5cc6c11 / merge 3e4d1aa; Windows/Linux 67 tests, isolated dist/VSIX on Node20/24; Proxy/CA and UTF-8 regression; live Azure unverified; upstream notice blocks public packaging |
-| 12 | In progress | Final packaged-flow regression, Linux cold SDK acquisition, documentation and public preparation; real public identifiers/live Azure remain external |
-| 13 | Waiting for 12 | User-authorized readable README/Dev, Mermaid flow, Chinese function comments, consistent src TypeScript formatting and complexity refactoring |
+| 12 | Implemented; local verification passed; external acceptance pending | b287e05 / merge 9debf04; 99 tests on Windows/Linux Node20/24, actual extracted VSIX matrix, cold Linux SDK, complete25 runtime notices, root devVSIX/test:package passed; real identities/live Azure external |
+| 13 | In progress | User-authorized readable README/Dev, Mermaid flow, Chinese function comments, consistent src TypeScript formatting and complexity refactoring |
 
 ## Validation policy
 
@@ -27,4 +27,4 @@ Record commands and their actual outcomes. Local automated tests, local real-too
 
 ## Dispatch policy
 
-User requested serial work after quota interruptions: at most one subagent (implementation, merge or review) at a time.12 is the sole active slice.01–11 are integrated and locally verified. Live Azure acceptance for11 is still pending. Do not start the next slice until the current one is committed, integrated and verified. Unintegrated WIP is preserved and never counted as a completed ticket.
+User requested serial work after quota interruptions: at most one subagent (implementation, merge or review) at a time.13 is the sole active slice.01–12 are integrated and locally verified. Live Azure acceptance is still pending. Do not start the next slice until the current one is committed, integrated and verified. Unintegrated WIP is preserved and never counted as a completed ticket.
