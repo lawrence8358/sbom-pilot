@@ -20,4 +20,3 @@ Blocked by: 13
 - 2026-11-03：原 implement-spec 已授權最終審查及集中修正；本工單收錄 reviews/standards.md、reviews/spec.md、reviews/coordinator-findings.md。保持一次一位子代理、先提交與驗證再整合，不建立 PR／push。
 
 - 本機修正與受影響驗證已完成：Windows/Linux Node20/24各108項測試、型別／格式／170中文說明、build/devVSIX/隔離套件與實際冷Node及NuGet/Framework流程通過。最後一項保留未勾，等待另一merger整合後核對審查結案；外部Publisher／Repo／liveAzure驗收未冒充完成。證據與資源見checkpoint14。
-
