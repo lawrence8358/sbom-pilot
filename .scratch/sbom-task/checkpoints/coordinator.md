@@ -70,3 +70,7 @@ Run `node scripts/resume.mjs` in the integration worktree, then read `implementa
 - Optional publisher question had no answer yet: reference project has actual Publisher ID LawrenceShen, but do not infer consent from author name. Current developer VSIX uses explicitly local test publisher. No public repo URL exists; public packaging must not invent one.
 - Full spec/public branding already approved: SBOM Pilot, sbom-pilot, Task display SBOM Pilot — Generate & Upload SBOM, MIT, Lawrence Shen, Traditional Chinese README plus developer guide. No further design interview is needed for those decisions.
 - Yarn workspace experiment found upstream cdxgen13.6 can mark a dev-only workspace dependency as required, so required-only retains it. Keep mandated scope behavior, record this concrete limitation and do not claim all non-production dependencies are guaranteed absent or silently invent a second filter.
+
+## 14 已整合，等待最後功能複查
+
+14 merge c831001／驗證紀錄917afff，產品與30a2cae一致；root108tests、170中文說明、格式／型別／build／Node20-24 package checks全過。Standards3項已由原審查者確認結案。下一個唯一worker為explore_compat，固定產品917afff，唯讀複查cache race／bounded Windows rename／release URL與assets，保存spec-recheck。完成後彙總兩軸、核銷13/14、清理已整合乾淨worktrees；不再重跑無關下載矩陣。
