@@ -87,7 +87,8 @@ async function workspaceRoot(requested: string): Promise<string> {
   }
 }
 
-const lockCandidates: [string, JavaScriptManager | 'unsupported'][] = [
+/** 共用受支援及競爭鎖檔政策，讓單專案與 combined workspace 使用相同候選。 */
+export const lockCandidates: readonly (readonly [string, JavaScriptManager | 'unsupported'])[] = [
   ['package-lock.json', 'npm'],
   ['npm-shrinkwrap.json', 'npm'],
   ['pnpm-lock.yaml', 'pnpm'],

@@ -6,6 +6,8 @@
 
 使用 Node >=24、npm 與 Git；Windows 目前實測 Node24.22.1／npm11.19.1，Linux Docker 為 Node24.22.2／npm11.19.1。.NET／Framework 真實測試另需相應 SDK 或 Visual Studio；一般單元測試不需預裝整套工具鏈。
 
+Linux 打包環境另需提供 tfx 用來判定檔案類型的 `file` 指令，Debian／Ubuntu 對應 `file` 套件。
+
 ```powershell
 npm ci
 npm run typecheck
@@ -22,7 +24,7 @@ npm run test:package
 
 ## 一次執行如何走完
 
-`src/index.ts` 先匯入秘密輸入模組，才載入 Azure SDK。入口確認 Build 情境並建立 Task 暫存空間；`runWorkflow` 接手驗證、工具、依賴、掃描、Schema、DT 與 artifact。公開呼叫介面保留注入點，測試與實際執行入口 共用工作流程。
+`src/index.ts` 先匯入秘密輸入模組，才載入 Azure SDK。入口確認 Build 情境並建立 Task 暫存空間；`runWorkflow` 接手驗證、工具、依賴、掃描、Schema、DT 與 artifact。公開呼叫介面保留注入點，測試與實際執行入口共用工作流程。
 
 ```mermaid
 flowchart TD
@@ -43,7 +45,7 @@ flowchart TD
     WantDT -->|否| Publish["要求 Agent 發佈同一份有效 SBOM"]
     WantDT -->|是| DT["上傳既有 DT 專案；接受即完成"]
     DT -->|接受| Publish
-    DT -->|失敗：暫存錯誤| Publish
+    DT -->|失敗：保留錯誤| Publish
     Publish -->|已排入佇列| PriorDT{"是否有 DT 錯誤？"}
     PriorDT -->|否| Success["Task 成功"]
     PriorDT -->|是| Failed["Task 失敗"]
@@ -82,7 +84,7 @@ DT 錯誤會保留到有效成品發佈請求之後再拋出。入口發出 `art
 
 `ToolContext` 只保留子工具環境與已驗證 assets／packageFiles，不保留專案來源秘密。npm 認證暫存同時檢查 Git 根目錄、共同 sourceRoot 及實體路徑；NuGet 使用實際 SDK／MSBuild 的 Configuration API，不用全域 config 取代分層設定。套件／鎖檔／資產檢查不得因改包裝器而略過。
 
-Node 快取僅公開驗證完成的 暫存安裝目錄，並行寫入者驗證勝出目錄，不刪除不完整目的地。Linux tar／Windows ZIP 預檢不得放寬 traversal 或連結限制。JSONC 解析器 `jsonc-parser` 的 ESM bundle alias、Task SDK 動態資源與相對路徑也須保留。
+Node 快取僅公開驗證完成的暫存安裝目錄，並行寫入者驗證勝出目錄，不刪除不完整目的地。Linux tar／Windows ZIP 預檢不得放寬 traversal 或連結限制。JSONC 解析器 `jsonc-parser` 的 ESM bundle alias、Task SDK 動態資源與相對路徑也須保留。
 
 ## 複雜處如何拆分
 
@@ -121,7 +123,7 @@ Node 快取僅公開驗證完成的 暫存安裝目錄，並行寫入者驗證�
 
 ## 最終 VSIX 驗收
 
-先執行 npm test、package:dev。`npm run test:final` 將目前 VSIX 解到 Repo 外，執行原始 handler。Windows 預設跑 npm、pnpm workspace、Yarn4 PnP、私有 .NET Core、私有前後端合併、三種 Framework 格式及 成品轉接器 故障；Linux 預設跑 npm、私有合併與 artifact 故障。可用 `npm run test:final -- --cases=pnpm,combined` 選擇受影響場景。
+先執行 npm test、package:dev。`npm run test:final` 將目前 VSIX 解到 Repo 外，執行原始 handler。Windows 預設跑 npm、pnpm workspace、Yarn4 PnP、私有 .NET Core、私有前後端合併、三種 Framework 格式及成品轉接器故障；Linux 預設跑 npm、私有合併與 artifact 故障。可用 `npm run test:final -- --cases=pnpm,combined` 選擇受影響場景。
 
 Windows 可設 `SBOM_FINAL_NODE20` 為實際 Node20 執行檔，讓 npm 場景使用該入口。單獨入口檢查：
 
@@ -156,7 +158,7 @@ docker cp sbom-pilot-final-repro:/work/.smoke/final-delivery/evidence.json .smok
 
 建置依兩份 esbuild metafile 盤點 Task 入口與 SDK 的實際執行相依，目前25筆，保留每份原始授權、SDK metadata／所有非程式資源。SDK task.js 保持原套件目錄與動態 resource JSON 語意；未使用 mock-test/downloader/tool-lib 不分發。建置拒絕未解析的非 builtin SDK import。詳見 [第三方告示](THIRD-PARTY-NOTICES.md)。
 
-`npm audit --omit=dev` 目前有一項上游 minimatch moderate advisory、兩個受影響條目（minimatch/task-lib），無相容修正版、無 high/critical；產品實際執行相依 確實使用該 minimatch。未套用破壞 SDK API 的 major override。開發樹的 SDK 仍宣告未封裝的 downloader，不捏造其缺漏 ISC 告示；產品已不含該模組，原公開告示缺漏 gate 已消除。發版時重新執行 audit 並記錄結果。
+`npm audit --omit=dev` 目前有一項上游 minimatch moderate advisory、兩個受影響條目（minimatch/task-lib），無相容修正版、無 high/critical；產品實際執行相依確實使用該 minimatch。未套用破壞 SDK API 的 major override。開發樹的 SDK 仍宣告未封裝的 downloader，不捏造其缺漏 ISC 告示；產品已不含該模組，原公開告示缺漏 gate 已消除。發版時重新執行 audit 並記錄結果。
 
 ## 版本與公開發佈準備
 
@@ -170,6 +172,6 @@ $env:SBOM_PILOT_REPOSITORY_URL = 'https://<public-repository-url>'
 npm run package:release
 ```
 
-命令只建置 VSIX，不上傳 Marketplace。正式包裝拒絕缺少身分／URL、local placeholder 或未解決 runtime 告示，不可使用文件佔位值。package.json、src/task.json、vss-extension.json 同步改版；GUID／名稱固定，Task major 影響 SbomPilot@0。更新 [CHANGELOG](CHANGELOG.md)，保存 VSIX hash、版本與證據；公開前須完成獨立程式碼審查。
+命令只建置 VSIX，不上傳 Marketplace。正式包裝要求有效 HTTPS repository URL，拒絕內嵌帳密、query／fragment、文件佔位及保留的測試網域；缺少身分、local placeholder 或未解決 runtime 告示也會拒絕。這是 metadata 的語法與秘密檢查，實際 Publisher 權限及 Repo 公開性仍須另行確認。package.json、src/task.json、vss-extension.json 同步改版；GUID／名稱固定，Task major 影響 SbomPilot@0。更新 [CHANGELOG](CHANGELOG.md)，保存 VSIX hash、版本與證據；公開前須完成獨立程式碼審查。
 
 外部 gate：實際 Publisher／公開 Repo、真實 Services/Server 安裝、Classic/YAML UI與工作、成品下載／失敗傳播、公司 feed／企業 Proxy/CA、arm64。SDK/workload 與 Yarn required scope 限制保持明示，未測項目保留 UNVERIFIED。

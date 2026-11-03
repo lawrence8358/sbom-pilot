@@ -47,6 +47,31 @@ async function complete(root: string, options: NodeCacheOptions): Promise<boolea
   }
 }
 
+/** 原子發佈驗證完成的目錄；只重試 Windows 暫時鎖定，最多五次並保留其他工作目的地。 */
+async function publishCache(stage: string, root: string, options: NodeCacheOptions): Promise<void> {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      await rename(stage, root);
+      return;
+    } catch (error) {
+      const occupied = await access(root).then(
+        () => true,
+        () => false,
+      );
+      if (occupied && (await complete(root, options))) return;
+      const code = (error as NodeJS.ErrnoException).code;
+      if (
+        occupied ||
+        process.platform !== 'win32' ||
+        !['EPERM', 'EACCES', 'EBUSY'].includes(code ?? '') ||
+        attempt === 4
+      )
+        throw error;
+      await new Promise((resolve) => setTimeout(resolve, 50 * 2 ** attempt));
+    }
+  }
+}
+
 /** 在目的地旁建立暫存安裝目錄，驗證後原子公開；並行輸家驗證勝出快取，不刪不完整目的地。 */
 export async function acquireNodeCache(
   options: NodeCacheOptions,
@@ -77,6 +102,11 @@ export async function acquireNodeCache(
         () => false,
       )
     ) {
+      // 另一工作可能在第一次檢查後原子發佈新格式快取；先驗證勝出者，不能誤判為損壞。
+      if (await complete(root, options)) {
+        await verify(root);
+        return root;
+      }
       throw new Error('Node 工具快取不完整或版本驗證失敗；請清理該版本快取後重試。');
     }
   }
@@ -86,13 +116,7 @@ export async function acquireNodeCache(
     await populate(stage);
     await verify(stage);
     await writeFile(join(stage, marker), JSON.stringify(identity(options)));
-    try {
-      await rename(stage, root);
-    } catch (error) {
-      if (!(await complete(root, options))) {
-        throw error;
-      }
-    }
+    await publishCache(stage, root, options);
     if (!(await complete(root, options))) {
       throw new Error('Node 工具快取完成標記無效。');
     }

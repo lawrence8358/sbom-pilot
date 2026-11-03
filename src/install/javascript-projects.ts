@@ -5,6 +5,7 @@ import { parse } from 'yaml';
 import {
   declarationsConflict,
   inspectJavaScriptProject,
+  lockCandidates,
   readPackageManagerDeclaration,
 } from './project';
 import type { JavaScriptProject } from './contracts';
@@ -15,14 +16,6 @@ const exists = async (path: string) =>
     () => true,
     () => false,
   );
-const lockNames = [
-  'package-lock.json',
-  'npm-shrinkwrap.json',
-  'pnpm-lock.yaml',
-  'yarn.lock',
-  'bun.lock',
-  'bun.lockb',
-];
 /** 將路徑轉為相對共同根目錄的斜線格式，供跨平台 glob 比對。 */
 const localPath = (root: string, path: string) => relative(root, path).replaceAll('\\', '/');
 /** 以 Azure glob 規則比對路徑，保留花括號與隱藏檔並遵循平台大小寫。 */
@@ -118,7 +111,9 @@ export async function discoverJavaScriptProjects(
     );
     if (owner) {
       if (
-        (await Promise.all(lockNames.map((name) => exists(join(directory, name))))).some(Boolean)
+        (await Promise.all(lockCandidates.map(([name]) => exists(join(directory, name))))).some(
+          Boolean,
+        )
       ) {
         throw new Error('workspace 子專案有獨立 lockfile；請統一根目錄鎖檔或修正 workspace 範圍。');
       }

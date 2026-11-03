@@ -3,6 +3,7 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import type { ProcessRunner } from '../process';
 import type { RestoreProject } from './restore';
+import { validRestoreAssets } from './assets';
 import { withNuGetCredentials, type NuGetCredential } from './credentials';
 import { withFrameworkSourceReader } from './sources';
 import { evaluateFrameworkProject, verifyFrameworkTargets, type MSBuildTool } from './msbuild';
@@ -224,16 +225,7 @@ async function readFrameworkGraph(
 /** 確認 PackageReference assets 與 packages.config 的實際 nupkg 完整，避免發佈缺少間接依賴的結果。 */
 async function verifyRestoredInputs(assets: RestoreProject[], configs: string[]): Promise<void> {
   for (const project of assets) {
-    try {
-      const content = JSON.parse(await readFile(project.assetsPath, 'utf8'));
-      if (
-        !content.targets ||
-        !content.libraries ||
-        resolve(content.project?.restore?.projectPath ?? '') !== resolve(project.projectPath)
-      ) {
-        throw new Error('Invalid assets');
-      }
-    } catch {
+    if (!(await validRestoreAssets(project.assetsPath, project.projectPath))) {
       throw new Error(
         '非 SDK-style PackageReference 未產生有效 project.assets.json；不會發佈缺少間接依賴資料的 SBOM。',
       );
