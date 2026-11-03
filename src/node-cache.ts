@@ -59,50 +59,57 @@ function safeEntry(name: string, folder: string): string {
   if (normalized !== folder && !normalized.startsWith(`${folder}/`)) throw new Error('Node 壓縮檔路徑超出預期根目錄。');
   return normalized;
 }
-/** Validate tar headers before invoking the OS extractor. Links may only resolve
- * within the official distribution root; no later entry may traverse a link. */
-export function validateNodeTar(tar: Buffer, folder: string): void {
-  const links: string[] = [], paths: string[] = [], targets: string[] = [];
-  let longName: string | undefined, longLink: string | undefined;
-  let extended: Record<string, string> = {};
-  const string = (data: Buffer) => data.toString('utf8').split('\0')[0];
+interface TarRecord { header: Buffer; body: Buffer; type: string }
+interface TarOverrides { longName?: string; longLink?: string; extended: Record<string, string> }
+interface TarPaths { links: string[]; paths: string[]; targets: string[] }
+
+function tarString(data: Buffer): string { return data.toString('utf8').split('\0')[0]; }
+
+function* tarRecords(tar: Buffer): Generator<TarRecord> {
   for (let offset = 0; offset + 512 <= tar.length;) {
     const header = tar.subarray(offset, offset + 512);
-    if (header.every(byte => byte === 0)) break;
-    const sizeText = string(header.subarray(124, 136)).trim();
+    if (header.every(byte => byte === 0)) return;
+    const sizeText = tarString(header.subarray(124, 136)).trim();
     if (!/^[0-7]+$/.test(sizeText)) throw new Error('Node tar 長度無效。');
-    const size = parseInt(sizeText, 8), type = String.fromCharCode(header[156] || 48);
+    const size = parseInt(sizeText, 8);
     const start = offset + 512, end = start + size;
     if (end > tar.length) throw new Error('Node tar 檔案不完整。');
-    const body = tar.subarray(start, end);
-    if (type === 'L' || type === 'K') {
-      if (type === 'L') longName = string(body).replace(/\n$/, ''); else longLink = string(body).replace(/\n$/, '');
-    } else if (type === 'x') {
-      let index = 0;
-      while (index < body.length) {
-        const space = body.indexOf(32, index), length = Number(body.subarray(index, space).toString());
-        if (space < index || !Number.isSafeInteger(length) || length <= space - index + 1 || index + length > body.length) throw new Error('Node tar PAX 資料無效。');
-        const field = body.subarray(space + 1, index + length - 1).toString('utf8'), equal = field.indexOf('=');
-        if (equal < 1) throw new Error('Node tar PAX 資料無效。');
-        if (!['path', 'linkpath', 'mtime', 'atime', 'ctime', 'uid', 'gid', 'uname', 'gname', 'charset', 'hdrcharset', 'comment'].includes(field.slice(0, equal))) throw new Error('Node tar PAX 包含不支援的擷取屬性。');
-        extended[field.slice(0, equal)] = field.slice(equal + 1); index += length;
-      }
-    } else {
-      if (!['0', '1', '2', '5'].includes(type)) throw new Error('Node tar 包含不支援的項目類型。');
-      const prefix = string(header.subarray(345, 500));
-      const name = safeEntry(extended.path || longName || `${prefix ? `${prefix}/` : ''}${string(header.subarray(0, 100))}`, folder);
-      paths.push(name);
-      if (type === '1' || type === '2') {
-        const target = extended.linkpath || longLink || string(header.subarray(157, 257));
-        if (!target || target.includes('\\') || target.startsWith('/') || /^[A-Za-z]:/.test(target)) throw new Error('Node tar 連結無效。');
-        safeEntry(posix.normalize(type === '2' ? posix.join(posix.dirname(name), target) : target), folder);
-        targets.push(type === '2' ? `${posix.dirname(name)}/${target}` : target);
-        links.push(name);
-      }
-      extended = {}; longName = undefined; longLink = undefined;
-    }
+    yield { header, body: tar.subarray(start, end), type: String.fromCharCode(header[156] || 48) };
     offset = start + Math.ceil(size / 512) * 512;
   }
+}
+
+function paxAttributes(body: Buffer): Record<string, string> {
+  const attributes: Record<string, string> = {};
+  let index = 0;
+  while (index < body.length) {
+    const space = body.indexOf(32, index), length = Number(body.subarray(index, space).toString());
+    if (space < index || !Number.isSafeInteger(length) || length <= space - index + 1 || index + length > body.length) throw new Error('Node tar PAX 資料無效。');
+    const field = body.subarray(space + 1, index + length - 1).toString('utf8'), equal = field.indexOf('=');
+    if (equal < 1) throw new Error('Node tar PAX 資料無效。');
+    if (!['path', 'linkpath', 'mtime', 'atime', 'ctime', 'uid', 'gid', 'uname', 'gname', 'charset', 'hdrcharset', 'comment'].includes(field.slice(0, equal))) throw new Error('Node tar PAX 包含不支援的擷取屬性。');
+    attributes[field.slice(0, equal)] = field.slice(equal + 1);
+    index += length;
+  }
+  return attributes;
+}
+
+function recordTarPath(record: TarRecord, overrides: TarOverrides, paths: TarPaths, folder: string): void {
+  const { header, type } = record;
+  if (!['0', '1', '2', '5'].includes(type)) throw new Error('Node tar 包含不支援的項目類型。');
+  const prefix = tarString(header.subarray(345, 500));
+  const name = safeEntry(overrides.extended.path || overrides.longName || `${prefix ? `${prefix}/` : ''}${tarString(header.subarray(0, 100))}`, folder);
+  paths.paths.push(name);
+  if (type !== '1' && type !== '2') return;
+  const target = overrides.extended.linkpath || overrides.longLink || tarString(header.subarray(157, 257));
+  if (!target || target.includes('\\') || target.startsWith('/') || /^[A-Za-z]:/.test(target)) throw new Error('Node tar 連結無效。');
+  safeEntry(posix.normalize(type === '2' ? posix.join(posix.dirname(name), target) : target), folder);
+  // 保留未正規化目標，後續才能檢查中間路徑是否穿越另一連結。
+  paths.targets.push(type === '2' ? `${posix.dirname(name)}/${target}` : target);
+  paths.links.push(name);
+}
+
+function validateTarLinks({ paths, links, targets }: TarPaths): void {
   if (!paths.length || paths.some(path => links.some(link => path.startsWith(`${link}/`)))) throw new Error('Node tar 包含空內容或穿越連結的路徑。');
   for (const target of targets) {
     const segments: string[] = [];
@@ -111,6 +118,21 @@ export function validateNodeTar(tar: Buffer, folder: string): void {
       if (links.includes(segments.join('/'))) throw new Error('Node tar 連結不能穿越另一個連結。');
     }
   }
+}
+
+export function validateNodeTar(tar: Buffer, folder: string): void {
+  const paths: TarPaths = { links: [], paths: [], targets: [] };
+  let overrides: TarOverrides = { extended: {} };
+  for (const record of tarRecords(tar)) {
+    if (record.type === 'L') overrides.longName = tarString(record.body).replace(/\n$/, '');
+    else if (record.type === 'K') overrides.longLink = tarString(record.body).replace(/\n$/, '');
+    else if (record.type === 'x') Object.assign(overrides.extended, paxAttributes(record.body));
+    else {
+      recordTarPath(record, overrides, paths, folder);
+      overrides = { extended: {} };
+    }
+  }
+  validateTarLinks(paths);
 }
 
 const unzipScript = `param([string]$Archive,[string]$Destination,[string]$Folder)
