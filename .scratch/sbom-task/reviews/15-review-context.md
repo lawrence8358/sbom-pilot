@@ -12,3 +12,5 @@
 2. 7379366的commandRedactor先generic header regex再替換已知值，可將含空白的已知認證切碎，後段無法完整匹配。以同一regex的純JS合成探針重現：已知值prefix middle suffix，Authorization Bearer前綴處理後仍保留middle suffix。已通知唯一worker在候選內改為已知值完整替換優先，補compound header／URL回歸；最終需要確認已修正。這些是實作中查核，與14初次兩軸報告分開。
 
 固定比較SHA、最後檢查／實際流程／套件hash與結論，待候選交回與獨立整合後保存至15整合及兩軸報告。
+
+固定候選：87597bf462de8f5b0232cc7ed3c12f6648ff6246（乾淨），Task runtime遮罩排序修正cc07bd3；兩項實作中查核均已加入回歸並修正。Windows/Linux Node20/24各114tests、175中文說明、間距／型別／格式／封裝、Angular三管理器與private combined／DT403真實流程通過。尚待獨立merger與兩軸增量複查；不可把候選通過當作已整合。

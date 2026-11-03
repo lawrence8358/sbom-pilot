@@ -27,13 +27,14 @@
   "activeWorktrees": [
     {
       "ticket": "15",
-      "phase": "implementing",
+      "phase": "integrating",
       "branch": "ticket/15-frontend-command-logging",
       "worktree": "../.sbom-pilot-worktrees/15-frontend-command-logging",
-      "checkpoint": ".scratch/sbom-task/checkpoints/15.md"
+      "checkpoint": ".scratch/sbom-task/checkpoints/15.md",
+      "candidate": "87597bf462de8f5b0232cc7ed3c12f6648ff6246"
     }
   ],
-  "reviewStatus": "ticket15-pending",
+  "reviewStatus": "ticket15-integration-pending",
   "reviewHead": "8b6969ded4884cb0a4d759dc70aabb2e246715dd",
   "externalValidation": [
     "live Azure Services/Server installation, Classic/YAML UI, artifact download and asynchronous failure propagation",
