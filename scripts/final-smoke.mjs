@@ -112,6 +112,23 @@ try {
     try { await checked(process.execPath, [npmCli, 'install', '--package-lock-only', '--ignore-scripts', '--no-audit', '--no-fund'], product, { NPM_CONFIG_USERCONFIG: auth }); }
     finally { await rm(auth, { force: true }); }
   }
+  // Framework-neutral fixture: real Angular packages from the primary npm registry.
+  // Exact version facts: https://registry.npmjs.org/@angular%2fcore/20.3.0
+  async function angular(product, manager) {
+    await mkdir(product, { recursive: true });
+    const version = manager === 'yarn' ? '4.18.1' : manager === 'pnpm' ? '12.16.1' : '11.19.1';
+    await writeFile(join(product, 'package.json'), JSON.stringify({ name: 'angular-delivery-fixture', version: '1.0.0', private: true, packageManager: `${manager}@${version}`, dependencies: { '@angular/core': '20.3.0', rxjs: '7.8.2', tslib: '2.8.1' } }));
+    await writeFile(join(product, 'main.ts'), "import { Component } from '@angular/core'; import { of } from 'rxjs'; of(Component);\n");
+    let cli = npmCli;
+    if (manager !== 'npm') {
+      const directory = join(root, `author-${manager}`); await mkdir(directory);
+      const pkg = manager === 'yarn' ? '@yarnpkg/cli-dist' : 'pnpm';
+      await checked(process.execPath, [npmCli, 'install', '--prefix', directory, '--no-audit', '--no-fund', '--ignore-scripts', `${pkg}@${version}`], root);
+      cli = join(directory, 'node_modules', ...(manager === 'yarn' ? ['@yarnpkg', 'cli-dist', 'bin', 'yarn.js'] : ['pnpm', 'bin', 'pnpm.cjs']));
+    }
+    if (manager === 'yarn') await writeFile(join(product, '.yarnrc.yml'), 'nodeLinker: pnp\n');
+    await checked(process.execPath, [cli, 'install', ...(manager === 'npm' ? ['--package-lock-only', '--ignore-scripts', '--no-audit', '--no-fund'] : [])], product);
+  }
   async function dotnet(product, format = 'dotnet') {
     const directory = join(product, '交付產品'); await mkdir(directory, { recursive: true });
     const refs = '<ItemGroup><PackageReference Include="Pilot.Private" Version="1.0.0"/></ItemGroup>';
@@ -151,6 +168,20 @@ try {
     });
     const output = `${result.stdout}${result.stderr}`, redacted = output.split(/\r?\n/).filter(line => !line.startsWith('##vso[task.setsecret]')).join('\n'); safe(redacted);
     await writeFile(join(evidenceDirectory, `${name}.log`), redacted);
+    const commands = redacted.split(/\r?\n/).filter(line => line.startsWith('[command] ')).map(line => JSON.parse(line.slice(10)));
+    assert.ok(commands.length >= 6, 'Actual Task command diagnostics missing');
+    const scans = commands.filter(command => command.argv.includes('--required-only'));
+    assert.equal(scans.length, 1, 'Exactly one real scanner command must be visible');
+    const scan = scans[0];
+    assert.equal(scan.cwd, product); assert.ok(scan.executable); assert.equal(scan.argv[1], product);
+    assert.equal(scan.argv[scan.argv.indexOf('--spec-version') + 1], '1.6');
+    assert.equal(scan.argv[scan.argv.indexOf('--install-deps') + 1], 'false');
+    assert.deepEqual(scan.scan, { FETCH_LICENSE: 'false', CDXGEN_NO_CACHE: 'true' });
+    assert.ok(scan.argv.includes('**/_Design{,Front}/**')); assert.ok(!scan.argv.includes('--api-key'));
+    if (dt) {
+      const http = redacted.split(/\r?\n/).filter(line => line.startsWith('[http] ')).map(line => JSON.parse(line.slice(7)));
+      assert.deepEqual(http, [{ method: 'PUT', url: `${base}/${dt}/api/v1/bom`, headers: { 'X-Api-Key': '***' } }]);
+    }
     assert.equal(result.code, 0);
     const failed = dt === 'fail' || failArtifact;
     assert.match(output, failed ? /task.complete result=Failed/ : /task.complete result=Succeeded/, `Handler outcome wrong: ${name}; see redacted evidence log`);
@@ -160,6 +191,13 @@ try {
     const bomFile = join(temp, runs[0], 'sbom', 'bom.json'), bytes = await readFile(bomFile), bom = JSON.parse(bytes); safe(bytes.toString());
     await validateSbom(bomFile, '1.6');
     for (const dependency of expected) assert.ok(bom.components?.some(item => item.name === dependency), `Missing ${dependency}`);
+    if (name.startsWith('angular-')) {
+      assert.ok(!bom.components.some(item => item.name === 'vue'));
+      const angularCore = bom.components.find(item => item.name === 'core' && item.group === '@angular');
+      const tslib = bom.components.find(item => item.name === 'tslib');
+      assert.ok(angularCore && tslib, 'Angular and its real runtime dependency must be present');
+      assert.ok(bom.dependencies.some(item => item.ref === angularCore['bom-ref'] && item.dependsOn.includes(tslib['bom-ref'])), 'Angular → tslib dependency edge missing');
+    }
     if (name === 'pnpm') assert.ok(!bom.components?.some(item => item.name === 'chalk'), 'Fixed cdxgen required scope must exclude this pnpm fixture dev-only chalk');
     assert.ok(bom.dependencies?.some(item => item.dependsOn?.length), 'Real dependency edges missing');
     if (dt) { assert.equal(dtBodies.length, dtStart + 1); assert.deepEqual(dtBodies.at(-1).bytes, bytes); }
@@ -173,15 +211,18 @@ try {
     if (npmAuth) assert.ok(calls.some(call => call.path.includes('/private/npm/') && call.path.endsWith('package.tgz') && call.authorized));
     if (nugetAuth) assert.ok(calls.some(call => call.path.includes('/private/nuget/') && call.path.endsWith('.nupkg') && call.authorized));
     assert.ok(!calls.some(call => call.path.startsWith('/public/') && call.hasAuth), 'Private credential reached public feed');
-    const item = { name, environment, dt: dt || 'off', artifact: failArtifact ? 'local adapter failure injected; no upload command' : 'one upload command, retained identical valid file', sha256: digest(bytes), components: bom.components.length, requests: calls.length, handler: (await checked(handler, ['--version'], root)).stdout.trim() };
+    const item = { name, environment, dt: dt || 'off', artifact: failArtifact ? 'local adapter failure injected; no upload command' : 'one upload command, retained identical valid file', sha256: digest(bytes), components: bom.components.length, requests: calls.length, visibleCommands: commands.length, visibleScan: scan, handler: (await checked(handler, ['--version'], root)).stdout.trim() };
     evidence.cases.push(item); await writeFile(join(evidenceDirectory, 'evidence.json'), JSON.stringify(evidence, null, 2));
     console.log(`FINAL PASS ${name}: ${item.components} components; ${item.sha256}`);
   }
   const selected = process.argv.find(arg => arg.startsWith('--cases='))?.slice(8).split(',') || (process.platform === 'win32' ? ['npm', 'pnpm', 'yarn', 'dotnet', 'combined', 'non-sdk-package-reference', 'packages-config', 'sdk-net48', 'artifact-failure'] : ['npm', 'combined', 'artifact-failure']);
   for (const name of selected) {
     console.log(`FINAL START ${name}; actual extracted VSIX handler; ${process.platform}`);
-    const product = join(root, `product-${name}`);
-    if (['pnpm', 'yarn'].includes(name)) {
+    const product = join(root, `交付 frontend ${name}`);
+    if (name.startsWith('angular-')) {
+      await angular(product, name.slice(8));
+      await scenario(name, 'javascript', product, { dt: 'accepted', expected: ['core', 'rxjs', 'tslib'], handler: process.env.SBOM_FINAL_NODE20 || process.execPath });
+    } else if (['pnpm', 'yarn'].includes(name)) {
       await cp(join(repository, 'examples', name === 'pnpm' ? 'pnpm-workspace' : 'yarn-modern-workspace'), product, { recursive: true });
       await scenario(name, 'vue', product, { dt: 'accepted', expected: name === 'pnpm' ? ['vue', 'lodash'] : ['is-odd', 'is-number'] });
     } else if (['dotnet', 'non-sdk-package-reference', 'packages-config', 'sdk-net48'].includes(name)) {
