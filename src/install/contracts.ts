@@ -3,9 +3,20 @@ import type { ProcessRunner } from '../process';
 import type { NuGetCredential } from '../dotnet/credentials';
 import type { NpmCredential } from './npm-credentials';
 
-export interface InstallOptions { tempDirectory?: string; log?: (message: string) => void; npmCredentials?: NpmCredential[]; nugetCredentials?: NuGetCredential[]; sourceRoot?: string }
+export interface InstallOptions {
+  tempDirectory?: string;
+  log?: (message: string) => void;
+  npmCredentials?: NpmCredential[];
+  nugetCredentials?: NuGetCredential[];
+  sourceRoot?: string;
+}
 export interface DependencyInstaller {
-  install(root: string, tools: ToolContext, run: ProcessRunner, options?: InstallOptions): Promise<void>;
+  install(
+    root: string,
+    tools: ToolContext,
+    run: ProcessRunner,
+    options?: InstallOptions,
+  ): Promise<void>;
 }
 export type JavaScriptManager = 'npm' | 'pnpm' | 'yarn';
 export interface JavaScriptProject {
@@ -17,7 +28,17 @@ export interface JavaScriptProject {
   lockPath: string;
   yarn?: { generation: 'classic' | 'modern'; path?: string };
 }
-export interface ManagerCommand { executable: string; args: string[]; env?: NodeJS.ProcessEnv; version?: string }
+export interface ManagerCommand {
+  executable: string;
+  args: string[];
+  env?: NodeJS.ProcessEnv;
+  version?: string;
+}
 export interface JavaScriptAdapter {
-  install(project: JavaScriptProject, command: ManagerCommand, tools: ToolContext, run: ProcessRunner): Promise<void>;
+  install(
+    project: JavaScriptProject,
+    command: ManagerCommand,
+    tools: ToolContext,
+    run: ProcessRunner,
+  ): Promise<void>;
 }

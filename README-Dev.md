@@ -22,7 +22,7 @@ npm run test:package
 
 ## 一次執行如何走完
 
-`src/index.ts` 先匯入秘密輸入模組，才載入 Azure SDK。入口確認 Build 情境並建立 Task 暫存空間；`runWorkflow` 接手驗證、工具、依賴、掃描、Schema、DT 與 artifact。公開呼叫介面保留注入點，測試與真正 handler 共用工作流程。
+`src/index.ts` 先匯入秘密輸入模組，才載入 Azure SDK。入口確認 Build 情境並建立 Task 暫存空間；`runWorkflow` 接手驗證、工具、依賴、掃描、Schema、DT 與 artifact。公開呼叫介面保留注入點，測試與實際執行入口 共用工作流程。
 
 ```mermaid
 flowchart TD
@@ -82,7 +82,26 @@ DT 錯誤會保留到有效成品發佈請求之後再拋出。入口發出 `art
 
 `ToolContext` 只保留子工具環境與已驗證 assets／packageFiles，不保留專案來源秘密。npm 認證暫存同時檢查 Git 根目錄、共同 sourceRoot 及實體路徑；NuGet 使用實際 SDK／MSBuild 的 Configuration API，不用全域 config 取代分層設定。套件／鎖檔／資產檢查不得因改包裝器而略過。
 
-Node 快取僅公開驗證完成的 staging，並行寫入者驗證勝出目錄，不刪除不完整目的地。Linux tar／Windows ZIP 預檢不得放寬 traversal 或連結限制。SDK `jsonc-parser` 的 ESM bundle alias、Task SDK 動態資源與相對路徑也須保留。
+Node 快取僅公開驗證完成的 暫存安裝目錄，並行寫入者驗證勝出目錄，不刪除不完整目的地。Linux tar／Windows ZIP 預檢不得放寬 traversal 或連結限制。JSONC 解析器 `jsonc-parser` 的 ESM bundle alias、Task SDK 動態資源與相對路徑也須保留。
+
+## 複雜處如何拆分
+
+這次整理保留公開介面，把判斷集中到明確責任的內部函式；不是新增一層泛用工廠。Yarn 分開鎖檔世代與最近設定，專案探索分開唯一鎖檔／pnpm 格式，管理器準備分開封裝完整性／隔離安裝／實際版本。認證預檢分開 npm 優先序與 Yarn 合併／映射檢查；tar 分開記錄、PAX 與連結；網路分開憑證、代理、回應收集與請求清理。SDK 分開政策讀取、已安裝 host 與官方安裝；Framework 分開 graph 評估與還原資料驗證。
+
+以下為同一 AST 規則估算的函式自身分支數（含初始1、條件／迴圈／catch／短路，排除巢狀函式）；用途是定位閱讀負擔，不是品質分數或驗收配額：
+
+| 主要函式 | 整理前 → 後 | 閱讀時先看 |
+| --- | --- | --- |
+| `inspectYarnProject` | 41 → 13 | 世代與路徑政策的組合 |
+| `inspectJavaScriptProject` | 37 → 13 | workspace → 唯一鎖檔 → 管理器 |
+| `withPackageManager` | 39 → 19 | 選擇指令及暫存生命週期 |
+| `checkProjectAuthentication` | 35 → 19 | 設定探索，細節交給各格式檢查 |
+| `validateNodeTar` | 39 → 5 | 記錄覆寫與整體連結驗證 |
+| `sendHttpRequest` | 14 → 5 | 單次請求與統一 finally 清理 |
+| `prepareDotnetSdk` | 28 → 8 | 系統 SDK → 完整快取 → 官方安裝 |
+| `restoreFrameworkProject` | 34 → 17 | 評估 → 還原／鎖檔保留 → 資料完整性 |
+
+`runWorkflow` 的模式分派改用具名的 `installDependencies` 與明確分支，讓主流程直接對應上方圖；各路徑的 sourceRoot／認證選項與注入 installer 優先序不變。重新計算清單可用 `node scripts/check-source-comments.mjs --inventory`。新增 helper 的中文註解說明責任與不變條件；原有測試仍從實際呼叫介面驗證行為。
 
 ## 依變更選擇驗證
 
@@ -96,13 +115,13 @@ Node 快取僅公開驗證完成的 staging，並行寫入者驗證勝出目錄�
 | `test:smoke:dotnet`／`test:smoke:framework` | SDK6／9／10、傳統三格式、鎖檔、assets／nupkg |
 | `test:smoke:nuget-auth` | loopback v3、四種格式與整個來源 graph；Linux 用 `-- --formats=dotnet` |
 | `test:smoke:combined` | 共同根目錄與不同前端管理器、一次掃描 |
-| `test:final` | 解包後真正 handler、DT 接受／拒絕、同一成品、本機 adapter 故障 |
+| `test:final` | 解包後實際執行入口、DT 接受／拒絕、同一成品、本機 adapter 故障 |
 
 以上外部流程會下載真實工具並執行專案 install／restore。範例鎖檔只在明確的 fixture 維護模式更新，例如 `test:smoke:yarn -- --refresh-fixtures`；一般 Task 與驗證不自動修正輸入。
 
 ## 最終 VSIX 驗收
 
-先執行 npm test、package:dev。`npm run test:final` 將目前 VSIX 解到 Repo 外，執行原始 handler。Windows 預設跑 npm、pnpm workspace、Yarn4 PnP、私有 .NET Core、私有前後端合併、三種 Framework 格式及 artifact adapter 故障；Linux 預設跑 npm、私有合併與 artifact 故障。可用 `npm run test:final -- --cases=pnpm,combined` 選擇受影響場景。
+先執行 npm test、package:dev。`npm run test:final` 將目前 VSIX 解到 Repo 外，執行原始 handler。Windows 預設跑 npm、pnpm workspace、Yarn4 PnP、私有 .NET Core、私有前後端合併、三種 Framework 格式及 成品轉接器 故障；Linux 預設跑 npm、私有合併與 artifact 故障。可用 `npm run test:final -- --cases=pnpm,combined` 選擇受影響場景。
 
 Windows 可設 `SBOM_FINAL_NODE20` 為實際 Node20 執行檔，讓 npm 場景使用該入口。單獨入口檢查：
 
@@ -135,9 +154,9 @@ docker cp sbom-pilot-final-repro:/work/.smoke/final-delivery/evidence.json .smok
 
 ## Runtime 授權與 audit
 
-建置依兩份 esbuild metafile 盤點 handler 與真實 Task SDK closure，目前25筆，保留每份原始授權、SDK metadata／所有非程式資源。SDK task.js 保持原套件目錄與動態 resource JSON 語意；未使用 mock-test/downloader/tool-lib 不分發。建置拒絕未解析的非 builtin SDK import。詳見 [第三方告示](THIRD-PARTY-NOTICES.md)。
+建置依兩份 esbuild metafile 盤點 Task 入口與 SDK 的實際執行相依，目前25筆，保留每份原始授權、SDK metadata／所有非程式資源。SDK task.js 保持原套件目錄與動態 resource JSON 語意；未使用 mock-test/downloader/tool-lib 不分發。建置拒絕未解析的非 builtin SDK import。詳見 [第三方告示](THIRD-PARTY-NOTICES.md)。
 
-`npm audit --omit=dev` 目前有一項上游 minimatch moderate advisory、兩個受影響條目（minimatch/task-lib），無相容修正版、無 high/critical；產品 closure 確實使用該 minimatch。未套用破壞 SDK API 的 major override。開發樹的 SDK 仍宣告未封裝的 downloader，不捏造其缺漏 ISC 告示；產品已不含該模組，原公開告示缺漏 gate 已消除。發版時重新執行 audit 並記錄結果。
+`npm audit --omit=dev` 目前有一項上游 minimatch moderate advisory、兩個受影響條目（minimatch/task-lib），無相容修正版、無 high/critical；產品實際執行相依 確實使用該 minimatch。未套用破壞 SDK API 的 major override。開發樹的 SDK 仍宣告未封裝的 downloader，不捏造其缺漏 ISC 告示；產品已不含該模組，原公開告示缺漏 gate 已消除。發版時重新執行 audit 並記錄結果。
 
 ## 版本與公開發佈準備
 

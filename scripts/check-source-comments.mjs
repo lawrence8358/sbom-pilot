@@ -12,6 +12,16 @@ async function sourceFiles(directory) {
   return result;
 }
 
+// 取得具名常數自行實作的函式，也涵蓋注入介面的 ?? fallback。
+function callableBody(node) {
+  if (!node) return;
+  if (ts.isArrowFunction(node) || ts.isFunctionExpression(node)) return node;
+  if (ts.isParenthesizedExpression(node)) return callableBody(node.expression);
+  if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken) {
+    return callableBody(node.right);
+  }
+}
+
 // 依 AST 找到實際具名函式體，排除只有型別的宣告及短匿名回呼。
 function implementation(node, source) {
   if (ts.isFunctionDeclaration(node) && node.body && node.name) {
@@ -22,10 +32,10 @@ function implementation(node, source) {
     return { name: node.name?.getText(source) ?? 'constructor', body: node, anchor: node };
   }
   if ((ts.isVariableDeclaration(node) || ts.isPropertyAssignment(node)) && node.initializer &&
-      (ts.isArrowFunction(node.initializer) || ts.isFunctionExpression(node.initializer))) {
+      callableBody(node.initializer)) {
     const anchor = ts.isVariableDeclaration(node) && ts.isVariableDeclarationList(node.parent) &&
       ts.isVariableStatement(node.parent.parent) ? node.parent.parent : node;
-    return { name: node.name.getText(source), body: node.initializer, anchor };
+    return { name: node.name.getText(source), body: callableBody(node.initializer), anchor };
   }
 }
 
