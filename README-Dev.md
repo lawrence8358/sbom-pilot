@@ -1,37 +1,127 @@
-# 開發與交付
+# 開發與維護
 
-SBOM Pilot 由 Lawrence Shen 開發，採 MIT。維護環境使用 Node >=24；Windows 實測 Node24.22.1/npm11.19.1，Linux Docker Node24.22.2/npm11.19.1。Task bundle 目標 Node20，提供 Node20_1／Node24 同一入口；掃描 Node24 由 Task 獨立準備。
+本文件帶維護者從本機建置走到實際 VSIX 驗證與發佈準備。使用者操作請先看 [README](README.md)；已驗證平台、版本與外部驗收清單集中在[相容性文件](docs/compatibility.md)，歷史工單證據不作為閱讀入口。
 
-## 建置與檢查
+## 準備開發環境
+
+使用 Node >=24、npm 與 Git；Windows 目前實測 Node24.22.1／npm11.19.1，Linux Docker 為 Node24.22.2／npm11.19.1。.NET／Framework 真實測試另需相應 SDK 或 Visual Studio；一般單元測試不需預裝整套工具鏈。
 
 ```powershell
 npm ci
 npm run typecheck
+npm run format:check
+npm run check:source-comments
 npm test
 npm run package:dev
 npm run test:package
 ```
 
-單元／整合測試使用 Node test runner，涵蓋四模式、鎖檔、官方 Schema、選項、SDK/MSBuild、來源隔離、Proxy/CA、DT、失敗後成品、初始化前秘密遮罩與 UTF-8。先完成上述檢查，再選擇受變更影響的真實 smoke，無需重跑所有不變的外部下載矩陣。
+`npm test` 編譯到 `.test-build`，用 Node test runner 執行測試並複製 Schema。`package:dev` 會先 build，再產生 `packages/local-dev-placeholder.sbom-pilot-0.1.0.vsix`；`test:package` 將 dist 與真正 VSIX 解到 Repo 外，檢查執行入口與包裝資源。執行產物、快取及日誌留在忽略目錄，不提交。
 
-| 命令 | 真實驗證 |
+格式採鎖定的 Prettier，只作用於 `src/**/*.ts`，不排序 import；`npm run format` 修正格式。修改具名函式／方法／具名函式常數時，在實作前寫正體中文用途註解，說明責任及必要的不變條件；短匿名回呼不需逐個描述語法。`check:source-comments` 使用 TypeScript AST 找具名實作並檢查註解，仍需人工判斷說明是否有意義。
+
+## 一次執行如何走完
+
+`src/index.ts` 先匯入秘密輸入模組，才載入 Azure SDK。入口確認 Build 情境並建立 Task 暫存空間；`runWorkflow` 接手驗證、工具、依賴、掃描、Schema、DT 與 artifact。公開呼叫介面保留注入點，測試與實際執行入口 共用工作流程。
+
+```mermaid
+flowchart TD
+    Start["入口：先登錄秘密遮罩，再載入 Azure SDK"] --> Inputs["確認 Build 情境並讀取參數"]
+    Inputs --> Validate["驗證參數與專案路徑"]
+    Validate --> Tools["準備並驗證 Node 及 cdxgen"]
+    Tools --> Mode{"開發環境"}
+    Mode -->|vue| JS["JavaScript：選擇管理器並嚴格安裝"]
+    Mode -->|dotnet| Core[".NET Core：選擇 SDK 並還原"]
+    Mode -->|netframework| Framework["Windows Framework：SDK 或 MSBuild 還原"]
+    Mode -->|combined| Combined["共同根目錄：前端嚴格安裝，再還原 .NET Core"]
+    JS --> Scan["一次遞迴 required-only 掃描"]
+    Core --> Scan
+    Framework --> Scan
+    Combined --> Scan
+    Scan --> Schema["驗證 CycloneDX 1.6 Schema 與組件"]
+    Schema --> WantDT{"啟用 DT？"}
+    WantDT -->|否| Publish["要求 Agent 發佈同一份有效 SBOM"]
+    WantDT -->|是| DT["上傳既有 DT 專案；接受即完成"]
+    DT -->|接受| Publish
+    DT -->|失敗：暫存錯誤| Publish
+    Publish -->|已排入佇列| PriorDT{"是否有 DT 錯誤？"}
+    PriorDT -->|否| Success["Task 成功"]
+    PriorDT -->|是| Failed["Task 失敗"]
+    Publish -->|發佈請求失敗| Failed
+    Inputs -.->|錯誤| Failed
+    Validate -.->|錯誤| Failed
+    Tools -.->|錯誤| Failed
+    JS -.->|錯誤| Failed
+    Core -.->|錯誤| Failed
+    Framework -.->|錯誤| Failed
+    Combined -.->|錯誤| Failed
+    Scan -.->|錯誤| Failed
+    Schema -.->|錯誤，不發佈| Failed
+    Success --> Cleanup["finally 清理工具暫存；保留有效 SBOM 供 Agent 讀取"]
+    Failed --> Cleanup
+```
+
+四條依賴路徑會各自在 finally 清除所建立的認證／工具暫存，才返回共同掃描階段。合併模式先處理前端安裝根目錄，避免重複安裝 workspace 成員，再還原後端；不以合併兩份 BOM 取代一次掃描。Framework 的 SDK-style 走 dotnet，傳統 PackageReference／packages.config 走 Agent 的 MSBuild。
+
+DT 錯誤會保留到有效成品發佈請求之後再拋出。入口發出 `artifact.upload` 時只代表請求已排入 Agent 佇列；上圖的 Task 成功不代表 Azure 已完成非同步上傳。有效檔案必須保留到工作清理，不能在入口 finally 刪除。成品請求本身失敗也必須讓 Task 失敗。
+
+## 從哪個模組開始讀
+
+| 維護工作 | 主要檔案 | 需要守住的行為 |
+| --- | --- | --- |
+| Azure 入口／輸入 | `azure-secret-inputs.ts`、`azure-inputs.ts`、`index.ts` | 秘密模組第一個 import，SDK debug 前遮罩；秘密不經 getInput |
+| 參數與流程 | `config.ts`、`tool-options.ts`、`workflow.ts` | 嚴格布林、空排除、預設值、單次掃描、DT 失敗仍發佈 |
+| 子程序 | `process.ts` | 不用 shell，UTF-8 串流，逾時清理程序樹，不轉印秘密輸出 |
+| 工具／快取 | `tools.ts`、`node-cache.ts` | 官方下載／checksum、實際版本、完整標記與原子快取、安全 ZIP／tar |
+| JavaScript 探索／版本 | `install/project.ts`、`yarn-project.ts`、`manager.ts` | workspace、唯一鎖檔、精確宣告、雜湊、管理器初始化認證與工具安裝環境分離 |
+| 安裝／npm 認證 | `install/javascript.ts`、各管理器 installer、`npm-auth.ts` | frozen／immutable／ci、來源範圍、Repo 設定、實體 sourceRoot 外暫存及清理 |
+| .NET 還原／NuGet 認證 | `dotnet/`、`install/dotnet.ts`、`framework.ts` | SDK 政策、官方有效來源、整個 graph、鎖檔、assets／nupkg 完整性 |
+| 合併產品 | `install/javascript-projects.ts`、`combined.ts` | 共同根目錄、workspace 擁有權、單次遞迴掃描 |
+| 掃描／驗證 | `scan.ts`、`validation.ts` | required-only、禁止再次 install、必要 obj/assets 例外、官方1.6 Schema |
+| 網路／DT | `network/`、`dt/` | Proxy／CA、憑證、大小／逾時／redirect、有限重試、接受 token 邊界 |
+
+`ToolContext` 只保留子工具環境與已驗證 assets／packageFiles，不保留專案來源秘密。npm 認證暫存同時檢查 Git 根目錄、共同 sourceRoot 及實體路徑；NuGet 使用實際 SDK／MSBuild 的 Configuration API，不用全域 config 取代分層設定。套件／鎖檔／資產檢查不得因改包裝器而略過。
+
+Node 快取僅公開驗證完成的 暫存安裝目錄，並行寫入者驗證勝出目錄，不刪除不完整目的地。Linux tar／Windows ZIP 預檢不得放寬 traversal 或連結限制。JSONC 解析器 `jsonc-parser` 的 ESM bundle alias、Task SDK 動態資源與相對路徑也須保留。
+
+## 複雜處如何拆分
+
+這次整理保留公開介面，把判斷集中到明確責任的內部函式；不是新增一層泛用工廠。Yarn 分開鎖檔世代與最近設定，專案探索分開唯一鎖檔／pnpm 格式，管理器準備分開封裝完整性／隔離安裝／實際版本。認證預檢分開 npm 優先序與 Yarn 合併／映射檢查；tar 分開記錄、PAX 與連結；網路分開憑證、代理、回應收集與請求清理。SDK 分開政策讀取、已安裝 host 與官方安裝；Framework 分開 graph 評估與還原資料驗證。
+
+以下為同一 AST 規則估算的函式自身分支數（含初始1、條件／迴圈／catch／短路，排除巢狀函式）；用途是定位閱讀負擔，不是品質分數或驗收配額：
+
+| 主要函式 | 整理前 → 後 | 閱讀時先看 |
+| --- | --- | --- |
+| `inspectYarnProject` | 41 → 13 | 世代與路徑政策的組合 |
+| `inspectJavaScriptProject` | 37 → 13 | workspace → 唯一鎖檔 → 管理器 |
+| `withPackageManager` | 39 → 19 | 選擇指令及暫存生命週期 |
+| `checkProjectAuthentication` | 35 → 19 | 設定探索，細節交給各格式檢查 |
+| `validateNodeTar` | 39 → 5 | 記錄覆寫與整體連結驗證 |
+| `sendHttpRequest` | 14 → 5 | 單次請求與統一 finally 清理 |
+| `prepareDotnetSdk` | 28 → 8 | 系統 SDK → 完整快取 → 官方安裝 |
+| `restoreFrameworkProject` | 34 → 17 | 評估 → 還原／鎖檔保留 → 資料完整性 |
+
+`runWorkflow` 的模式分派改用具名的 `installDependencies` 與明確分支，讓主流程直接對應上方圖；各路徑的 sourceRoot／認證選項與注入 installer 優先序不變。重新計算清單可用 `node scripts/check-source-comments.mjs --inventory`。新增 helper 的中文註解說明責任與不變條件；原有測試仍從實際呼叫介面驗證行為。
+
+## 依變更選擇驗證
+
+先完成型別、格式、中文說明、全測試及封裝檢查，再跑受影響的真實流程。測試的介面應與呼叫者一致；避免新增只重述實作的測試，或沒有需要就重跑所有歷史下載矩陣。
+
+| `npm run` 命令 | 主要用途 |
 | --- | --- |
-| `test:smoke` | npm/Vue、required-only、chalk 排除、鎖檔不變 |
-| `test:options-smoke` | 花括號 glob、空白路徑、授權／快取、版本拒絕 |
-| `test:smoke:pnpm` | workspace、精確 npm/pnpm、原生 pnpm12、frozen 失敗 |
-| `test:smoke:yarn` | Classic、Yarn4 PnP/node-modules、雜湊、yarnPath、嚴格失敗 |
-| `test:smoke:dotnet` | .NET Core SDK6/9/10、間接依賴、鎖檔與 SDK 政策 |
-| `test:smoke:framework` | Windows SDK-style、非 SDK PackageReference、packages.config |
-| `test:smoke:combined` | 共同根目錄、各前端管理器＋.NET Core、一次掃描 |
-| `test:smoke:npm-auth` | loopback Bearer/Basic、公開來源並存、七種管理器／合併路徑 |
-| `test:smoke:nuget-auth` | loopback v3、四種 .NET 格式、來源 graph、錯誤／缺認證 |
-| `test:final` | 實際 VSIX 入口、真實 install/restore/scan、DT、同一成品及本機發佈故障 |
+| `test:smoke`／`test:options-smoke` | Vue/npm、required scope、預設／排除／版本與鎖檔 |
+| `test:smoke:pnpm`／`test:smoke:yarn` | workspace、各世代／格式、精確版本與嚴格安裝 |
+| `test:smoke:npm-auth` | loopback Bearer／Basic、公開並存、映射、來源隔離、清理；可用 `-- --scenarios=npm,pnpm12,yarn-pnp` |
+| `test:smoke:dotnet`／`test:smoke:framework` | SDK6／9／10、傳統三格式、鎖檔、assets／nupkg |
+| `test:smoke:nuget-auth` | loopback v3、四種格式與整個來源 graph；Linux 用 `-- --formats=dotnet` |
+| `test:smoke:combined` | 共同根目錄與不同前端管理器、一次掃描 |
+| `test:final` | 解包後實際執行入口、DT 接受／拒絕、同一成品、本機 adapter 故障 |
 
-以上命令均以 `npm run <command>` 執行。外部下載、合成來源與暫存資料不提交。`test:smoke:yarn -- --refresh-fixtures` 是明確更新範例鎖檔的維護模式；正常 Task 與 smoke 嚴格使用已提交鎖檔。
+以上外部流程會下載真實工具並執行專案 install／restore。範例鎖檔只在明確的 fixture 維護模式更新，例如 `test:smoke:yarn -- --refresh-fixtures`；一般 Task 與驗證不自動修正輸入。
 
 ## 最終 VSIX 驗收
 
-先執行 npm test、package:dev。`npm run test:final` 將目前 VSIX 解到 Repo 外，執行原始 handler。Windows 預設跑 npm、pnpm workspace、Yarn4 PnP、私有 .NET Core、私有前後端合併、三種 Framework 格式及 artifact adapter 故障；Linux 預設跑 npm、私有合併與 artifact 故障。可用 `npm run test:final -- --cases=pnpm,combined` 選擇受影響場景。
+先執行 npm test、package:dev。`npm run test:final` 將目前 VSIX 解到 Repo 外，執行原始 handler。Windows 預設跑 npm、pnpm workspace、Yarn4 PnP、私有 .NET Core、私有前後端合併、三種 Framework 格式及 成品轉接器 故障；Linux 預設跑 npm、私有合併與 artifact 故障。可用 `npm run test:final -- --cases=pnpm,combined` 選擇受影響場景。
 
 Windows 可設 `SBOM_FINAL_NODE20` 為實際 Node20 執行檔，讓 npm 場景使用該入口。單獨入口檢查：
 
@@ -62,30 +152,11 @@ docker cp sbom-pilot-final-repro:/work/.smoke/final-delivery/evidence.json .smok
 
 首次 combined 由官方 dotnet-install 安裝 SDK10.0.101，再真實還原私有 npm/NuGet、掃描及上傳到 loopback DT。Node20 Docker 可在同一 volume 使用已建置產物執行 test:package 與 test:final 的 npm 場景，工具 Node24 仍由 Task 驗證。不需特權或 Docker socket。保留資源直到證據複查，再清理指定資源。當前矩陣與 live runbook 見 [相容性](docs/compatibility.md)。
 
-## 模組與邊界
-
-| 模組 | 責任 |
-| --- | --- |
-| azure-secret-inputs.ts／index.ts | 先捕捉／遮罩秘密再載入 SDK；Azure input/result/artifact adapter |
-| config.ts／tool-options.ts | 嚴格布林、空排除、Node/cdxgen/Spec 契約 |
-| workflow.ts | WorkflowServices 注入 prepare/install/scan/validate/upload/publish；DT 失敗仍先發佈 |
-| process.ts | 無 shell、逾時／程序樹清理、UTF-8、抑制秘密輸出 |
-| tools.ts／node-cache.ts | SHA-256、版本、原生安全解壓、完整標記／原子快取、隔離 cdxgen |
-| install/ | 管理器版本／雜湊、workspace、嚴格安裝、共同根目錄與 combined |
-| dotnet/ | SDK／MSBuild、restore graph、assets／鎖檔／nupkg 完整性 |
-| npm-auth.ts／credentials.ts／sources.ts | 有效來源及 physical sourceRoot guard；僅 install／restore 認證 |
-| scan.ts／validation.ts | 單次 required-only、禁止重複 install、必要 assets 例外、官方1.6 Schema |
-| dt/／network/ | 接受 token、有限重試、Proxy/CA/client certificate、redirect／大小／逾時界限 |
-
-ToolContext 保存 child env 及已驗證 dotnetAssets/dotnetPackageFiles，installer 包裝器必須保留。私有認證不寫入 ToolContext，不傳給工具準備、scanner 或 DT；npm 暫存須在實際 sourceRoot/Git 根目錄外且 finally 清理。NuGet 使用實際工具的 Configuration API，保留分層設定，不以全域 config 取代 Repo。
-
-Node 快取按版本／架構隔離，只公開經實際執行版本驗證的完整 staging；並行寫入者驗證勝出目錄，不完整目的地明確失敗，不刪除另一工作目錄。舊 tool-lib 完整快取仍驗證後可讀。Linux tar 限根目錄內路徑／連結，Windows ZIP 拒絕 traversal/symlink；保留 npm 相對連結。Node 工具快取與 cdxgen metadata 快取各自獨立。
-
 ## Runtime 授權與 audit
 
-建置依兩份 esbuild metafile 盤點 handler 與真實 Task SDK closure，目前25筆，保留每份原始授權、SDK metadata／所有非程式資源。SDK task.js 保持原套件目錄與動態 resource JSON 語意；未使用 mock-test/downloader/tool-lib 不分發。建置拒絕未解析的非 builtin SDK import。詳見 [第三方告示](THIRD-PARTY-NOTICES.md)。
+建置依兩份 esbuild metafile 盤點 Task 入口與 SDK 的實際執行相依，目前25筆，保留每份原始授權、SDK metadata／所有非程式資源。SDK task.js 保持原套件目錄與動態 resource JSON 語意；未使用 mock-test/downloader/tool-lib 不分發。建置拒絕未解析的非 builtin SDK import。詳見 [第三方告示](THIRD-PARTY-NOTICES.md)。
 
-`npm audit --omit=dev` 目前有一項上游 minimatch moderate advisory、兩個受影響條目（minimatch/task-lib），無相容修正版、無 high/critical；產品 closure 確實使用該 minimatch。未套用破壞 SDK API 的 major override。開發樹的 SDK 仍宣告未封裝的 downloader，不捏造其缺漏 ISC 告示；產品已不含該模組，原公開告示缺漏 gate 已消除。發版時重新執行 audit 並記錄結果。
+`npm audit --omit=dev` 目前有一項上游 minimatch moderate advisory、兩個受影響條目（minimatch/task-lib），無相容修正版、無 high/critical；產品實際執行相依 確實使用該 minimatch。未套用破壞 SDK API 的 major override。開發樹的 SDK 仍宣告未封裝的 downloader，不捏造其缺漏 ISC 告示；產品已不含該模組，原公開告示缺漏 gate 已消除。發版時重新執行 audit 並記錄結果。
 
 ## 版本與公開發佈準備
 

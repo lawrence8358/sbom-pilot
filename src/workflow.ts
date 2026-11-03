@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { mkdir } from 'node:fs/promises';
 import { validateConfig, type TaskConfig } from './config';
-import { prepareTools, type ToolPreparer } from './tools';
+import { prepareTools, type ToolPreparer, type ToolContext } from './tools';
 import type { DependencyInstaller } from './install/contracts';
 import { javascriptInstaller } from './install/javascript';
 import { dotnetInstaller } from './install/dotnet';
@@ -25,39 +25,114 @@ export interface WorkflowServices {
   upload?: SbomUploader;
 }
 export class StageError extends Error {
-  constructor(public stage: string, cause: unknown) {
+  /** 將安全原始錯誤加上工作階段名稱，讓使用者定位失敗位置。 */
+  constructor(
+    public stage: string,
+    cause: unknown,
+  ) {
     super(`[${stage}] ${cause instanceof Error ? cause.message : '執行失敗'}`);
   }
 }
+/** 執行單一階段並統一包裝錯誤，不改變成功結果或吞掉失敗。 */
 async function stage<T>(name: string, action: () => Promise<T>): Promise<T> {
-  try { return await action(); } catch (error) { throw new StageError(name, error); }
+  try {
+    return await action();
+  } catch (error) {
+    throw new StageError(name, error);
+  }
 }
-export async function runWorkflow(input: TaskConfig, tempDirectory: string, services: WorkflowServices): Promise<ValidatedSbom> {
+/** 依開發環境派送依賴安裝，保留注入 installer 優先序及各路徑專用的認證／sourceRoot 設定。 */
+async function installDependencies(
+  config: TaskConfig,
+  tools: ToolContext,
+  run: ProcessRunner,
+  tempDirectory: string,
+  services: WorkflowServices,
+): Promise<void> {
+  const common = {
+    tempDirectory,
+    /** 各安裝路徑共用已約束為安全摘要的日誌輸出。 */
+    log: services.log,
+  };
+  if (services.installer) {
+    return services.installer.install(config.projectPath, tools, run, {
+      ...common,
+      npmCredentials: config.npmCredentials,
+      nugetCredentials: config.nugetCredentials,
+      sourceRoot: config.projectPath,
+    });
+  }
+  if (config.environment === 'dotnet') {
+    return dotnetInstaller.install(config.projectPath, tools, run, {
+      ...common,
+      excludes: config.excludes,
+      nugetCredentials: config.nugetCredentials,
+    });
+  }
+  if (config.environment === 'netframework') {
+    return frameworkInstaller.install(config.projectPath, tools, run, {
+      ...common,
+      excludes: config.excludes,
+      nugetCredentials: config.nugetCredentials,
+    });
+  }
+  if (config.environment === 'combined') {
+    return combinedInstaller.install(config.projectPath, tools, run, {
+      ...common,
+      excludes: config.excludes,
+      npmCredentials: config.npmCredentials,
+      nugetCredentials: config.nugetCredentials,
+    });
+  }
+  return javascriptInstaller.install(config.projectPath, tools, run, {
+    ...common,
+    npmCredentials: config.npmCredentials,
+    sourceRoot: config.projectPath,
+  });
+}
+
+/** 依序準備、還原、單次掃描及驗證；DT 失敗先保留錯誤，發佈有效成品後再讓 Task 失敗。 */
+export async function runWorkflow(
+  input: TaskConfig,
+  tempDirectory: string,
+  services: WorkflowServices,
+): Promise<ValidatedSbom> {
   const config = await stage('參數驗證', () => validateConfig(input));
+  /** 選用測試注入或正式子程序執行器，所有後續階段共用相同執行介面。 */
   const run = services.run ?? runProcess;
   await mkdir(tempDirectory, { recursive: true });
-  const tools = await stage('工具準備', () => (services.prepare ?? prepareTools)({ nodeVersion: config.nodeVersion, cdxgenVersion: config.cdxgenVersion, tempDirectory }, run, services.log));
-  await stage('依賴安裝', () => services.installer
-    ? services.installer.install(config.projectPath, tools, run, { tempDirectory, log: services.log, npmCredentials: config.npmCredentials, nugetCredentials: config.nugetCredentials, sourceRoot: config.projectPath })
-    : config.environment === 'dotnet'
-      ? dotnetInstaller.install(config.projectPath, tools, run, { tempDirectory, log: services.log, excludes: config.excludes, nugetCredentials: config.nugetCredentials })
-      : config.environment === 'netframework'
-        ? frameworkInstaller.install(config.projectPath, tools, run, { tempDirectory, log: services.log, excludes: config.excludes, nugetCredentials: config.nugetCredentials })
-        : config.environment === 'combined'
-          ? combinedInstaller.install(config.projectPath, tools, run, { tempDirectory, log: services.log, excludes: config.excludes, npmCredentials: config.npmCredentials, nugetCredentials: config.nugetCredentials })
-          : javascriptInstaller.install(config.projectPath, tools, run, { tempDirectory, log: services.log, npmCredentials: config.npmCredentials, sourceRoot: config.projectPath }));
+  const tools = await stage('工具準備', () =>
+    (services.prepare ?? prepareTools)(
+      { nodeVersion: config.nodeVersion, cdxgenVersion: config.cdxgenVersion, tempDirectory },
+      run,
+      services.log,
+    ),
+  );
+  await stage('依賴安裝', () => installDependencies(config, tools, run, tempDirectory, services));
   const outputPath = join(tempDirectory, 'sbom', 'bom.json');
   await mkdir(join(tempDirectory, 'sbom'), { recursive: true });
-  await stage('SBOM 產生', () => (services.generate ?? generateSbom)({ config, tools, outputPath }, run));
-  const sbom = await stage('SBOM 驗證', () => (services.validate ?? validateSbom)(outputPath, config.specVersion));
+  await stage('SBOM 產生', () =>
+    (services.generate ?? generateSbom)({ config, tools, outputPath }, run),
+  );
+  const sbom = await stage('SBOM 驗證', () =>
+    (services.validate ?? validateSbom)(outputPath, config.specVersion),
+  );
   services.log(`CycloneDX ${config.specVersion} 驗證通過；組件數：${sbom.componentCount}。`);
   let uploadError: unknown;
   if (config.uploadToDt) {
     try {
-      await stage('DT 上傳', () => services.upload ? services.upload(sbom) : uploadToDependencyTrack(sbom, config.dt!, services.log));
-    } catch (error) { uploadError = error; }
+      await stage('DT 上傳', () =>
+        services.upload
+          ? services.upload(sbom)
+          : uploadToDependencyTrack(sbom, config.dt!, services.log),
+      );
+    } catch (error) {
+      uploadError = error;
+    }
   }
   await stage('成品發佈', () => services.publish(sbom));
-  if (uploadError) throw uploadError;
+  if (uploadError) {
+    throw uploadError;
+  }
   return sbom;
 }
