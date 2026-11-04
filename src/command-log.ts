@@ -2,6 +2,22 @@ import { agentNetworkCredentials } from './azure-secret-inputs';
 import type { TaskConfig } from './config';
 import type { ProcessRunner } from './process';
 
+// 三種顯示情境共用秘密旗標名稱，各自保留字串內聯／完整旗標／argv 指派的邊界。
+const SECRET_FLAG_NAME_PATTERN =
+  'api[-_]?key|password|passwd|token|access[-_]?token|client[-_]?secret|_authToken|_auth';
+const INLINE_SECRET_FLAG = new RegExp(
+  String.raw`((?:--?|\/)(?:${SECRET_FLAG_NAME_PATTERN})[:=])[^\s]*`,
+  'gi',
+);
+const STANDALONE_SECRET_FLAG = new RegExp(
+  String.raw`^(?:--?|\/)(?:${SECRET_FLAG_NAME_PATTERN})$`,
+  'i',
+);
+const SECRET_FLAG_ASSIGNMENT = new RegExp(
+  String.raw`^((?:--?|\/)?(?:${SECRET_FLAG_NAME_PATTERN})[:=])`,
+  'i',
+);
+
 /** 收集已知帳密及常見傳輸編碼，只供記憶體內遮罩，不列印環境內容。 */
 function secretVariants(values: string[]): string[] {
   const variants = new Set<string>();
@@ -106,10 +122,7 @@ export function commandRedactor(
         /((?:authorization|proxy-authorization)\s*[:=]\s*(?:Basic|Bearer)\s+)[^\s"']+/gi,
         '$1***',
       )
-      .replace(
-        /((?:--?|\/)(?:api[-_]?key|password|passwd|token|access[-_]?token|client[-_]?secret|_authToken|_auth)[:=])[^\s]*/gi,
-        '$1***',
-      );
+      .replace(INLINE_SECRET_FLAG, '$1***');
 
     return safe;
   };
@@ -134,16 +147,11 @@ export function withCommandLogging(
     const args = command.args.map((argument) => {
       const hidden = hideNext;
 
-      hideNext =
-        /^(?:--?|\/)(?:api[-_]?key|password|passwd|token|access[-_]?token|client[-_]?secret|_authToken|_auth)$/i.test(
-          argument,
-        );
+      hideNext = STANDALONE_SECRET_FLAG.test(argument);
 
       if (hidden) return '***';
 
-      const assignment = argument.match(
-        /^((?:--?|\/)?(?:api[-_]?key|password|passwd|token|access[-_]?token|client[-_]?secret|_authToken|_auth)[:=])/i,
-      );
+      const assignment = argument.match(SECRET_FLAG_ASSIGNMENT);
 
       return assignment ? `${assignment[1]}***` : redact(argument, command.env);
     });

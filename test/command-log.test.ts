@@ -34,14 +34,16 @@ test('Task-side diagnostics redact config, encoded, URI, inherited and child cre
   const password = '密碼 " / + sensitive-428', username = 'account-sensitive-428', token = 'token-sensitive-428', key = 'dt-sensitive-428';
   const redact = commandRedactor({ dt: { apiUrl: 'https://dt.example.test', projectUuid: 'd40ce445-3566-49d5-bd8d-2601d73cf0d4', apiKey: key, skipTlsCertificateCheck: false }, npmCredentials: [{ registry: 'https://npm.example.test', token }], nugetCredentials: [{ source: 'Private', url: 'https://nuget.example.test', username, password }] });
   const secrets = [password, username, token, key, `${username}:${password}`, Buffer.from(password).toString('base64'), Buffer.from(`${username}:${password}`).toString('base64'), encodeURIComponent(password), encodeURIComponent(encodeURIComponent(password))];
-  const argumentsBefore = [...secrets, '--api-key', 'unknown flag secret', '--password=unknown inline secret', 'https://unknown:unregistered@host.test/path?token=another-secret', 'Authorization: Bearer unknown-header-secret'];
+  const argumentsBefore = [...secrets, '--api-key', 'unknown flag secret', '--password=unknown inline secret', 'https://unknown:unregistered@host.test/path?token=another-secret', 'Authorization: Bearer unknown-header-secret', '--ACCESS_TOKEN', 'alternate-flag-sensitive', '/CLIENT_secret:assigned-sensitive', 'wrapper --_AUTHTOKEN=embedded-sensitive tail', '--tokenizer', 'public value'];
   const command: Command = { executable: process.execPath, cwd: 'cwd Unicode 正體中文', args: argumentsBefore, env: { PRIVATE_TOKEN: 'child-token-secret', HTTPS_PROXY: 'http://proxy-user:proxy-password@host.test', FETCH_LICENSE: 'false', CDXGEN_NO_CACHE: 'true' } };
   command.args.push('child-token-secret', 'proxy-user', 'proxy-password');
   const snapshot = structuredClone(command);
   const logs: string[] = [];
   await assert.rejects(withCommandLogging(async original => { assert.equal(original, command); throw new Error('safe failure'); }, message => logs.push(message), redact)(command), /safe failure/);
-  for (const secret of [...secrets, 'unknown flag secret', 'unknown inline secret', 'unregistered', 'another-secret', 'unknown-header-secret', 'child-token-secret', 'proxy-user', 'proxy-password']) assert.ok(!logs[0].includes(secret), `Diagnostic leaked a synthetic credential`);
+  for (const secret of [...secrets, 'unknown flag secret', 'unknown inline secret', 'unregistered', 'another-secret', 'unknown-header-secret', 'alternate-flag-sensitive', 'assigned-sensitive', 'embedded-sensitive', 'child-token-secret', 'proxy-user', 'proxy-password']) assert.ok(!logs[0].includes(secret), `Diagnostic leaked a synthetic credential`);
   assert.match(logs[0], /\*\*\*/);
+  const displayed = JSON.parse(logs[0].slice(10)).argv;
+  for (const value of ['--ACCESS_TOKEN', '/CLIENT_secret:***', 'wrapper --_AUTHTOKEN=*** tail', '--tokenizer', 'public value']) assert.ok(displayed.includes(value));
   assert.deepEqual(JSON.parse(logs[0].slice(10)).scan, { FETCH_LICENSE: 'false', CDXGEN_NO_CACHE: 'true' });
   assert.doesNotMatch(logs[0], /PRIVATE_TOKEN|HTTPS_PROXY/);
   assert.deepEqual(command, snapshot);

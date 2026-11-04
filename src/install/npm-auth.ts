@@ -327,7 +327,7 @@ export async function checkProjectAuthentication(
     return;
   }
 
-  // 先核對實體來源邊界，再建立只有本次安裝可使用的認證目錄。
+  // 先驗證認證格式並整理明確環境映射，供後續設定層的優先序與來源檢查共用。
   const credentials = validateNpmCredentials(options.npmCredentials);
   const mappings = new Map(
     credentials.flatMap((credential) =>
