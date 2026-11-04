@@ -25,18 +25,9 @@
     "14",
     "15"
   ],
-  "activeWorktrees": [
-    {
-      "ticket": "15",
-      "phase": "spec-security-fixing",
-      "branch": "ticket/15-command-log-safety",
-      "worktree": "../.sbom-pilot-worktrees/15-command-log-safety",
-      "checkpoint": ".scratch/sbom-task/checkpoints/15.md",
-      "candidate": "7ddf4a0"
-    }
-  ],
-  "reviewStatus": "ticket15-spec-security-fix-in-progress",
-  "reviewHead": "8b6969ded4884cb0a4d759dc70aabb2e246715dd",
+  "activeWorktrees": [],
+  "reviewStatus": "ticket15-review-closed",
+  "reviewHead": "c19b354537dff8fc1b4bb3e35c71a322f1d30c0b",
   "externalValidation": [
     "live Azure Services/Server installation, Classic/YAML UI, artifact download and asynchronous failure propagation",
     "real public Publisher ID confirmation",
@@ -46,7 +37,7 @@
   ],
   "notesDirectory": "../.sbom-pilot-notes",
   "recheckHead": "917afff17e06795113fb31d6d05b28167ec1d393",
-  "localImplementationStatus": "ticket15-spec-security-fix",
+  "localImplementationStatus": "ticket15-complete-ticket16-ready",
   "cleanupStatus": "worktree-registrations-removed; five residual directories retained after deletion errors and policy rejection",
   "cleanupReport": ".scratch/sbom-task/reviews/worktree-cleanup.md"
 }
