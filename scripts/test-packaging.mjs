@@ -51,6 +51,27 @@ test('Marketplace CLI creates private/public bundles and rejects stale, mismatch
   assert.match(tamper.stderr, /VSIX已被修改/);
   await writeFile(privatePath, privateBytes);
   run(['scripts/packaging.mjs', 'submission', '--private']);
+  // 新build本身有效，也不能把其來源收據套給之前的VSIX。
+  const readme = join(fixture, 'README.md'), readmeBytes = await readFile(readme);
+  await writeFile(readme, Buffer.concat([readmeBytes, Buffer.from('\n')]));
+  run(['scripts/build.mjs']);
+  const stalePackage = run(['scripts/packaging.mjs', 'submission', '--private'], false);
+  assert.match(stalePackage.stderr, /封裝來源已變/);
+  await writeFile(readme, readmeBytes);
+  run(['scripts/build.mjs']);
+  // 即使sidecar的VSIX hash被一併改寫，archive實際payload仍須匹配來源。
+  const receiptPath = `${privatePath}.provenance.json`, receiptBytes = await readFile(receiptPath);
+  const tamperedZip = await JSZip.loadAsync(privateBytes);
+  tamperedZip.file('marketplace/overview.md', 'tampered overview');
+  const tamperedBytes = await tamperedZip.generateAsync({ type: 'nodebuffer' });
+  const tamperedReceipt = JSON.parse(receiptBytes.toString());
+  tamperedReceipt.vsix.sha256 = hash(tamperedBytes);
+  await writeFile(privatePath, tamperedBytes);
+  await writeFile(receiptPath, JSON.stringify(tamperedReceipt));
+  const payloadMismatch = run(['scripts/packaging.mjs', 'submission', '--private'], false);
+  assert.match(payloadMismatch.stderr, /VSIX內容不符目前輸入/);
+  await writeFile(privatePath, privateBytes);
+  await writeFile(receiptPath, receiptBytes);
   run(['scripts/packaging.mjs', 'submission'], false);
   run(['scripts/packaging.mjs', 'submission', '--preview'], false);
   run(['scripts/packaging.mjs', 'package']);

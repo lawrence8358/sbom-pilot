@@ -1,6 +1,6 @@
 # Marketplace 包裝與上架
 
-本流程準備 Azure DevOps Marketplace 的本機交付資料。所有 `packaging:*` 命令都不連線上傳、不分享組織、不公開擴充功能。實際 Publisher ID／公開 Repo URL 尚未提供；先用 placeholder 預覽即可完成版面與內容檢查。
+本流程準備 Azure DevOps Marketplace 的本機交付資料。所有 `packaging:*` 命令都不會上傳至Marketplace；組織分享與公開由維護者在portal操作。工具安裝仍可能從npm來源下載相依。實際 Publisher ID／公開 Repo URL 尚未提供；先用 placeholder 預覽即可完成版面與內容檢查。
 
 ## 工具準備與檢查
 
@@ -46,7 +46,7 @@ npm run packaging:package -- --private
 
 建置收據把來源、scripts、tests、鎖檔、manifest、文件、素材與dist位元組綁定；包裝收據另保存模式／身分與整個VSIX雜湊，並核對實際archive內容及文件連結。任何輸入新增、刪除、更動、舊build配新文件、VSIX竄改或private/public不符，都必須重新 `packaging:package`。這是本機完整性／新鮮度檢查，不是簽章或可信建置證明；保護本機收據及工作目錄仍是維護者責任。
 
-相容命令 `npm run package:dev`／`npm run package:release`仍build並把VSIX放在 `packages/`根目錄，供既有測試流程使用；`npm run package:release -- --private`不會把參數轉入內層package script，實際Publisher私有測試請使用新的 `packaging:package -- --private`，或build後直接 `node scripts/package.mjs --private`。舊命令不建立submission。`npm run test:package`預設驗證舊路徑；新包可用 `node scripts/verify-package.mjs --vsix <path> --node <absolute-node-path>`。
+相容命令 `npm run package:dev`／`npm run package:release`仍build並把VSIX放在 `packages/`根目錄，供既有測試流程使用；實際Publisher私有測試建議使用新的 `packaging:package -- --private`，一次產生交付資料。舊命令不建立submission。`npm run test:package`預設驗證舊路徑；新包可用 `node scripts/verify-package.mjs --vsix <path> --node <absolute-node-path>`。
 
 ## 在portal私有上傳與測試
 
@@ -58,6 +58,6 @@ npm run packaging:package -- --private
 
 ## 公開與後續改版
 
-私有測試及外部門檻完成後，再取得維護者公開授權。`packaging:package`以實際身分產生 `public:true`；portal管理者核對公開Repo、overview、圖片權利、MIT及第三方授權後手動上傳／公開。Publisher資格與Marketplace審核依Microsoft當時要求，工具不保證審核結果。[manifest參考](https://learn.microsoft.com/en-us/azure/devops/extend/develop/manifest?view=azure-devops)說明icon、content.details與public flag。
+完成私有測試及外部驗收後，由維護者在portal公開。`packaging:package`以實際身分產生 `public:true`；portal管理者核對公開Repo、overview、圖片權利、MIT及第三方授權後手動上傳／公開。Publisher資格與Marketplace審核依Microsoft當時要求，工具不保證審核結果。[manifest參考](https://learn.microsoft.com/en-us/azure/devops/extend/develop/manifest?view=azure-devops)說明icon、content.details與public flag。
 
 每次更新同步增加 `package.json`、`package-lock.json`根與root package版本、`src/task.json`、`vss-extension.json`，更新CHANGELOG，再跑完整測試、獨立審查與正式包裝。保留Task GUID與名稱；Task major決定YAML的 `SbomPilot@0`等版本參照。在portal對既有擴充功能選 **Update**上傳新VSIX，避免刪除後重建；先驗證私有測試，再更新公開版。保留本次交付資料與Azure測試證據。
