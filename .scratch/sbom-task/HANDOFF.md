@@ -1,10 +1,10 @@
 # SBOM Pilot 續接入口
 
-## 2026-11-04 有效續接位置
+## 2026-11-04 有效續接位置：工單16
 
-工單15的Standards兩項已在7ddf4a0修正並獨立複查；Spec新發現P2日誌內Azure logging command前綴可注入。唯一worker在 `D:/Project/Git/.sbom-pilot-worktrees/15-command-log-safety`、`ticket/15-command-log-safety` 集中修正，以該處checkpoint15為準。先完成提交／獨立整合／複查，再啟動16。舊15原候選worktree已整合保留，不再當active。
+工單15已在39584bc結案：Standards兩項修正7ddf4a0、安全P2修正8993b98／merge c19b354，兩軸獨立複查未解決0。Windows20/24各116測試、175中文說明、spacing0與四組入口檢查全過；Linux本次targeted18，歷史三管理器Angular矩陣保留。見reviews/15-report.md。兩個15 worktree皆已整合且乾淨，暫保留，不是active。
 
-使用者另授權工單16 Marketplace指令與上架素材；issue16與checkpoint16已建立、images一次性生成素材已保存，但包裝程式尚未實作。Publisher是否沿用LawrenceShen與公開Repo URL未獲具體答覆，預覽可先完成，不自動發佈。root有這些16準備WIP，保留。
+使用者另授權工單16 Marketplace指令與上架素材；issue16與checkpoint16已建立、images一次性生成素材已保存。實作工作區 `D:/Project/Git/.sbom-pilot-worktrees/16-marketplace-packaging`、branch `ticket/16-marketplace-packaging`，先讀該處checkpoint16。Publisher是否沿用LawrenceShen與公開Repo URL未獲具體答覆，預覽可先完成，不自動發佈。打包程式尚待實作；只有一位worker，可中斷後接續同一WIP。
 
 權限已從managed恢復danger-full-access/never，先前提交7ddf4a0確實成功；不要重提相同權限問題。原先刪除被拒的殘留／temp仍不觸碰。
 

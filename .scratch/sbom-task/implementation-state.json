@@ -25,7 +25,15 @@
     "14",
     "15"
   ],
-  "activeWorktrees": [],
+  "activeWorktrees": [
+    {
+      "ticket": "16",
+      "phase": "implementation-preparation",
+      "branch": "ticket/16-marketplace-packaging",
+      "worktree": "../.sbom-pilot-worktrees/16-marketplace-packaging",
+      "checkpoint": ".scratch/sbom-task/checkpoints/16.md"
+    }
+  ],
   "reviewStatus": "ticket15-review-closed",
   "reviewHead": "c19b354537dff8fc1b4bb3e35c71a322f1d30c0b",
   "externalValidation": [
@@ -37,7 +45,7 @@
   ],
   "notesDirectory": "../.sbom-pilot-notes",
   "recheckHead": "917afff17e06795113fb31d6d05b28167ec1d393",
-  "localImplementationStatus": "ticket15-complete-ticket16-ready",
+  "localImplementationStatus": "ticket16-implementation",
   "cleanupStatus": "worktree-registrations-removed; five residual directories retained after deletion errors and policy rejection",
   "cleanupReport": ".scratch/sbom-task/reviews/worktree-cleanup.md"
 }

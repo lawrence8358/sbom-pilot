@@ -145,6 +145,8 @@ Implementation: tickets01-14 complete locally; ticket15 in progress; external ac
 
 ## Comments
 
+- 2026-11-04 追加工單16：參考 AI-PR-AutoReview，新增可重跑 packaging 指令、正式及預覽 VSIX／上架資料輸出、一次性保存 icon／hero、Marketplace 操作文件。保留實際 Publisher／公開 Repo gate；不自動發佈、不捏造帳號與網址。詳見 [工單16](issues/16-marketplace-packaging-assets.md)。
+
 - 2026-11-03 追加工單15：src具名函式之間與內部責任區塊必須保留空白行；前端擴為JavaScript/TypeScript的npm／Yarn／pnpm專案（含Angular等，保留vue相容）；Task顯示真實執行檔／argv／cwd與可核對掃描設定，秘密遮罩，DT原生API方法／URL明確記錄。不得為日誌改動實際命令、洩漏認證或假造上傳CLI。詳見issues/15-readability-generic-frontend-command-logging.md。
 
 - 2026-11-03 追加實作要求：README.md 與 README-Dev.md 須改為人類易讀的導讀文件；README-Dev 加入實際執行流程的 Mermaid 圖。src 下 TypeScript 須補中文函式用途說明，統一換行／排版，並拆解複雜邏輯。詳見 [工單 13](issues/13-documentation-and-source-readability.md)；保留原需求與執行行為，於最終審查前完成。
