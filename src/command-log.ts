@@ -128,10 +128,10 @@ export function commandRedactor(
   };
 }
 
-/** 以 JSON 保留參數邊界並跳脫所有控制字元，避免單行日誌被注入額外命令。 */
+/** 以 JSON 保留參數邊界，跳脫控制字元及井號，阻擋 Agent 在單行任意位置辨識控制命令。 */
 export function diagnosticJson(value: unknown): string {
   return JSON.stringify(value).replace(
-    /[\u007f-\u009f\u2028\u2029]/g,
+    /[#\u007f-\u009f\u2028\u2029]/g,
     (character) => `\\u${character.charCodeAt(0).toString(16).padStart(4, '0')}`,
   );
 }

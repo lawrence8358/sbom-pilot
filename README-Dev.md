@@ -69,7 +69,7 @@ flowchart TD
 
 DT 錯誤會保留到有效成品發佈請求之後再拋出。入口發出 `artifact.upload` 時只代表請求已排入 Agent 佇列；上圖的 Task 成功不代表 Azure 已完成非同步上傳。有效檔案必須保留到工作清理，不能在入口 finally 刪除。成品請求本身失敗也必須讓 Task 失敗。
 
-命令診斷在 `runWorkflow` 統一包裝 ProcessRunner，所以注入的測試 runner 與實際 runner 都收到原始 Command；顯示副本先遮罩再 JSON 序列化，不排序 import、不啟用 shell。僅顯示兩個掃描開關，不列印整份環境或子程序輸出。DT 在原生 HTTP transport 前另記真實 PUT URL 與遮罩 Key，沒有增加 cdxgen 認證參數。前端 canonical 值為 `javascript`，`vue` 在驗證後正規化成同一路徑。
+命令診斷在 `runWorkflow` 統一包裝 ProcessRunner，所以注入的測試 runner 與實際 runner 都收到原始 Command；顯示副本先遮罩再 JSON 序列化，不排序 import、不啟用 shell。命令與 DT 共用 `diagnosticJson`，將 `#` 寫成 `\u0023`，阻擋 Agent 在整行任意位置辨識 `##vso[`／`##[`；解析 JSON 後仍是原來的非秘密值。僅顯示兩個掃描開關，不列印整份環境或子程序輸出。DT 在原生 HTTP transport 前另記真實 PUT URL 與遮罩 Key，沒有增加 cdxgen 認證參數。前端 canonical 值為 `javascript`，`vue` 在驗證後正規化成同一路徑。
 
 ## 從哪個模組開始讀
 

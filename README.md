@@ -159,7 +159,7 @@ Classic 勾選「推送到 DT」後顯示對應欄位。Task 將已驗證 SBOM �
 
 ## 核對執行命令
 
-每個工具子程序開始前，Task 會以單行 `[command]` JSON 顯示實際 `executable`、完整 `argv` 清單與 `cwd`。JSON 保留空參數、空白、引號、Unicode 與 glob 的參數邊界；控制字元以跳脫表示。執行仍使用原始參數及 `shell: false`，日誌不是可直接貼入 shell 的命令字串。掃描時另列 `FETCH_LICENSE`／`CDXGEN_NO_CACHE`，可核對 `--required-only`、`--spec-version`、`--exclude` 與 `--install-deps false`。
+每個工具子程序開始前，Task 會以單行 `[command]` JSON 顯示實際 `executable`、完整 `argv` 清單與 `cwd`。JSON 保留空參數、空白、引號、Unicode 與 glob 的參數邊界；控制字元以跳脫表示，`#` 寫成 `\u0023`，避免 Azure Agent 將顯示內容當成日誌控制命令；`JSON.parse` 可還原非秘密原值。執行仍使用原始參數及 `shell: false`，日誌不是可直接貼入 shell 的命令字串。掃描時另列 `FETCH_LICENSE`／`CDXGEN_NO_CACHE`，可核對 `--required-only`、`--spec-version`、`--exclude` 與 `--install-deps false`。
 
 已知 DT、npm、NuGet 及代理帳密、常見編碼、URL userinfo 與認證旗標值會在 Task 輸出前改為 `***`；遮罩來源包含已驗證的 Task 認證設定及相關子程序／代理認證；其餘參數與路徑會顯示。Task 不列印整份環境或原始子程序 stdout／stderr。Agent 的 setsecret 控制命令仍用於提前登錄遮罩。
 
