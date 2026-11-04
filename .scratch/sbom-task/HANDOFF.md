@@ -1,5 +1,13 @@
 # SBOM Pilot 續接入口
 
+## 2026-11-04 有效續接位置
+
+工單15的Standards兩項已在7ddf4a0修正並獨立複查；Spec新發現P2日誌內Azure logging command前綴可注入。唯一worker在 `D:/Project/Git/.sbom-pilot-worktrees/15-command-log-safety`、`ticket/15-command-log-safety` 集中修正，以該處checkpoint15為準。先完成提交／獨立整合／複查，再啟動16。舊15原候選worktree已整合保留，不再當active。
+
+使用者另授權工單16 Marketplace指令與上架素材；issue16與checkpoint16已建立、images一次性生成素材已保存，但包裝程式尚未實作。Publisher是否沿用LawrenceShen與公開Repo URL未獲具體答覆，預覽可先完成，不自動發佈。root有這些16準備WIP，保留。
+
+權限已從managed恢復danger-full-access/never，先前提交7ddf4a0確實成功；不要重提相同權限問題。原先刪除被拒的殘留／temp仍不觸碰。
+
 ## 最新追加：工單15進行中
 
 使用者新授權三項調整：函式／責任區塊空白行、通用JavaScript/TypeScript前端（Angular等，npm/Yarn/pnpm，vue相容）、console顯示實際命令及cwd（認證遮罩），另記錄真實DT HTTP方法／URL。已重讀需求.md。唯一worker在 `D:/Project/Git/.sbom-pilot-worktrees/15-frontend-command-logging`、branch `ticket/15-frontend-command-logging`；先讀issue15及該處checkpoint15，再接續。原01–14成果保留，以下「完成」為前一輪歷史；現在仍有15待實作／驗證／獨立整合／複查，不可沿用舊完成狀態。
