@@ -28,7 +28,7 @@
   "activeWorktrees": [
     {
       "ticket": "16",
-      "phase": "implementation-preparation",
+      "phase": "implementation",
       "branch": "ticket/16-marketplace-packaging",
       "worktree": "../.sbom-pilot-worktrees/16-marketplace-packaging",
       "checkpoint": ".scratch/sbom-task/checkpoints/16.md"
