@@ -25,6 +25,8 @@
 
 套件／SBOM hash、實際命令及資源記錄於交付 checkpoint；可重跑命令見 [README-Dev](../README-Dev.md)。既有完整認證矩陣見 [npm](npm-auth.md)、[NuGet](nuget-auth.md)，共同根目錄規則見 [combined](combined.md)。沒有將先前 SDK 預裝映像當作冷 SDK 證據。
 
+本輪追加：工單15已在 Windows／Linux x64 的 Node20／24 通過完整114項測試、175項中文說明、型別／格式／間距、建置及隔離 dist／VSIX 檢查；真實解包流程另涵蓋兩平台 Angular npm、Yarn4 PnP、原生 pnpm12、私有 combined 與 .NET Core／DT403 成品保留。其後命令日誌安全修正已通過 Windows Node20.20.2／24.22.1 完整116項測試，及 Linux Node24.22.2 的命令／DT 相關18項回歸；本次未重跑管理器下載／還原矩陣，既有真實流程證據與外部 UNVERIFIED 範圍分開保留。
+
 Docker Node24 image ID：sha256:e7add2a490bb17d97b485b8641bd88455fff7839ade0f5eba493c3508124d413；Node20：sha256:8f693eaa7e0a8e71560c9a82b55fd54c2ae920a2ba5d2cde28bac7d1c01c9ba5。容器是在本機 Docker 執行，不是真實 Azure Agent。
 
 [官方 Server／Agent 配對表](https://learn.microsoft.com/en-us/azure/devops/pipelines/agents/v4-agent?view=azure-devops#does-azure-devops-server-support-the-4x-agent) 指定2022.2配3.238.0；[Agent v3.238.0](https://github.com/microsoft/azure-pipelines-agent/blob/v3.238.0/src/Agent.Worker/Handlers/NodeHandler.cs) 含 Node20_1，兩者只支持來源候選。[Task schema](https://github.com/microsoft/azure-pipelines-task-lib/blob/master/tasks.schema.json) 允許雙 handler；[runner 政策](https://learn.microsoft.com/en-us/azure/devops/pipelines/agents/nodejs-runners?view=azure-devops) 可能變動，發佈前重查。

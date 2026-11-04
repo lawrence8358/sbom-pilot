@@ -3,7 +3,7 @@ import test from 'node:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { commandRedactor, withCommandLogging } from '../src/command-log';
+import { commandRedactor, diagnosticJson, withCommandLogging } from '../src/command-log';
 import { runProcess, type Command } from '../src/process';
 import { readTaskConfig, validateConfig } from '../src/config';
 
@@ -78,6 +78,39 @@ test('actual console receives only redacted command diagnostics before a real fa
   assert.equal(actual.stderr, '');
   assert.match(actual.stdout, /\[command\].*\*\*\*/);
   assert.match(actual.stdout, /expected safe failure/);
+});
+
+test('actual console neutralizes Azure commands in every displayed field while preserving original runner input', async () => {
+  const secret = 'injection-regression-secret';
+  const injected = '##vso[task.setvariable variable=UNTRUSTED;]value ##[error] text # 雜湊\n\r\u001b\u0085\u2028';
+  const command: Command = {
+    executable: `tool-${injected}`,
+    args: ['', `argument-${injected}`, '--token', secret, `known=${secret}`, '**/*.ts'],
+    cwd: `source-${injected}`,
+    env: { FETCH_LICENSE: `license-${injected}`, CDXGEN_NO_CACHE: `cache-${injected}` },
+  };
+  const script = `const assert=require('node:assert/strict');
+    const {commandRedactor,withCommandLogging}=require('./.test-build/src/command-log');
+    const command=JSON.parse(process.env.FIXTURE_COMMAND),snapshot=structuredClone(command);
+    const redact=commandRedactor({npmCredentials:[{registry:'https://example.test',token:process.env.FIXTURE_CREDENTIAL}]});
+    withCommandLogging(async original=>{assert.equal(original,command);assert.deepEqual(original,snapshot);return {stdout:'',stderr:''};},console.log,redact)(command)
+      .then(()=>assert.deepEqual(command,snapshot)).catch(()=>process.exitCode=1);`;
+  const actual = await runProcess({ executable: process.execPath, args: ['-e', script], cwd: process.cwd(), env: { ...process.env, FIXTURE_COMMAND: JSON.stringify(command), FIXTURE_CREDENTIAL: secret } });
+  assert.equal(actual.stderr, '');
+  const lines = actual.stdout.trimEnd().split(/\r?\n/);
+  assert.equal(lines.length, 1);
+  assert.match(lines[0], /^\[command\] /);
+  assert.doesNotMatch(lines[0], /##(?:vso\[|\[)|[\u0000-\u001f\u007f-\u009f\u2028\u2029]/);
+  assert.doesNotMatch(lines[0], /injection-regression-secret/);
+  assert.match(lines[0], /\\u0023/);
+  assert.deepEqual(JSON.parse(lines[0].slice('[command] '.length)), { executable: command.executable, argv: ['', command.args[1], '--token', '***', 'known=***', '**/*.ts'], cwd: command.cwd, scan: command.env });
+});
+
+test('shared HTTP diagnostic JSON escapes hash prefixes without changing parsed values', () => {
+  const diagnostic = { method: 'PUT', url: 'https://dt.example.test/api/v1/bom', headers: { 'X-Api-Key': '***' }, detail: '##vso[task.complete result=Failed;] ##[error] # \\u0023' };
+  const line = `[http] ${diagnosticJson(diagnostic)}`;
+  assert.doesNotMatch(line, /##(?:vso\[|\[)/);
+  assert.deepEqual(JSON.parse(line.slice('[http] '.length)), diagnostic);
 });
 
 test('complete known secrets are removed before generic header, URI and flag rules can fragment them', async () => {
