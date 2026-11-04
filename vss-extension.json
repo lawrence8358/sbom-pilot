@@ -13,9 +13,10 @@
   "categories": [
     "Azure Pipelines"
   ],
+  "icons": { "default": "images/extension-icon.png" },
   "content": {
     "details": {
-      "path": "README.md"
+      "path": "marketplace/overview.md"
     },
     "license": {
       "path": "LICENSE"
@@ -25,6 +26,10 @@
     {
       "path": "dist"
     },
+    { "path": "README.md", "addressable": true },
+    { "path": "marketplace", "addressable": true },
+    { "path": "images", "addressable": true },
+    { "path": "docs/marketplace.md", "addressable": true },
     {
       "path": "THIRD-PARTY-NOTICES.md"
     },
