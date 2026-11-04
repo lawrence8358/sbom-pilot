@@ -168,6 +168,21 @@ docker cp sbom-pilot-final-repro:/work/.smoke/final-delivery/evidence.json .smok
 
 ## 版本與公開發佈準備
 
+完整操作見 [Marketplace 包裝與上架](docs/marketplace.md)。新流程以鎖定的本機 tfx，一次產出VSIX與可交付上架資料：
+
+```powershell
+npm run packaging:install-tool
+npm run packaging:check -- --preview
+npm run packaging:preview
+# 設定下方的實際身分後：
+npm run packaging:check
+npm run packaging:package -- --private
+npm run packaging:package
+npm run packaging:submission
+```
+
+`packaging:preview`使用明確標示的私有placeholder；`packaging:package -- --private`使用實際Publisher供測試組織分享；不帶flag產生public包。各自輸出 `packages/<mode>/`及獨立 `packages/submission/<mode>/`，包含該次VSIX、listing／overview、有效manifest、圖片、授權／操作文件及SHA256。`packaging:submission [--private]`只整理與目前來源／dist／身分吻合的正式包；來源、scripts、鎖檔、文件、素材或VSIX變動時拒絕舊產物。所有命令都不自動上傳。portal需手動選New extension→Azure DevOps、私有分享驗收後再公開，改版須同步增加版本；細節與官方來源見上架文件。
+
 VSIX 位於 packages/local-dev-placeholder.sbom-pilot-0.1.0.vsix。package:dev 使用 public:false、Local Development 名稱與 placeholder publisher。實際 Publisher／公開 Repo URL 尚未提供，不捏造 Marketplace 連結。
 
 確認 Publisher 權限、公開 HTTPS Repo、版本說明及 [live 驗收](docs/compatibility.md) 後設定：

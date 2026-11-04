@@ -1,5 +1,7 @@
 # SBOM Pilot
 
+[Marketplace 產品介紹](marketplace/overview.md) · [包裝與上架操作](docs/marketplace.md)
+
 在 Azure Pipelines 加入一個 **SBOM Pilot — Generate & Upload SBOM** Task，即可準備工具、安裝／還原依賴，並產生交付產品的 CycloneDX 1.6 JSON。結果以名稱為 `SBOM` 的 Build Artifact 提供，也可選擇上傳到既有 Dependency-Track（DT）專案。
 
 ## 支援與前置條件

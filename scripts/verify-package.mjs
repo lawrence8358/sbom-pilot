@@ -5,7 +5,14 @@ import { dirname, join, resolve, sep } from 'node:path';
 import assert from 'node:assert/strict';
 import JSZip from 'jszip';
 
-const nodes = process.argv.slice(2).filter((_, index) => process.argv[index + 1] === '--node');
+const nodes = [];
+let vsix;
+for (let index = 2; index < process.argv.length; index += 2) {
+  const flag = process.argv[index], value = process.argv[index + 1];
+  assert.ok(value && ['--node', '--vsix'].includes(flag), '用法：verify-package.mjs [--vsix <path>] [--node <absolute-path>]');
+  if (flag === '--node') nodes.push(value);
+  else vsix = value;
+}
 if (!nodes.length) nodes.push(process.execPath);
 const root = await mkdtemp(join(tmpdir(), 'sbom-shipped-'));
 try {
@@ -13,12 +20,15 @@ try {
   await cp('dist', standalone, { recursive: true });
   const version = JSON.parse(await readFile('vss-extension.json', 'utf8')).version;
   const file = `local-dev-placeholder.sbom-pilot-${version}.vsix`;
-  const archive = await JSZip.loadAsync(await readFile(join('packages', file)));
+  const archive = await JSZip.loadAsync(await readFile(vsix ?? join('packages', file)));
+  assert.ok(archive.file('marketplace/overview.md'));
+  assert.ok(archive.file('images/marketplace-hero.png'));
+  assert.deepEqual(await archive.file('dist/icon.png').async('nodebuffer'), await archive.file('images/extension-icon.png').async('nodebuffer'));
   // Check local Markdown links in shipped user/developer docs against the VSIX,
   // including nested example/config files. Marketplace must not depend on an
   // unpublished repository URL to make these relative links work.
   for (const [name, entry] of Object.entries(archive.files)) {
-    if (entry.dir || !/^(?:README(?:-Dev)?\.md|CHANGELOG\.md|THIRD-PARTY-NOTICES\.md|docs\/[^/]+\.md)$/.test(name)) continue;
+    if (entry.dir || name.startsWith('dist/') || !name.endsWith('.md')) continue;
     const contents = await entry.async('string');
     for (const match of contents.matchAll(/\]\(([^)]+)\)/g)) {
       const target = match[1].split('#')[0];

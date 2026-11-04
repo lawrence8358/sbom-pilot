@@ -1,7 +1,9 @@
 import { build } from 'esbuild';
 import { cp, mkdir, readFile, rm, readdir, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
+import { sourceSnapshot, recordBuild } from './packaging-state.mjs';
 
+const sources = await sourceSnapshot();
 const check = spawnSync(process.execPath, ['node_modules/typescript/bin/tsc', '--noEmit'], { stdio: 'inherit' });
 if (check.status !== 0) process.exit(check.status ?? 1);
 await rm('dist', { recursive: true, force: true });
@@ -26,6 +28,7 @@ for (const output of Object.values(sdk.metafile.outputs)) for (const dependency 
   if (!dependency.external || !isBuiltin(dependency.path)) throw new Error(`Unexpected SDK runtime import: ${dependency.path}`);
 }
 await cp('src/task.json', 'dist/task.json');
+await cp('images/extension-icon.png', 'dist/icon.png');
 await cp('src/schemas', 'dist/schemas', { recursive: true });
 await cp('LICENSE', 'dist/LICENSE');
 await cp('THIRD-PARTY-NOTICES.md', 'dist/THIRD-PARTY-NOTICES.md');
@@ -46,3 +49,4 @@ for (const source of bundledRoots) {
 }
 await writeFile('dist/licenses/manifest.json', JSON.stringify(attributions.sort((a, b) => a.name.localeCompare(b.name) || a.version.localeCompare(b.version)), null, 2));
 await writeFile('dist/licenses/runtime-inputs.json', JSON.stringify({ handler: Object.keys(bundled.metafile.inputs), sdk: Object.keys(sdk.metafile.inputs) }, null, 2));
+await recordBuild(sources);
