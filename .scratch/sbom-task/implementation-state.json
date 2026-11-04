@@ -23,19 +23,22 @@
     "12",
     "13",
     "14",
-    "15"
+    "15",
+    "16"
   ],
   "activeWorktrees": [
     {
       "ticket": "16",
-      "phase": "implementation",
+      "phase": "standards-fix-awaiting-next-quota-cycle",
       "branch": "ticket/16-marketplace-packaging",
       "worktree": "../.sbom-pilot-worktrees/16-marketplace-packaging",
-      "checkpoint": ".scratch/sbom-task/checkpoints/16.md"
+      "checkpoint": ".scratch/sbom-task/checkpoints/16.md",
+      "candidate": "c4212ef8ec0bdebbba3a119e8d85213c5a453d61",
+      "recoveryCommit": "7afb9cb"
     }
   ],
-  "reviewStatus": "ticket15-review-closed",
-  "reviewHead": "c19b354537dff8fc1b4bb3e35c71a322f1d30c0b",
+  "reviewStatus": "ticket16-standards1-spec0-awaiting-next-quota-cycle",
+  "reviewHead": "45058ecf6e8f2503940d83057053dc4046f0ff5c",
   "externalValidation": [
     "live Azure Services/Server installation, Classic/YAML UI, artifact download and asynchronous failure propagation",
     "real public Publisher ID confirmation",
@@ -45,7 +48,7 @@
   ],
   "notesDirectory": "../.sbom-pilot-notes",
   "recheckHead": "917afff17e06795113fb31d6d05b28167ec1d393",
-  "localImplementationStatus": "ticket16-implementation",
+  "localImplementationStatus": "ticket16-functional-complete-review-fix-pending",
   "cleanupStatus": "worktree-registrations-removed; five residual directories retained after deletion errors and policy rejection",
   "cleanupReport": ".scratch/sbom-task/reviews/worktree-cleanup.md"
 }

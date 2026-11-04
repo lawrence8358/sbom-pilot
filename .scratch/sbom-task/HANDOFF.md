@@ -1,10 +1,14 @@
 # SBOM Pilot 續接入口
 
-## 2026-11-04 有效續接位置：工單16
+## 2026-11-05 有效續接位置：16最後審查修正，等下一個額度週期
+
+使用者表示92%額度，若無法完成則等下一週期；續派原worker立即回報workspace out of credits，未開始新修改。因此依使用者條件停止實作，保存乾淨提交。工單16功能／圖片／文件及雙平台全驗證已完成，獨立merge45058ec／整合報告3e48a2d；Spec為0項，Standards只剩1項判斷性P3清單重複尚未修，不能宣告審查結案。
+
+下一步先執行resume，再讀16 worktree的checkpoint最新2026-11-05區塊。own branch新增交接提交7afb9cb，產品仍是c4212ef；無active session。只派一位worker共用19個roots常數、補bash env兩行，跑受影響CLI驗證並獨立整合／複查即可；不重跑已過116項與無關下載矩陣。root目前預覽在 `packages/submission/preview/local-dev-placeholder.sbom-pilot-0.1.0-1wTIKK`，109檔SHA核對通過，可供使用者檢視。兩軸總表見reviews/16-report.md。下方是先前準備脈絡，以本段及最新checkpoint為準。
 
 工單15已在39584bc結案：Standards兩項修正7ddf4a0、安全P2修正8993b98／merge c19b354，兩軸獨立複查未解決0。Windows20/24各116測試、175中文說明、spacing0與四組入口檢查全過；Linux本次targeted18，歷史三管理器Angular矩陣保留。見reviews/15-report.md。兩個15 worktree皆已整合且乾淨，暫保留，不是active。
 
-使用者另授權工單16 Marketplace指令與上架素材；issue16與checkpoint16已建立、images一次性生成素材已保存。實作工作區 `D:/Project/Git/.sbom-pilot-worktrees/16-marketplace-packaging`、branch `ticket/16-marketplace-packaging`，先讀該處checkpoint16。Publisher是否沿用LawrenceShen與公開Repo URL未獲具體答覆，預覽可先完成，不自動發佈。打包程式尚待實作；只有一位worker，可中斷後接續同一WIP。
+使用者另授權工單16 Marketplace指令與上架素材；issue16與checkpoint16已建立、images一次性生成素材已保存。實作工作區 `D:/Project/Git/.sbom-pilot-worktrees/16-marketplace-packaging`、branch `ticket/16-marketplace-packaging`。目前功能已整合，最後小修待額度；Publisher是否沿用LawrenceShen與公開Repo URL未獲具體答覆，不自動發佈。
 
 權限已從managed恢復danger-full-access/never，先前提交7ddf4a0確實成功；不要重提相同權限問題。原先刪除被拒的殘留／temp仍不觸碰。
 
