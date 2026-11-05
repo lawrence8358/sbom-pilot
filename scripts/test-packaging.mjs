@@ -4,13 +4,13 @@ import { cp, mkdir, mkdtemp, readFile, writeFile, readdir } from 'node:fs/promis
 import { resolve, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import JSZip from 'jszip';
-import { hash } from './packaging-state.mjs';
+import { hash, PACKAGING_SOURCE_ROOTS } from './packaging-state.mjs';
 
 /** 真正執行CLI於隔離的合成身分fixture；不使用或覆寫工作目錄的正式產物。 */
 test('Marketplace CLI creates private/public bundles and rejects stale, mismatched and tampered packages', { timeout: 180_000 }, async () => {
   await mkdir('.smoke', { recursive: true });
   const fixture = await mkdtemp(resolve('.smoke', 'marketplace-SYNTHETIC-'));
-  const sourceRoots = ['src', 'scripts', 'test', 'docs', 'examples', 'images', 'marketplace', 'node_modules', 'package.json', 'package-lock.json', 'tsconfig.json', 'vss-extension.json', 'README.md', 'README-Dev.md', 'CHANGELOG.md', 'LICENSE', 'THIRD-PARTY-NOTICES.md', '.gitattributes', '.gitignore'];
+  const sourceRoots = [...PACKAGING_SOURCE_ROOTS, 'node_modules'];
   for (const path of sourceRoots) await cp(path, join(fixture, path), { recursive: true });
   await writeFile(join(fixture, 'SYNTHETIC-FIXTURE.txt'), '僅供包裝測試：Publisher與Repo皆為合成字串，不可當正式交付或上傳。\n');
   const env = { ...process.env, SBOM_PILOT_PUBLISHER: 'sbom-fixture-only', SBOM_PILOT_REPOSITORY_URL: 'https://github.com/sbom-fixture-only/synthetic-never-publish' };

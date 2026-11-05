@@ -36,6 +36,13 @@ npm run packaging:package -- --private
 
 佔位文字須替換才可通過。Repo必須是無帳密、無query／fragment的公開HTTPS URL；程式檢查語法與佔位值，維護者仍須確認實際公開性及Publisher操作權限。不要把帳號、token或PAT寫入manifest。預覽不借用其他專案的Publisher。
 
+Linux／Bash以相同兩個環境變數設定身分，再執行上述npm命令：
+
+```bash
+export SBOM_PILOT_PUBLISHER='<actual-publisher-id>'
+export SBOM_PILOT_REPOSITORY_URL='https://<public-repository-url>'
+```
+
 新流程的VSIX按模式存於 `packages/preview/`、`packages/private/`、`packages/public/`，正式檔名為 `<publisher>.sbom-pilot-<version>.vsix`。每次交付資料另建立獨立目錄，console顯示完整路徑，內含：
 
 - 本次VSIX、`listing.json`、有效的 `vss-extension.json`、實際generated manifests。

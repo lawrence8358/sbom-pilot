@@ -4,6 +4,9 @@ import { lstat, readdir, readFile, mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { validateReleaseIdentity } from './release-identity.mjs';
 
+// 建置快照與隔離CLI fixture共用來源輸入；fixture另加自己的工具相依。
+export const PACKAGING_SOURCE_ROOTS = ['src', 'scripts', 'test', 'docs', 'examples', 'images', 'marketplace', 'package.json', 'package-lock.json', 'tsconfig.json', 'vss-extension.json', 'README.md', 'README-Dev.md', 'CHANGELOG.md', 'LICENSE', 'THIRD-PARTY-NOTICES.md', '.gitattributes', '.gitignore'];
+
 export const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 export const readJson = async path => JSON.parse(await readFile(path, 'utf8'));
 export const writeJson = (path, value) => writeFile(path, `${JSON.stringify(value, null, 2)}\n`);
@@ -20,8 +23,7 @@ export async function filesAt(path) {
 
 /** 以檔名及位元組雜湊記錄建置／文件／素材輸入，排除產物與本機派工紀錄。 */
 export async function sourceSnapshot() {
-  const roots = ['src', 'scripts', 'test', 'docs', 'examples', 'images', 'marketplace', 'package.json', 'package-lock.json', 'tsconfig.json', 'vss-extension.json', 'README.md', 'README-Dev.md', 'CHANGELOG.md', 'LICENSE', 'THIRD-PARTY-NOTICES.md', '.gitattributes', '.gitignore'];
-  return snapshot((await Promise.all(roots.map(filesAt))).flat());
+  return snapshot((await Promise.all(PACKAGING_SOURCE_ROOTS.map(filesAt))).flat());
 }
 
 export async function snapshot(files) {
