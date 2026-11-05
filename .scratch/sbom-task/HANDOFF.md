@@ -1,52 +1,35 @@
 # SBOM Pilot 續接入口
 
-## 使用者已要求繼續（2026-11-05）
+本機開發、文件、Marketplace 準備與獨立審查已完成。沒有待派工的實作或執行中的測試；外部 Azure 驗收與正式發布身分仍未提供。
 
-本輪已重新核對root839af74與16 worktree7afb9cb皆乾淨，執行resume並讀最新checkpoint。現在唯一worker在原16工作區修正共用清單及bash文件；不再等待額度。依下方交接範圍完成小修、受影響驗證與獨立複查，不重跑已通過矩陣。
+## 恢復事實
 
-## 2026-11-05 有效續接位置：16最後審查修正，等下一個額度週期
+先執行 node scripts/resume.mjs，核對 Git 與 implementation-state.json。整合分支為 feature/sbom-pilot，沒有遠端，不 push、不建立 PR。若使用者有新需求，再建立追加工單；不要把舊 checkpoint 中的歷史進行中狀態當成現在的工作。
 
-使用者表示92%額度，若無法完成則等下一週期；續派原worker立即回報workspace out of credits，未開始新修改。因此依使用者條件停止實作，保存乾淨提交。工單16功能／圖片／文件及雙平台全驗證已完成，獨立merge45058ec／整合報告3e48a2d；Spec為0項，Standards只剩1項判斷性P3清單重複尚未修，不能宣告審查結案。
+## 最後完成內容
 
-下一步先執行resume，再讀16 worktree的checkpoint最新2026-11-05區塊。own branch新增交接提交7afb9cb，產品仍是c4212ef；無active session。只派一位worker共用19個roots常數、補bash env兩行，跑受影響CLI驗證並獨立整合／複查即可；不重跑已過116項與無關下載矩陣。root目前預覽在 `packages/submission/preview/local-dev-placeholder.sbom-pilot-0.1.0-1wTIKK`，109檔SHA核對通過，可供使用者檢視。兩軸總表見reviews/16-report.md。下方是先前準備脈絡，以本段及最新checkpoint為準。
+- 01–14：Task 核心、四模式、認證／工具／驗證、README／Dev Mermaid、中文函式用途及重構；審查見 [原總表](reviews/report.md)。
+- 15：函式／責任區塊空白、JavaScript／TypeScript 通用前端與 legacy vue、實際 exe／argv／cwd 及原生 HTTP 診斷。秘密遮罩與 Agent logging command 跳脫已修正；見 [15總表](reviews/15-report.md)。
+- 16：五個 packaging 指令、preview/private/public、一次性 PNG、overview／上架文件、來源／dist／VSIX 及交付雜湊檢查。清單共用及 Bash 設定修正候選 b231a69，獨立 merge f70fe2b；兩軸未解決0，見 [16總表](reviews/16-report.md)。
+- 使用者要求最多一位子代理；所有實作、整合與審查皆序列執行。額度中斷從原 checkpoint 接續，沒有重做舊矩陣。
 
-工單15已在39584bc結案：Standards兩項修正7ddf4a0、安全P2修正8993b98／merge c19b354，兩軸獨立複查未解決0。Windows20/24各116測試、175中文說明、spacing0與四組入口檢查全過；Linux本次targeted18，歷史三管理器Angular矩陣保留。見reviews/15-report.md。兩個15 worktree皆已整合且乾淨，暫保留，不是active。
+## 目前可用產物
 
-使用者另授權工單16 Marketplace指令與上架素材；issue16與checkpoint16已建立、images一次性生成素材已保存。實作工作區 `D:/Project/Git/.sbom-pilot-worktrees/16-marketplace-packaging`、branch `ticket/16-marketplace-packaging`。目前功能已整合，最後小修待額度；Publisher是否沿用LawrenceShen與公開Repo URL未獲具體答覆，不自動發佈。
+- 上架操作：[docs/marketplace.md](../../docs/marketplace.md)，使用者入口：[README](../../README.md)，維護者入口：[README-Dev](../../README-Dev.md)。
+- 最新預覽：packages/submission/preview/local-dev-placeholder.sbom-pilot-0.1.0-EbqmRP，109檔SHA256一致。
+- preview VSIX：packages/preview/local-dev-placeholder.sbom-pilot-0.1.0.vsix，3789348 bytes，SHA256 8cf9d81634b85c75c936d5d39cbc170552fb90dd00ddb6a4e3fda290371c7af9。
+- 舊入口 dev VSIX：packages/local-dev-placeholder.sbom-pilot-0.1.0.vsix；其最新hash見 [最後整合](reviews/16-final-integration.md)。
+- runtime SHA256 c937caf650b101fd888ece192c7391976da4a3fdb401179e668071e4e9a1388f，與工單15相同；PNG原封保存，打包不呼叫AI。
+- 指令：npm run packaging:install-tool；npm run packaging:preview。填入實際 SBOM_PILOT_PUBLISHER 與 SBOM_PILOT_REPOSITORY_URL 後，可用 packaging:package -- --private 或 packaging:package。
 
-權限已從managed恢復danger-full-access/never，先前提交7ddf4a0確實成功；不要重提相同權限問題。原先刪除被拒的殘留／temp仍不觸碰。
+## 驗證與證據
 
-## 最新追加：工單15進行中
+Windows/Linux 本機／Docker 的116測試、175中文用途、spacing0、型別／格式、受影響真實流程與雙Node入口已通過。最後小修只重跑受影響真CLI完整性、雙平台fresh preview及root新舊ZIP Node20/24 probes，沒有把歷史完整矩陣說成本輪重跑。root .smoke/review-15、review-15-safety、review-16、review-16-final 保存精簡證據；[最終檢查點](checkpoints/final.md)及 [16最後整合](reviews/16-final-integration.md)保存版本／命令／hash。
 
-使用者新授權三項調整：函式／責任區塊空白行、通用JavaScript/TypeScript前端（Angular等，npm/Yarn/pnpm，vue相容）、console顯示實際命令及cwd（認證遮罩），另記錄真實DT HTTP方法／URL。已重讀需求.md。唯一worker在 `D:/Project/Git/.sbom-pilot-worktrees/15-frontend-command-logging`、branch `ticket/15-frontend-command-logging`；先讀issue15及該處checkpoint15，再接續。原01–14成果保留，以下「完成」為前一輪歷史；現在仍有15待實作／驗證／獨立整合／複查，不可沿用舊完成狀態。
+## 尚待外部資料與環境
 
-本機開發、文件整理與最終程式碼審查已完成。先執行 `node scripts/resume.mjs`，以 Git 實況與 implementation-state 為準；精確證據見 [最終檢查點](checkpoints/final.md)。
+實際 Publisher ID、公開 Repo URL；真實 Services/Server 安裝、Classic/YAML UI、成品下載與非同步失敗傳播；企業 feeds／Proxy／CA／client certificates、arm64。參考專案的 LawrenceShen 不自動當成本專案身分。以上未驗收，不宣稱已上架或已通過 Microsoft 審核。
 
-## 已完成
+## 清理界線
 
-- 分支 `feature/sbom-pilot`，無遠端；01–14皆已提交、整合及本機驗證。
-- README改為使用者導讀；README-Dev提供開發步驟、模組分工及實際四模式Mermaid流程。
-- src全體TypeScript統一Prettier／LF、中文函式用途說明；170/170具名函式／callable檢查通過。按責任拆解管理器、認證、壓縮檔、網路、SDK／還原及流程分派。
-- 工單14修正註解、共用鎖檔／assets判定、Node cache初始競爭、Windows有界rename重試及正式打包URL驗證；merge `c831001`，最終產品驗證提交 `917afff`。
-- Windows/Linux、Node20/24各108項測試、型別、格式、build、實際dist/VSIX入口與受影響真實流程通過；[整合證據](reviews/14-integration.md)。
-- [兩軸審查總表](reviews/report.md)：Standards初次3項、Spec初次1項均修正並獨立複查；協調追加2項也已修正。原始固定基準 `e3a5bf6ed57b74c519d0d64285f2929d0195688b` 不變。
-
-## 最後收尾
-
-程式、審查與最後核對皆完成，沒有待派工任務。14個工單worktree均已解除Git註冊，只有root工作區仍註冊；分支與提交歷史保留。9個目錄完全移除，03／05／07／09／13有Git刪檔失敗殘留；03直接刪除又被自動審查以blocked by policy拒絕，因此保留五個殘留，不再重試替代刪除。[清理結果](reviews/worktree-cleanup.md)記錄範圍及證據。舊checkpoint所列工作區可能已清理或解除註冊，不代表任務未完成，不要重做工單。
-
-最終開發VSIX位於 `packages/local-dev-placeholder.sbom-pilot-0.1.0.vsix`，443939bytes；SHA-256 `110e443bcc9cfb8e3fa0f974d05939b18db3fc736033f9660df1cbb88eb91e26`。本次去秘密證據另存root忽略目錄 `.smoke/review-14/`，不會隨工單worktree清理消失。
-
-## 仍待外部環境
-
-實際Publisher／公開Repo尚未提供，開發包使用local-dev-placeholder。live Services／Server安裝、Classic／YAML UI、原生成品下載與Agent非同步失敗傳播、arm64及公司feed／企業Proxy/CA尚未驗收。Docker／loopback／本機adapter證據不代替Azure實測；Linux本次SDK預裝與先前冷SDK證據分開記錄。見 [相容矩陣](../../docs/compatibility.md)。
-
-## 固定約束
-
-- 名稱SBOM Pilot／sbom-pilot；Task為SBOM Pilot — Generate & Upload SBOM；MIT，Lawrence Shen；使用「.NET Core」。
-- 同時最多一個子代理，包含實作、合併、審查；不得為續接重新啟動已完成工單或重跑無關矩陣。
-- 保留秘密模組第一載入、physical sourceRoot／認證暫存、鎖檔、assets／nupkg、JSONC ESM alias、單次合併掃描、DT失敗仍交付有效成品與runtime告示。
-- 舊可選診斷暫存 `C:/Users/lawrence/AppData/Local/Temp/sbom-final-GP4o3T` 刪除曾遭自動審查拒絕，理由僅「blocked by policy」；保留，不再嘗試。
-- Linux測試容器與volume保留證據，不做Docker prune或不相關資源清理；研究筆記 `D:/Project/Git/.sbom-pilot-notes`。
-
-歷史精確命令、失敗及續接記錄保留於checkpoint12／13／14與Git；代理對話或ID不作為事實來源。
+本輪只清理已完整合併且乾淨的15原工單、15安全修正及16工作區；分支／提交與root證據保留。結果見 [本輪清理](reviews/current-worktree-cleanup.md)。舊03／05／07／09／13未註冊殘留與被拒刪除的temp維持原狀，禁止替代方式重試；歷史見 [清理紀錄](reviews/worktree-cleanup.md)。Docker容器／volume保留證據，不處理無關資源。

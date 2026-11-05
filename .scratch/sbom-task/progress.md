@@ -22,7 +22,7 @@ The user authorized implementation on a local branch, with no remote push or PR.
 | 13 | Implemented; local verification passed | 4818116 / merge 8b6969d; human README/Dev+Mermaid,38 TS formatted,167/167 Chinese-purpose checks, responsibility refactors; Windows/Linux Node20/24 99tests and affected real flows; root package checks passed |
 | 14 | Implemented; integrated; review closed | 30a2cae / merge c831001;108 tests and170 Chinese descriptions; Windows/Linux Node20/24, actual coldNode/privateNuGet/Framework passed; root package verified917afff; Standards3/Spec1 plus2 coordinator items fixed and independently rechecked; reviews/report.md |
 | 15 | Implemented; integrated; review closed | Generic frontend + Angular npm/Yarn/pnpm Windows/Linux matrix, meaningful source spacing, safe actual command/HTTP diagnostics; security8993b98/mergec19b354; Windows20/24 full116, Linux24 targeted18,175 comments,spacing0,4 isolatedprobes; reviews/15-report.md |
-| 16 | Implemented; integrated; one Standards improvement pending next quota cycle | c4212ef / merge45058ec; Windows/Linux116,175 comments,spacing0,preview+private/public integrity and Node20/24probes; Spec0, Standards1 judgment roots duplication; checkpoint7afb9cb, reviews/16-report.md; no active session |
+| 16 | Implemented; integrated; review closed | finalb231a69 / mergef70fe2b; shared source roots+Bash docs; affected CLI integrity, Windows/Linux fresh preview and root new/legacy dualNode probes passed; historical116/175/spacing0 retained; Standards1 resolved, Spec0; reviews/16-report.md |
 
 ## Validation policy
 

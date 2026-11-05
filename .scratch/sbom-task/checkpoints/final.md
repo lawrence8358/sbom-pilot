@@ -1,5 +1,13 @@
 # 最終本機交付檢查點
 
+## 2026-11-05 最後有效交付（01–16完成）
+
+- 15日誌控制命令安全修正與16 Marketplace準備皆已獨立整合／兩軸複查結案；最新產品merge f70fe2b，報告e6afa3b，兩軸未解決0。後文01–14數字與工作區資訊屬歷史，不代表最新狀態。
+- 16最後小修共用18個source roots（fixture含node_modules共19），補Bash身分設定，沒有runtime／依賴／圖片變動。Windows真CLI完整性、Windows/Linux fresh preview、root新／舊ZIP各四組Node20/24 probes、109交付hash通過；既有116／175／spacing0矩陣不重跑。
+- 最新root preview：packages/submission/preview/local-dev-placeholder.sbom-pilot-0.1.0-EbqmRP；VSIX 3789348bytes，SHA256 8cf9d81634b85c75c936d5d39cbc170552fb90dd00ddb6a4e3fda290371c7af9。runtime仍c937caf650b101fd888ece192c7391976da4a3fdb401179e668071e4e9a1388f。
+- 功能／文件入口見root README及docs/marketplace.md；最後精簡證據root .smoke/review-16-final/final-summary.json。額度曾中斷但已從原WIP接續完成，沒有active session或未提交產品。
+- 正式Publisher／公開Repo與live Azure等外部環境仍未驗收，不宣稱已上架。清理15/16乾淨已合併worktree時保留分支與root證據；結果另記reviews/current-worktree-cleanup.md，舊受保護殘留不碰。
+
 ## 已完成
 
 - 整合分支 `feature/sbom-pilot`，01–14皆已提交與整合，沒有未完成程式工單、活動worker或活動測試session。

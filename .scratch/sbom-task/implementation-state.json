@@ -26,19 +26,9 @@
     "15",
     "16"
   ],
-  "activeWorktrees": [
-    {
-      "ticket": "16",
-      "phase": "standards-fix-in-progress",
-      "branch": "ticket/16-marketplace-packaging",
-      "worktree": "../.sbom-pilot-worktrees/16-marketplace-packaging",
-      "checkpoint": ".scratch/sbom-task/checkpoints/16.md",
-      "candidate": "c4212ef8ec0bdebbba3a119e8d85213c5a453d61",
-      "recoveryCommit": "7afb9cb"
-    }
-  ],
-  "reviewStatus": "ticket16-standards-fix-in-progress",
-  "reviewHead": "45058ecf6e8f2503940d83057053dc4046f0ff5c",
+  "activeWorktrees": [],
+  "reviewStatus": "closed-local-all-findings-resolved",
+  "reviewHead": "f70fe2b343d0a28992876c7f9e613b22c3b32c37",
   "externalValidation": [
     "live Azure Services/Server installation, Classic/YAML UI, artifact download and asynchronous failure propagation",
     "real public Publisher ID confirmation",
@@ -47,8 +37,8 @@
     "company feeds and enterprise Proxy/CA/client certificates"
   ],
   "notesDirectory": "../.sbom-pilot-notes",
-  "recheckHead": "917afff17e06795113fb31d6d05b28167ec1d393",
-  "localImplementationStatus": "ticket16-functional-complete-review-fix-pending",
-  "cleanupStatus": "worktree-registrations-removed; five residual directories retained after deletion errors and policy rejection",
+  "recheckHead": "e6afa3be1efa197858f52a6b8db441f3c42f3886",
+  "localImplementationStatus": "complete-local-external-validation-pending",
+  "cleanupStatus": "current-15-16-cleanup-pending; protected old residuals retained",
   "cleanupReport": ".scratch/sbom-task/reviews/worktree-cleanup.md"
 }
