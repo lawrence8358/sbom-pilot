@@ -29,7 +29,7 @@
   "activeWorktrees": [
     {
       "ticket": "16",
-      "phase": "standards-fix-awaiting-next-quota-cycle",
+      "phase": "standards-fix-in-progress",
       "branch": "ticket/16-marketplace-packaging",
       "worktree": "../.sbom-pilot-worktrees/16-marketplace-packaging",
       "checkpoint": ".scratch/sbom-task/checkpoints/16.md",
@@ -37,7 +37,7 @@
       "recoveryCommit": "7afb9cb"
     }
   ],
-  "reviewStatus": "ticket16-standards1-spec0-awaiting-next-quota-cycle",
+  "reviewStatus": "ticket16-standards-fix-in-progress",
   "reviewHead": "45058ecf6e8f2503940d83057053dc4046f0ff5c",
   "externalValidation": [
     "live Azure Services/Server installation, Classic/YAML UI, artifact download and asynchronous failure propagation",
