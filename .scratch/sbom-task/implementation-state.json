@@ -37,8 +37,8 @@
     "company feeds and enterprise Proxy/CA/client certificates"
   ],
   "notesDirectory": "../.sbom-pilot-notes",
-  "recheckHead": "e6afa3be1efa197858f52a6b8db441f3c42f3886",
+  "recheckHead": "3c69674fed70adaf3a14255343bf7de57e97dc91",
   "localImplementationStatus": "complete-local-external-validation-pending",
-  "cleanupStatus": "current-15-16-cleanup-pending; protected old residuals retained",
-  "cleanupReport": ".scratch/sbom-task/reviews/worktree-cleanup.md"
+  "cleanupStatus": "current-15-16-worktrees-removed; five protected old residual directories retained",
+  "cleanupReport": ".scratch/sbom-task/reviews/current-worktree-cleanup.md"
 }
