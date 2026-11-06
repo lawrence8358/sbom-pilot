@@ -31,3 +31,6 @@ Record commands and their actual outcomes. Local automated tests, local real-too
 ## Dispatch policy
 
 User requested serial work after quota interruptions: at most one subagent (implementation, merge or review) at a time.01–14 are integrated and locally verified. Initial reviews use fixed product8b6969d/basee3a5bf6; all findings were fixed, integrated and independently rechecked at product917afff. See reviews/report.md. Live Azure acceptance and public identities remain pending. Only clean, merged task worktrees may be cleaned up; branches and committed checkpoints remain available.
+
+## 17 圖示大小修正（2026-11-06）
+使用者同意後本機縮原圖至256×256／60,594 bytes；新增preflight與實際VSIX大小限制，精確邊界及真CLI全過。正式包與109個hash、Node20/24四組入口核對通過；runtime不變。詳見reviews/17-icon-size.md，最新產物見HANDOFF。未上傳市集。

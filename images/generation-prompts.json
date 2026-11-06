@@ -1,6 +1,17 @@
 {
   "mode": "built-in image_gen",
   "generated": "2026-11-04",
+  "postprocessing": {
+    "date": "2026-11-06",
+    "asset": "extension-icon.png",
+    "authorization": "Maintainer explicitly approved local resizing; preserve the original design.",
+    "tool": "Windows System.Drawing, high-quality bicubic resampling, opaque RGB PNG",
+    "originalDimensions": [1254, 1254],
+    "outputDimensions": [256, 256],
+    "originalBytes": 1230605,
+    "outputBytes": 60594,
+    "reason": "Marketplace rejected icons larger than 1024 KB; resize the original instead of regenerating the brand. Build and packaging use the saved asset."
+  },
   "assets": {
     "extension-icon.png": "square compass/package/component identity; no people or third-party logos",
     "marketplace-hero.png": "landscape overview illustration; not an Azure DevOps screenshot"

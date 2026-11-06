@@ -12,7 +12,7 @@ npm run packaging:check -- --preview
 npm run packaging:preview
 ```
 
-已有完整 npm cache 時，安裝可加 `-- --offline`；一般命令沿用 npm 來源設定。一次性PNG及生成紀錄已在 [images](../images/README.md)，build不呼叫AI。`packaging:check` 核對版本、鎖定工具、PNG尺寸與overview；預設還要求正式身分。正式runtime授權告示在build後、建立VSIX前再次檢查。
+已有完整 npm cache 時，安裝可加 `-- --offline`；一般命令沿用 npm 來源設定。一次性PNG及生成紀錄已在 [images](../images/README.md)，build不呼叫AI。`packaging:check` 核對版本、鎖定工具、PNG尺寸、圖示檔案大小與overview；預設還要求正式身分。圖示必須為正方形、至少128×128，PNG檔案不得超過1024 KB（1,048,576 bytes）；超標會在建置前指出檔案與實際大小。目前圖示為256×256、60,594 bytes。橫幅不套用圖示的檔案上限。正式runtime授權告示在build後、建立VSIX前再次檢查。
 
 ## 預覽與正式包
 

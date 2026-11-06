@@ -1,8 +1,8 @@
 # SBOM Pilot 續接入口
 
-01–16 本機實作與審查完成。2026-11-06 追加 [17 圖示過大修正](issues/17-marketplace-icon-size.md) 進行中；先讀 [17 checkpoint](checkpoints/17.md)。Publisher／Repo 已確認；上架用 VSIX 的圖示尚待縮小，現有包會被市集拒絕，不要交付成已修復。
+01–16 本機實作與獨立審查完成；[17 圖示過大修正](issues/17-marketplace-icon-size.md) 已於2026-11-06取得同意、完成本機縮圖及封裝驗證。沒有未完成的本機實作或執行中測試；市集實際上傳與Azure安裝仍待驗收。
 
-17 已補 preflight／archive 大小檢查與 CLI 邊界測試；現有圖示 1,230,605 bytes，packaging:check 及新增測試均正確報錯。內建編修圖仍過大未採用，已詢問使用者是否同意本機工具等比例縮原圖至 256×256，尚待回覆。原圖與正式包未覆寫，沒有執行中的測試。收到同意後可用已準備的 .smoke/resize-marketplace-icon.ps1 先產生候選，檢查後替換；勿把等待當作同意。
+17 新圖示為256×256、60,594 bytes，保留原設計。preflight／archive檢查、1024 KB精確邊界、真CLI及Node20/24四組檢查全過。最新正式包仍在packages/public/LawrenceShen.sbom-pilot-0.1.0.vsix；SHA256 35f995b420ec1523056aeee4037fac8dec87356220bf0d2b3abe47b46d86a039。交付目錄改為packages/submission/public/LawrenceShen.sbom-pilot-0.1.0-0wMWgX，109項hash通過。詳見[17驗證](reviews/17-icon-size.md)及[checkpoint](checkpoints/17.md)。以下舊HUW3Lx與preview屬歷史產物，含超標圖示，不可用來重試上傳。
 
 ## 恢復事實
 
@@ -17,8 +17,8 @@
 
 ## 目前可用產物
 
-- **最新上架用正式包（2026-11-06）**：packages/public/LawrenceShen.sbom-pilot-0.1.0.vsix；Publisher LawrenceShen、public:true、Repo https://github.com/lawrence8358/sbom-pilot，已核對實際archive。
-- 正式交付資料：packages/submission/public/LawrenceShen.sbom-pilot-0.1.0-HUW3Lx；109檔SHA全部通過。VSIX 3789838bytes，SHA256 b9f50a595e168ee7582b9432b4f076e10090821f23a294efc0e435f29df0a4f3；runtime仍c937...，Node20/24四組dist/VSIX probes通過。見 [正式包紀錄](reviews/publisher-release.md)。
+- **最新上架用正式包（2026-11-06，圖示已縮小）**：packages/public/LawrenceShen.sbom-pilot-0.1.0.vsix；Publisher LawrenceShen、public:true、Repo https://github.com/lawrence8358/sbom-pilot，已核對實際archive。
+- 正式交付資料：packages/submission/public/LawrenceShen.sbom-pilot-0.1.0-0wMWgX；109檔SHA全部通過。VSIX 1869147bytes，SHA256 35f995b420ec1523056aeee4037fac8dec87356220bf0d2b3abe47b46d86a039；runtime仍c937...，Node20/24四組dist/VSIX probes通過。見[圖示修正紀錄](reviews/17-icon-size.md)。舊身分設定的歷史見[正式包紀錄](reviews/publisher-release.md)。
 - 舊placeholder預覽與dev包不可上傳到LawrenceShen；以下預覽資料是歷史產物，對應當時來源，最新正式文件已更新。
 
 - 上架操作：[docs/marketplace.md](../../docs/marketplace.md)，使用者入口：[README](../../README.md)，維護者入口：[README-Dev](../../README-Dev.md)。
