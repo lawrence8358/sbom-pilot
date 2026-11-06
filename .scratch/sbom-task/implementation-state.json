@@ -32,7 +32,7 @@
   "externalValidation": [
     "live Azure Services/Server installation, Classic/YAML UI, artifact download and asynchronous failure propagation",
     "Marketplace upload and Publisher permissions for confirmed ID LawrenceShen",
-    "public repository URL (no remote exists)",
+    "public repository contents and release-source correspondence (repository currently empty)",
     "Windows/Linux arm64",
     "company feeds and enterprise Proxy/CA/client certificates"
   ],
@@ -44,6 +44,7 @@
   "releaseIdentity": {
     "publisher": "LawrenceShen",
     "publisherConfirmedBy": "user reported Marketplace publisher mismatch on 2026-11-06",
-    "repositoryUrl": null
+    "repositoryUrl": "https://github.com/lawrence8358/sbom-pilot",
+    "repositoryConfirmedBy": "user provided URL on 2026-11-06; anonymous GitHub read shows empty repository"
   }
 }

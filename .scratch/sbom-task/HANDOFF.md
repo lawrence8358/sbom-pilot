@@ -15,6 +15,10 @@
 
 ## 目前可用產物
 
+- **最新上架用正式包（2026-11-06）**：packages/public/LawrenceShen.sbom-pilot-0.1.0.vsix；Publisher LawrenceShen、public:true、Repo https://github.com/lawrence8358/sbom-pilot，已核對實際archive。
+- 正式交付資料：packages/submission/public/LawrenceShen.sbom-pilot-0.1.0-HUW3Lx；109檔SHA全部通過。VSIX 3789838bytes，SHA256 b9f50a595e168ee7582b9432b4f076e10090821f23a294efc0e435f29df0a4f3；runtime仍c937...，Node20/24四組dist/VSIX probes通過。見 [正式包紀錄](reviews/publisher-release.md)。
+- 舊placeholder預覽與dev包不可上傳到LawrenceShen；以下預覽資料是歷史產物，對應當時來源，最新正式文件已更新。
+
 - 上架操作：[docs/marketplace.md](../../docs/marketplace.md)，使用者入口：[README](../../README.md)，維護者入口：[README-Dev](../../README-Dev.md)。
 - 最新預覽：packages/submission/preview/local-dev-placeholder.sbom-pilot-0.1.0-EbqmRP，109檔SHA256一致。
 - preview VSIX：packages/preview/local-dev-placeholder.sbom-pilot-0.1.0.vsix，3789348 bytes，SHA256 8cf9d81634b85c75c936d5d39cbc170552fb90dd00ddb6a4e3fda290371c7af9。
@@ -28,7 +32,7 @@ Windows/Linux 本機／Docker 的116測試、175中文用途、spacing0、型別
 
 ## 尚待外部資料與環境
 
-2026-11-06 使用者回報 Marketplace Publisher mismatch：上傳帳號是 LawrenceShen，但VSIX內是local-dev-placeholder。由此確認本專案要使用的Publisher ID為LawrenceShen；已讀取兩個本機預覽／dev包的實際manifest並重現相同錯誤，正式身分包尚未產出。仍缺公開Repo URL（root無remote、目前環境亦無該URL），已向使用者詢問，不猜網址、不繞過現有release gate。真實Publisher權限與成功上傳、Services/Server安裝、Classic/YAML UI、成品下載／非同步失敗、企業feeds／Proxy／CA／client certificates、arm64仍待驗收。
+2026-11-06已確認Publisher LawrenceShen，使用者另提供 https://github.com/lawrence8358/sbom-pilot，匿名讀取可見空Repo；已設定來源manifest、更新文件並重建正式包，Publisher mismatch本機對照由紅轉綠。尚未上傳市集或推送Git，root仍無remote。Publisher權限／成功上傳、Repo程式內容與版本對應、Services/Server安裝、Classic/YAML UI、成品下載／非同步失敗、企業feeds／Proxy／CA／client certificates、arm64仍待驗收。
 
 ## 清理界線
 
