@@ -23,7 +23,9 @@ try {
   const archive = await JSZip.loadAsync(await readFile(vsix ?? join('packages', file)));
   assert.ok(archive.file('marketplace/overview.md'));
   assert.ok(archive.file('images/marketplace-hero.png'));
-  assert.deepEqual(await archive.file('dist/icon.png').async('nodebuffer'), await archive.file('images/extension-icon.png').async('nodebuffer'));
+  const iconBytes = await archive.file('images/extension-icon.png').async('nodebuffer');
+  assert.ok(iconBytes.length <= 1024 * 1024, `VSIX icon exceeds Marketplace 1024 KB limit: ${iconBytes.length} bytes`);
+  assert.deepEqual(await archive.file('dist/icon.png').async('nodebuffer'), iconBytes);
   // Check local Markdown links in shipped user/developer docs against the VSIX,
   // including nested example/config files. Marketplace must not depend on an
   // unpublished repository URL to make these relative links work.

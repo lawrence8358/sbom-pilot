@@ -24,6 +24,25 @@ test('Marketplace CLI creates private/public bundles and rejects stale, mismatch
   const rejected = run(['scripts/packaging.mjs', 'package'], false, { ...env, SBOM_PILOT_PUBLISHER: '', SBOM_PILOT_REPOSITORY_URL: '' });
   assert.match(rejected.stderr, /正式打包需設定實際/);
   assert.ok(!(await readdir(fixture)).includes('dist'), '身分失敗應早於build。');
+  // 市集限制的是 PNG 解壓後的實際檔案，不是 VSIX 的壓縮大小。
+  // 測試資料保留原 PNG 內容並於檔尾補齊長度，測試檔案大小邊界。
+  const iconPath = join(fixture, 'images/extension-icon.png');
+  const iconBytes = await readFile(iconPath);
+  assert.ok(iconBytes.length <= 1024 * 1024, '專案圖示必須符合市集大小限制。');
+  try {
+    const atLimit = Buffer.alloc(1024 * 1024);
+    iconBytes.copy(atLimit);
+    await writeFile(iconPath, atLimit);
+    run(['scripts/packaging.mjs', 'check']);
+
+    await writeFile(iconPath, Buffer.concat([atLimit, Buffer.from([0])]));
+    const oversize = run(['scripts/packaging.mjs', 'package'], false);
+    assert.match(oversize.stderr, /PNG 超過 1024 KB 上限/);
+    assert.match(oversize.stderr, /extension-icon\.png.*1048577 bytes/);
+    assert.ok(!(await readdir(fixture)).includes('dist'), '過大圖示應在 build 及建立 VSIX 前拒絕。');
+  } finally {
+    await writeFile(iconPath, iconBytes);
+  }
   run(['scripts/packaging.mjs', 'package', '--private']);
   const privatePath = join(fixture, 'packages/private/sbom-fixture-only.sbom-pilot-0.1.0.vsix');
   const privateBytes = await readFile(privatePath);

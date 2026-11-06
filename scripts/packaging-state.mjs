@@ -48,9 +48,10 @@ export async function verifyBuild() {
   return receipt;
 }
 
-/** 檢查實際 PNG header 及最小尺寸，不因副檔名正確就接受錯誤素材。 */
-export async function pngSize(path) {
+/** 檢查實際 PNG、最小尺寸及指定的檔案上限；橫幅不套用圖示大小限制。 */
+export async function pngSize(path, maxBytes = Infinity) {
   const bytes = await readFile(path);
+  assert.ok(bytes.length <= maxBytes, `PNG 超過 ${maxBytes / 1024} KB 上限：${path}（${bytes.length} bytes），請縮小圖片後重新打包。`);
   assert.ok(bytes.length >= 24 && bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) && bytes.toString('ascii', 12, 16) === 'IHDR', `無效 PNG：${path}`);
   const size = { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
   assert.ok(size.width >= 128 && size.height >= 128, `PNG 至少128×128：${path}`);
@@ -72,7 +73,7 @@ export async function packagingConfig({ local = false, privatePackage = false } 
   assert.equal(manifest.icons?.default, 'images/extension-icon.png');
   assert.equal(manifest.content?.details?.path, 'marketplace/overview.md');
   assert.ok(!manifest.screenshots?.some(item => item.path === 'images/marketplace-hero.png'), 'hero是插畫，不是UI截圖。');
-  const icon = await pngSize(manifest.icons.default);
+  const icon = await pngSize(manifest.icons.default, 1024 * 1024);
   assert.equal(icon.width, icon.height, '圖示必須正方形。');
   await pngSize('images/marketplace-hero.png');
   const overview = await readFile(manifest.content.details.path, 'utf8');

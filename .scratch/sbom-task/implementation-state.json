@@ -27,7 +27,7 @@
     "16"
   ],
   "activeWorktrees": [],
-  "reviewStatus": "closed-local-all-findings-resolved",
+  "reviewStatus": "01-16-closed; 17-icon-size-fix-in-progress",
   "reviewHead": "f70fe2b343d0a28992876c7f9e613b22c3b32c37",
   "externalValidation": [
     "live Azure Services/Server installation, Classic/YAML UI, artifact download and asynchronous failure propagation",
@@ -38,7 +38,8 @@
   ],
   "notesDirectory": "../.sbom-pilot-notes",
   "recheckHead": "3c69674fed70adaf3a14255343bf7de57e97dc91",
-  "localImplementationStatus": "complete-local-external-validation-pending",
+  "localImplementationStatus": "17-wip-waiting-for-local-image-resize-consent",
+  "currentCheckpoint": ".scratch/sbom-task/checkpoints/17.md",
   "cleanupStatus": "current-15-16-worktrees-removed; five protected old residual directories retained",
   "cleanupReport": ".scratch/sbom-task/reviews/current-worktree-cleanup.md",
   "releaseIdentity": {

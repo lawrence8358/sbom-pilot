@@ -1,6 +1,8 @@
 # SBOM Pilot 續接入口
 
-本機開發、文件、Marketplace 準備與獨立審查已完成。沒有待派工的實作或執行中的測試；外部 Azure 驗收與正式發布身分仍未提供。
+01–16 本機實作與審查完成。2026-11-06 追加 [17 圖示過大修正](issues/17-marketplace-icon-size.md) 進行中；先讀 [17 checkpoint](checkpoints/17.md)。Publisher／Repo 已確認；上架用 VSIX 的圖示尚待縮小，現有包會被市集拒絕，不要交付成已修復。
+
+17 已補 preflight／archive 大小檢查與 CLI 邊界測試；現有圖示 1,230,605 bytes，packaging:check 及新增測試均正確報錯。內建編修圖仍過大未採用，已詢問使用者是否同意本機工具等比例縮原圖至 256×256，尚待回覆。原圖與正式包未覆寫，沒有執行中的測試。收到同意後可用已準備的 .smoke/resize-marketplace-icon.ps1 先產生候選，檢查後替換；勿把等待當作同意。
 
 ## 恢復事實
 
