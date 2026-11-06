@@ -28,7 +28,7 @@ Windows/Linux 本機／Docker 的116測試、175中文用途、spacing0、型別
 
 ## 尚待外部資料與環境
 
-實際 Publisher ID、公開 Repo URL；真實 Services/Server 安裝、Classic/YAML UI、成品下載與非同步失敗傳播；企業 feeds／Proxy／CA／client certificates、arm64。參考專案的 LawrenceShen 不自動當成本專案身分。以上未驗收，不宣稱已上架或已通過 Microsoft 審核。
+2026-11-06 使用者回報 Marketplace Publisher mismatch：上傳帳號是 LawrenceShen，但VSIX內是local-dev-placeholder。由此確認本專案要使用的Publisher ID為LawrenceShen；已讀取兩個本機預覽／dev包的實際manifest並重現相同錯誤，正式身分包尚未產出。仍缺公開Repo URL（root無remote、目前環境亦無該URL），已向使用者詢問，不猜網址、不繞過現有release gate。真實Publisher權限與成功上傳、Services/Server安裝、Classic/YAML UI、成品下載／非同步失敗、企業feeds／Proxy／CA／client certificates、arm64仍待驗收。
 
 ## 清理界線
 

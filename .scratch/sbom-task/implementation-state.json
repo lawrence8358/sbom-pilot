@@ -31,7 +31,7 @@
   "reviewHead": "f70fe2b343d0a28992876c7f9e613b22c3b32c37",
   "externalValidation": [
     "live Azure Services/Server installation, Classic/YAML UI, artifact download and asynchronous failure propagation",
-    "real public Publisher ID confirmation",
+    "Marketplace upload and Publisher permissions for confirmed ID LawrenceShen",
     "public repository URL (no remote exists)",
     "Windows/Linux arm64",
     "company feeds and enterprise Proxy/CA/client certificates"
@@ -40,5 +40,10 @@
   "recheckHead": "3c69674fed70adaf3a14255343bf7de57e97dc91",
   "localImplementationStatus": "complete-local-external-validation-pending",
   "cleanupStatus": "current-15-16-worktrees-removed; five protected old residual directories retained",
-  "cleanupReport": ".scratch/sbom-task/reviews/current-worktree-cleanup.md"
+  "cleanupReport": ".scratch/sbom-task/reviews/current-worktree-cleanup.md",
+  "releaseIdentity": {
+    "publisher": "LawrenceShen",
+    "publisherConfirmedBy": "user reported Marketplace publisher mismatch on 2026-11-06",
+    "repositoryUrl": null
+  }
 }
