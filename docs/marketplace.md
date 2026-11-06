@@ -1,6 +1,6 @@
 # Marketplace 包裝與上架
 
-本流程準備 Azure DevOps Marketplace 的本機交付資料。所有 `packaging:*` 命令都不會上傳至Marketplace；組織分享與公開由維護者在portal操作。工具安裝仍可能從npm來源下載相依。實際 Publisher ID／公開 Repo URL 尚未提供；先用 placeholder 預覽即可完成版面與內容檢查。
+本流程準備 Azure DevOps Marketplace 的本機交付資料。所有 `packaging:*` 命令都不會上傳至Marketplace；組織分享與公開由維護者在portal操作。工具安裝仍可能從npm來源下載相依。已確認 Publisher 為 `LawrenceShen`，[公開 Repo](https://github.com/lawrence8358/sbom-pilot)已提供。placeholder 預覽只供本機檢查；上傳市集要使用實際 Publisher 重新打包。
 
 ## 工具準備與檢查
 
@@ -28,22 +28,24 @@ npm run packaging:preview
 正式命令使用已確認的實際資料：
 
 ```powershell
-$env:SBOM_PILOT_PUBLISHER = '<actual-publisher-id>'
-$env:SBOM_PILOT_REPOSITORY_URL = 'https://<public-repository-url>'
+$env:SBOM_PILOT_PUBLISHER = 'LawrenceShen'
+$env:SBOM_PILOT_REPOSITORY_URL = 'https://github.com/lawrence8358/sbom-pilot'
 npm run packaging:check
 npm run packaging:package -- --private
 ```
 
-佔位文字須替換才可通過。Repo必須是無帳密、無query／fragment的公開HTTPS URL；程式檢查語法與佔位值，維護者仍須確認實際公開性及Publisher操作權限。不要把帳號、token或PAT寫入manifest。預覽不借用其他專案的Publisher。
+這組值對應目前已確認的專案身分；腳本仍使用上述環境變數產生有效 manifest。Repo必須是無帳密、無query／fragment的公開HTTPS URL；維護者仍須確認Publisher操作權限及Repo內容。不要把token或PAT寫入manifest。預覽會固定使用placeholder，修改來源manifest的publisher也不會把預覽變成上架包。
 
 Linux／Bash以相同兩個環境變數設定身分，再執行上述npm命令：
 
 ```bash
-export SBOM_PILOT_PUBLISHER='<actual-publisher-id>'
-export SBOM_PILOT_REPOSITORY_URL='https://<public-repository-url>'
+export SBOM_PILOT_PUBLISHER='LawrenceShen'
+export SBOM_PILOT_REPOSITORY_URL='https://github.com/lawrence8358/sbom-pilot'
 ```
 
 新流程的VSIX按模式存於 `packages/preview/`、`packages/private/`、`packages/public/`，正式檔名為 `<publisher>.sbom-pilot-<version>.vsix`。每次交付資料另建立獨立目錄，console顯示完整路徑，內含：
+
+例如本版公開包為 `packages/public/LawrenceShen.sbom-pilot-0.1.0.vsix`，私有測試包為 `packages/private/LawrenceShen.sbom-pilot-0.1.0.vsix`。請上傳新包；`packages/preview/`及舊測試入口的local-dev-placeholder包會因Publisher與LawrenceShen不符而被市集拒絕。
 
 - 本次VSIX、`listing.json`、有效的 `vss-extension.json`、實際generated manifests。
 - `marketplace/overview.md`、icon／hero／生成紀錄，以及保持相對結構的README、Dev、docs、examples與runtime授權。

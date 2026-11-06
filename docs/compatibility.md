@@ -1,6 +1,6 @@
 # 執行相容性與驗收
 
-本頁是目前交付候選版的矩陣；本機／Docker、來源支持的候選組合與真實 Azure 驗收分開記錄。**Services／Server 的 VSIX 安裝、Classic／YAML UI、原生成品下載及 Agent 上傳失敗傳播均 UNVERIFIED**。實際 Publisher 與公開 Repo URL 未提供，不宣稱可從 Marketplace 公開安裝。
+本頁是目前交付候選版的矩陣；本機／Docker、來源支持的候選組合與真實 Azure 驗收分開記錄。**Services／Server 的 VSIX 安裝、Classic／YAML UI、原生成品下載及 Agent 上傳失敗傳播均 UNVERIFIED**。Publisher `LawrenceShen` 與 [公開 Repo](https://github.com/lawrence8358/sbom-pilot) 已提供，市集成功上傳／安裝仍待驗收。
 
 ## Handler 與平台
 
@@ -42,7 +42,7 @@ Docker Node24 image ID：sha256:e7add2a490bb17d97b485b8641bd88455fff7839ade0f5eb
 
 每個待驗證 Services／Server 組合各執行 Windows、Linux，分別使用 Classic Build 與 YAML；.NET Framework 的 Linux 列為不適用。先記錄 Server 年版／Update、Agent 完整版本、OS／架構、VSIX SHA-256、Task 版本、選用 handler、Node/cdxgen 實際版本。未知欄位保留 UNVERIFIED。
 
-1. 執行 `npm ci`、`npm test`、`npm run package:dev`、`npm run test:package`。Windows 以 `Get-FileHash packages/local-dev-placeholder.sbom-pilot-0.1.0.vsix -Algorithm SHA256` 記錄套件；Linux 用 `sha256sum`。僅安裝標示 Local Development 的測試擴充功能，正式 Publisher／公開網址仍未提供，測試包不是公開發佈。
+1. 執行 `npm ci`、`npm test`，依[上架說明](marketplace.md)設定實際Publisher／Repo，再執行 `npm run packaging:package -- --private`。用 `node scripts/verify-package.mjs --vsix packages/private/LawrenceShen.sbom-pilot-0.1.0.vsix` 檢查實際私有包。Windows 以 `Get-FileHash packages/private/LawrenceShen.sbom-pilot-0.1.0.vsix -Algorithm SHA256` 記錄套件；Linux 用 `sha256sum`。使用實際Publisher私有包分享到測試組織，placeholder預覽僅供本機檢查。
 2. 在測試組織／Collection 擴充功能管理頁上傳同一個 VSIX 並安裝。記錄安裝結果及版本。Classic Build 搜尋 SBOM Pilot，確認 JavaScript／TypeScript、.NET Core、.NET Framework、.NET Core 前後端合併選項；DT 關閉時 DT 欄位隱藏，而 projectPath、excludes、specVersion 仍顯示；開啟時要求 URL／UUID／Key。Classic Release 不應列出本 Task。
 3. 建立最小 Vue/npm 測試 Repo：package.json 含 `name:host-test-product`、`version:1.0.0`、`private:true`、dependencies.vue=`3.5.13`、devDependencies.chalk=`5.3.0`；main.js 內容 `import { createApp } from 'vue'; createApp({});`。在開發端執行 npm install 並提交 package.json、package-lock.json、main.js。Agent 保留必要 handler，但使用空的 SBOM Pilot 工具快取，讓單一 Task 自行準備掃描工具。
 4. Classic Build 加一個 SBOM Pilot，JavaScript／TypeScript、Repo 根目錄、Node24.x、Spec1.6、DT關閉；不加 NodeTool／npm／cdxgen Task。YAML 使用下方相同值。確認工具實際版本、required-only、Schema 驗證及組件數；缺 lockfile／不同步各跑一次並確認失敗。

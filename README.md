@@ -18,7 +18,7 @@
 
 由維護者依[開發說明](README-Dev.md)產生 VSIX，在組織或 Collection 的擴充功能管理介面上傳並安裝。權限與操作位置依 Azure DevOps 管理政策而定。
 
-目前 `package:dev` 產生標示 **Local Development**、Publisher 為 `local-dev-placeholder` 的測試套件。正式 Publisher 與公開專案網址尚未提供，沒有可直接安裝的正式 Marketplace 連結。真實 Services／Server 安裝與成品下載仍待環境驗收，請先在測試環境使用；[版本內容](CHANGELOG.md)與[驗收狀態](docs/compatibility.md)另有記錄。
+`package:dev`／`packaging:preview` 產生 Publisher 為 `local-dev-placeholder` 的本機測試套件。**上傳市集請使用 `packaging:package` 產出的 `LawrenceShen.sbom-pilot-<version>.vsix`**；正式 Publisher 為 `LawrenceShen`，[公開專案](https://github.com/lawrence8358/sbom-pilot)已提供。設定方式與實際上傳路徑見[上架說明](docs/marketplace.md)。目前尚未確認市集安裝成功，真實 Services／Server 安裝與成品下載仍待環境驗收；[版本內容](CHANGELOG.md)與[驗收狀態](docs/compatibility.md)另有記錄。
 
 ## 第一次執行
 

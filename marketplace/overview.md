@@ -44,4 +44,4 @@ Windows／Linux x64 有本機及 Docker 解包驗證；真實 Azure DevOps Servi
 - [版本說明](../CHANGELOG.md)
 - [第三方執行相依告示](../THIRD-PARTY-NOTICES.md)
 
-作者 **Lawrence Shen**；採 [MIT](../LICENSE) 授權。實際 Publisher 與公開 Repo 以正式包裝時經維護者確認的 metadata 為準；本頁不預設發布帳號或捏造網址。
+作者 **Lawrence Shen**；採 [MIT](../LICENSE) 授權。Publisher 為 **LawrenceShen**，[公開 Repo](https://github.com/lawrence8358/sbom-pilot)已提供；安裝及發布狀態以市集實際結果為準。
