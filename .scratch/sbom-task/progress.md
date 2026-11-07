@@ -39,4 +39,4 @@ User requested serial work after quota interruptions: at most one subagent (impl
 
 `1bb265f`已整合於feature/sbom-pilot。0.1.1正式VSIX與109項SHA、119測試、新回歸雙Node、真packaging CLI、dist／VSIX雙Node入口通過。真實PortalBackend使用相對PrimeEagleX.Backend.sln執行封裝Task，還原、掃描、Schema成功，267組件。修正是.NET檔案轉所在目錄，保持既有遞迴／排除範圍並明示不依solution成員過濾。
 
-Marketplace0.1.0權限與Azure原run2732已讀取確認。0.1.1尚未上傳，因獨立操作窗口消失已詢問使用者；Azure0.1.1實跑與成品下載待完成。本機證據與交付位置見reviews/18-dotnet-project-file-path.md與HANDOFF。
+使用者回覆後已上傳Marketplace0.1.1，驗證完成。原definition85設定、master78ef08f4與ubuntu-24.04啟動run2733成功，Task日誌版本0.1.1、Task1m58s／job2m3s。成品2170／SBOM/bom.json非同步上傳成功，實際下載550,201bytes、229組件、Schema1.6再次通過。工單18resolved。本機／Azure證據與交付位置見reviews/18-dotnet-project-file-path.md與HANDOFF。

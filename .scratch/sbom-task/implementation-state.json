@@ -25,21 +25,21 @@
     "14",
     "15",
     "16",
-    "17"
+    "17",
+    "18"
   ],
   "activeWorktrees": [],
-  "reviewStatus": "01-16-independent-review-closed; 17-self-checked-and-package-verified",
+  "reviewStatus": "01-16-independent-review-closed; 17-self-checked-and-package-verified; 18-self-checked-and-live-azure-verified",
   "reviewHead": "f70fe2b343d0a28992876c7f9e613b22c3b32c37",
   "externalValidation": [
-    "live Azure Services/Server installation, Classic/YAML UI, artifact download and asynchronous failure propagation",
-    "Marketplace upload and Publisher permissions for confirmed ID LawrenceShen",
+    "Azure DevOps Server installation, YAML UI and asynchronous failure propagation (Services Classic success/artifact download verified in run2733)",
     "public repository contents and release-source correspondence (repository currently empty)",
     "Windows/Linux arm64",
     "company feeds and enterprise Proxy/CA/client certificates"
   ],
   "notesDirectory": "../.sbom-pilot-notes",
   "recheckHead": "3c69674fed70adaf3a14255343bf7de57e97dc91",
-  "localImplementationStatus": "0.1.1-complete-local-marketplace-upload-and-live-azure-pending",
+  "localImplementationStatus": "0.1.1-complete-marketplace-and-azure-services-classic-verified",
   "currentCheckpoint": ".scratch/sbom-task/checkpoints/18.md",
   "cleanupStatus": "current-15-16-worktrees-removed; five protected old residual directories retained",
   "cleanupReport": ".scratch/sbom-task/reviews/current-worktree-cleanup.md",
@@ -54,6 +54,8 @@
     "commit": "1bb265f",
     "ticket": "18",
     "localVerification": "119 tests; real PortalBackend 267 components; VSIX109 hashes; dualNode probes",
-    "remoteStatus": "not uploaded; waiting for user reply about disappearing Chrome windows"
+    "remoteStatus": "Marketplace public0.1.1 verified; Azure Services Classic run2733 succeeded; artifact2170 downloaded and schema validated",
+    "azureEvidence": ".smoke/18/azure-2733-evidence.json",
+    "azureRunUrl": "https://primeeagle.visualstudio.com/PrimeEagleX/_build/results?buildId=2733"
   }
 }

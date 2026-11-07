@@ -40,4 +40,15 @@ Task ID、extension ID、major0 不變；package、lock、Task、extension 同�
 
 Chrome 原run2732確認Task0.1.0與原錯誤；definition85確認選項／排除與截圖一致、DT關閉、其他歷史步驟皆disabled。Marketplace可使用已登入的個人帳戶看到LawrenceShen管理頁及public SBOM Pilot0.1.0。
 
-尚未上傳：準備操作時獨立Chrome窗口兩次消失，已詢問使用者是否正在關閉窗口／是否改由其自行上傳，以免搶用螢幕及過期索引。0.1.1實際Azure run／成品下載仍待驗證；沒有把本機成功寫成Azure成功。
+使用者回覆可繼續操作Chrome並暫停使用；續接後上傳相同SHA的正式0.1.1。Marketplace經Verifying後顯示正式public0.1.1，上傳與驗證成功。
+
+以definition85既有設定啟動[run2733](https://primeeagle.visualstudio.com/PrimeEagleX/_build/results?buildId=2733)，master78ef08f430dbe940ad9dec1b45139ba3ac7aaaab，Azure Pipelines ubuntu-24.04。沒有改動Pipeline定義／專案路徑／排除／DT或其他步驟。
+
+- 實際Task日誌：Version0.1.1；Task成功1m58s，整個job成功2m3s。
+- 真實Node工具冷安裝與.NET SDK10.0.101準備、restore、單次scanner、CycloneDX1.6驗證成功。
+- 日誌包含`File upload succeed.`及`Associated artifact 2170 with build 2733`；沒有`##[error]`。
+- 成品頁1 published，SBOM/bom.json538KB；已透過Chrome下載到Downloads/bom.json，再複製至`.smoke/18/Azure-run2733.bom.json`。
+- 下載檔550,201bytes；以正式validator重新執行CycloneDX1.6 Schema，229組件、173筆非空dependsOn記錄。SHA256 `a7575019cccbb4ce18ba40bc635f2777a11570d7df69a1aa84edc4dc809d7a88`。
+- 精簡機器可讀證據`.smoke/18/azure-2733-evidence.json`；完整原始日誌不提交。raw log瀏覽器文字有中文字碼解碼問題，Task UI與下載BOM正常；因此以Task UI與實際BOM檔案驗證中文／格式。
+
+這次證據涵蓋Marketplace正式更新、Azure DevOps Services Classic成功執行、非同步成品上傳與下載。Server／YAML UI、故障傳播、arm64及企業feed環境仍屬其他既有驗收範圍。
