@@ -4,7 +4,7 @@
   "name": "SBOM Pilot",
   "publisher": "LawrenceShen",
   "repository": { "type": "git", "uri": "https://github.com/lawrence8358/sbom-pilot" },
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "產生 CycloneDX SBOM 的單一 Azure Pipelines Task。",
   "public": false,
   "targets": [

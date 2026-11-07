@@ -5,12 +5,14 @@ import type { ProcessRunner } from '../process';
 import { discoverDotnetProjects } from '../dotnet/projects';
 import { prepareDotnetSdk } from '../dotnet/sdk';
 import { restoreDotnetProject } from '../dotnet/restore';
+import { restoreSelectedDotnetTarget } from '../dotnet/target';
 
 export interface DotnetInstallOptions {
   tempDirectory?: string;
   log?: (message: string) => void;
   excludes?: string[];
   nugetCredentials?: NuGetCredential[];
+  target?: string;
 }
 
 export const dotnetInstaller = {
@@ -21,6 +23,9 @@ export const dotnetInstaller = {
     run: ProcessRunner,
     options: DotnetInstallOptions = {},
   ): Promise<void> {
+    if (options.target) {
+      return restoreSelectedDotnetTarget(root, options.target, tools, run, options);
+    }
     const projects = await discoverDotnetProjects(root, options.excludes);
 
     if (!projects.length) {

@@ -19,6 +19,9 @@ export const DEFAULT_EXCLUDES =
 export interface TaskConfig {
   environment: string;
   projectPath: string;
+  dotnetTarget?: string;
+  artifactName?: string;
+  sbomFileName?: string;
   nodeVersion: string;
   cdxgenVersion: string;
   specVersion: string;
@@ -122,6 +125,8 @@ export function readTaskConfig(read: InputReader): TaskConfig {
   return {
     environment: text('environment', 'javascript'),
     projectPath: text('projectPath'),
+    artifactName: read('artifactName')?.trim() || 'SBOM',
+    sbomFileName: read('sbomFileName')?.trim() || 'bom.json',
     nodeVersion: text('nodeVersion', '24.x'),
     cdxgenVersion: read('cdxgenVersion')?.trim() || CDXGEN_VERSION,
     specVersion: text('specVersion', '1.6'),
@@ -168,6 +173,27 @@ export async function validateConfig(config: TaskConfig): Promise<TaskConfig> {
 
   validateToolOptions(config.nodeVersion, config.cdxgenVersion);
 
+  const artifactName = config.artifactName ?? 'SBOM';
+  const sbomFileName = config.sbomFileName ?? 'bom.json';
+
+  for (const [label, value] of [
+    ['成品名稱', artifactName],
+    ['SBOM 檔名', sbomFileName],
+  ]) {
+    if (
+      !value ||
+      value.length > 128 ||
+      /[<>:"/\\|?*+%{}\x00-\x1f\x7f]/.test(value) ||
+      /[. ]$/.test(value) ||
+      /^\s|^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(value)
+    ) {
+      throw new Error(`${label}必須是安全的單一名稱，不可包含路徑、控制字元或保留名稱。`);
+    }
+  }
+  if (!/\.json$/i.test(sbomFileName)) {
+    throw new Error('SBOM 檔名必須以 .json 結尾；輸出格式為 CycloneDX JSON。');
+  }
+
   if (
     !Array.isArray(config.excludes) ||
     config.excludes.some((value) => typeof value !== 'string' || value.includes('\0'))
@@ -175,8 +201,13 @@ export async function validateConfig(config: TaskConfig): Promise<TaskConfig> {
     throw new Error('排除規則必須是 glob 字串清單。');
   }
 
-  let projectPath = await realpath(config.projectPath);
+  let projectPath = await realpath(
+    config.environment === 'dotnet' && config.dotnetTarget
+      ? config.dotnetTarget
+      : config.projectPath,
+  );
   const projectStat = await stat(projectPath);
+  let dotnetTarget: string | undefined;
 
   if (!projectStat.isDirectory()) {
     if (
@@ -184,6 +215,7 @@ export async function validateConfig(config: TaskConfig): Promise<TaskConfig> {
       projectStat.isFile() &&
       /\.(?:slnx?|csproj|fsproj|vbproj)$/i.test(projectPath)
     ) {
+      if (config.environment === 'dotnet') dotnetTarget = projectPath;
       projectPath = dirname(projectPath);
     } else {
       throw new Error(
@@ -198,6 +230,9 @@ export async function validateConfig(config: TaskConfig): Promise<TaskConfig> {
     ...config,
     environment: config.environment === 'vue' ? 'javascript' : config.environment,
     projectPath,
+    dotnetTarget,
+    artifactName,
+    sbomFileName,
     dt: config.uploadToDt ? validateDtConfig(config.dt) : undefined,
     nugetCredentials:
       config.nugetCredentials === undefined

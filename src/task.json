@@ -10,7 +10,7 @@
   "version": {
     "Major": 0,
     "Minor": 1,
-    "Patch": 1
+    "Patch": 2
   },
   "instanceNameFormat": "SBOM Pilot",
   "runsOn": [
@@ -53,7 +53,7 @@
       "label": "專案路徑",
       "required": true,
       "defaultValue": "$(Build.SourcesDirectory)",
-      "helpMarkDown": ".NET Core／.NET Framework 可選目錄或 .sln／.slnx／.csproj／.fsproj／.vbproj；選檔案時遞迴還原與掃描其所在目錄，不依 solution 成員過濾。JavaScript／TypeScript 與合併模式請選共同根目錄。"
+      "helpMarkDown": ".NET Core 可選目錄或 .sln／.slnx／.csproj／.fsproj／.vbproj；選方案或專案時只還原一次，掃描限還原圖內專案與參照。目錄模式仍遞迴探索；.NET Framework 選檔案時使用所在目錄。"
     },
     {
       "name": "excludes",
@@ -71,7 +71,24 @@
       "defaultValue": "1.6",
       "options": {
         "1.6": "1.6"
-      }
+      },
+      "helpMarkDown": "產生的 SBOM 所採用的 CycloneDX JSON 規格版本。本版支援並驗證 1.6；無論是否推送 DT 都會套用此設定。"
+    },
+    {
+      "name": "artifactName",
+      "type": "string",
+      "label": "成品名稱",
+      "required": false,
+      "defaultValue": "SBOM",
+      "helpMarkDown": "Azure Build Artifact 名稱，例如 CycloneSBOM。未設定或清空時使用 SBOM；不可包含路徑或控制字元。"
+    },
+    {
+      "name": "sbomFileName",
+      "type": "string",
+      "label": "SBOM 檔名",
+      "required": false,
+      "defaultValue": "bom.json",
+      "helpMarkDown": "CycloneDX JSON 檔名，例如 PrimeX.cdx.json。未設定或清空時使用 bom.json；只填檔名，不含資料夾。與成品名稱組合後可為 CycloneSBOM/PrimeX.cdx.json。"
     },
     {
       "name": "uploadToDt",

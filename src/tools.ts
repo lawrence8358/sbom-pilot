@@ -23,6 +23,8 @@ export interface ToolContext {
   env: NodeJS.ProcessEnv;
   /** 已驗證的還原輸入，掃描器必須可讀才能保留依賴邊。 */
   dotnetAssets?: string[];
+  /** 指定方案／專案時，僅允許掃描已驗證還原圖的輸入。 */
+  dotnetScanIncludes?: string[];
   /** 傳統專案已驗證的 packages.config 與還原 nupkg。 */
   dotnetPackageFiles?: string[];
 }

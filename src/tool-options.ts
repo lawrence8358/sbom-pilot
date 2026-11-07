@@ -57,6 +57,7 @@ export function validateCdxgenHelp(help: string): void {
     '--recurse',
     '--type',
     '--output',
+    '--include-regex',
   ]) {
     if (!new RegExp(`${option}(?=[\\s,=]|$)`).test(help)) {
       throw new Error(`cdxgen CLI 不相容：缺少 ${option} 選項。`);

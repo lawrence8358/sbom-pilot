@@ -1,6 +1,6 @@
 # .NET Core 前後端合併
 
-`environment: combined` 把共同根目錄內的前端與 SDK-style .NET Core 後端視為一個交付產品。一次 cdxgen 遞迴掃描同時指定 `-t dotnet -t js`，固定 `--required-only --install-deps false`；經官方 CycloneDX 1.6 Schema 驗證後，只發佈一份 `SBOM/bom.json`。選用 DT 仍傳送同一份檔案至一個既有產品 UUID。
+`environment: combined` 把共同根目錄內的前端與 SDK-style .NET Core 後端視為一個交付產品。一次 cdxgen 遞迴掃描同時指定 `-t dotnet -t js`，固定 `--required-only --install-deps false`；經官方 CycloneDX 1.6 Schema 驗證後，只發佈一份成品，預設為 `SBOM/bom.json`。可用 `artifactName`／`sbomFileName` 修改成品名稱及檔名。選用 DT 仍傳送同一份檔案至一個既有產品 UUID。
 
 ## 根目錄與依賴還原
 

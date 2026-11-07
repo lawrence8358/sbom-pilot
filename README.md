@@ -39,7 +39,7 @@ steps:
 
 Classic Build：在 Agent job 選擇 **Add task → SBOM Pilot**，設定「開發環境」與「專案路徑」，保持「推送到 DT」關閉，儲存並執行。欄位與 YAML 相同。
 
-工作成功且 Agent 完成上傳後，在 Build 結果的成品頁選擇 **SBOM**，下載 `bom.json`。Task 日誌的「已排入佇列」表示已要求 Agent 上傳；請以工作結果及成品頁確認完成。Agent 非同步上傳失敗時會回報工作失敗。
+工作成功且 Agent 完成上傳後，預設在 Build 結果的成品頁選擇 **SBOM**，下載 `bom.json`；自訂名稱時選擇對應成品與檔案。Task 日誌的「已排入佇列」表示已要求 Agent 上傳；請以工作結果及成品頁確認完成。Agent 非同步上傳失敗時會回報工作失敗。
 
 ## 選擇開發環境
 
@@ -48,7 +48,7 @@ Classic Build：在 Agent job 選擇 **Add task → SBOM Pilot**，設定「開�
 | `environment` | 何時選用 | 專案路徑與依賴準備 |
 | --- | --- | --- |
 | `javascript` | JavaScript／TypeScript 前端（例如 Angular、Vue），npm、pnpm 或 Yarn | 指向專案或 workspace 根目錄；以對應管理器嚴格安裝 |
-| `dotnet` | SDK-style .NET Core | 指向含 csproj／fsproj／vbproj 的目錄，或選擇 .sln／.slnx／專案檔，以檔案所在目錄遞迴還原及掃描 |
+| `dotnet` | SDK-style .NET Core | 可選 .sln／.slnx／專案檔，以還原圖執行一次 restore 並限制掃描範圍；選目錄則遞迴探索 |
 | `netframework` | Windows .NET Framework | SDK-style、非 SDK PackageReference、packages.config；依格式使用 SDK 或 Agent 的 MSBuild |
 | `combined` | 前後端共同作為一個交付產品 | 指向前後端共同根目錄；先安裝各前端根目錄、再還原 .NET Core，最後一次遞迴掃描產生一份 SBOM |
 
@@ -71,7 +71,7 @@ pnpm workspace 指向含 `pnpm-workspace.yaml` 與鎖檔的共同根目錄；Yar
     projectPath: '$(Build.SourcesDirectory)/backend'
 ```
 
-自 **0.1.1** 起，.NET Core／.NET Framework 的 `projectPath` 也接受 `.sln`、`.slnx`、`.csproj`、`.fsproj`、`.vbproj`。例如 Classic 可直接選擇 `PrimeEagleX.Backend.sln`，YAML 可填 `$(Build.SourcesDirectory)/PrimeEagleX.Backend.sln`。檔案會轉成其所在目錄，沿用遞迴還原與掃描並套用排除規則；掃描範圍包含該目錄下的專案，不依 solution 成員過濾。要縮小範圍，請指定適當子目錄或排除規則。
+自 **0.1.2** 起，.NET Core 的 `projectPath` 選擇 `.sln`、`.slnx`、`.csproj`、`.fsproj`、`.vbproj` 時，保留該檔案作為還原目標，只執行一次 `dotnet restore`。例如 Classic 選 `PrimeEagleX.Backend.sln`，YAML 填 `$(Build.SourcesDirectory)/PrimeEagleX.Backend.sln`。掃描限 MSBuild 還原圖的專案與 ProjectReference 閉包，未加入 Solution 的旁邊專案及舊 assets 不納入。排除規則相對於檔案所在目錄；被排除的成員仍可能由 Solution 還原，但不作為掃描輸入。參照與還原輸出須位於此根目錄內；跨根目錄時請使用包含所有輸入的共同目錄模式。目錄模式沿用逐專案 SDK 政策與還原；.NET Framework 選檔案仍以所在目錄探索。
 
 Task 從實際還原目錄向上讀取 `global.json`，支援註解、完整 `sdk.version`、`rollForward` 與 `allowPrerelease`；沒有版本宣告時使用固定 SDK **10.0.101**。建議提交明確政策：
 
@@ -108,7 +108,9 @@ Task 從實際還原目錄向上讀取 `global.json`，支援註解、完整 `sd
 | 欄位 | 預設 | 說明 |
 | --- | --- | --- |
 | `environment` | `javascript` | 上述四種模式 |
-| `projectPath` | `$(Build.SourcesDirectory)` | 專案／workspace／合併產品共同根目錄；.NET Core／.NET Framework 可選 solution／專案檔，掃描其所在目錄；可含空白，不需在欄位值內加引號 |
+| `projectPath` | `$(Build.SourcesDirectory)` | 專案／workspace／合併產品共同根目錄；.NET Core 選 solution／專案檔時單次還原並依還原圖掃描；可含空白，不需在欄位值內加引號 |
+| `artifactName` | `SBOM` | Build Artifact 名稱，例如 `CycloneSBOM`；選填，清空沿用預設 |
+| `sbomFileName` | `bom.json` | JSON 檔名，例如 `PrimeX.cdx.json`；只填檔名，不含目錄；選填，清空沿用預設 |
 | `nodeVersion` | `24.x` | 最新符合 semver 範圍的掃描 Node，須 >=24；與 Agent handler 分別管理 |
 | `specVersion` | `1.6` | 以隨附官方 CycloneDX 1.6 Schema 驗證 |
 | `excludes` | 下列規則 | 相對根目錄的 glob，以逗號分隔，保留花括號內的逗號 |
@@ -186,3 +188,16 @@ Classic 勾選「推送到 DT」後顯示對應欄位。Task 將已驗證 SBOM �
 [相容矩陣與手動驗收](docs/compatibility.md)區分本機／容器證據及尚未驗證的 Azure、企業網路與 arm64 項目。[開發說明](README-Dev.md)提供建置、測試、架構與發佈準備。
 
 MIT License · Copyright © 2026 Lawrence Shen。第三方授權見 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。
+
+### 自訂成品名稱與掃描日誌
+
+```yaml
+- task: SbomPilot@0
+  inputs:
+    environment: dotnet
+    projectPath: '$(Build.SourcesDirectory)/PrimeEagleX.Backend.sln'
+    artifactName: CycloneSBOM
+    sbomFileName: PrimeX.cdx.json
+```
+
+成品為 `CycloneSBOM/PrimeX.cdx.json`。省略這兩個欄位時維持 `SBOM/bom.json`。DT 使用同一份已驗證 JSON；改名不會再掃描一次。掃描開始前會顯示「開始產生 SBOM（cdxgen）」與安全設定摘要，可依此定位真正掃描指令。

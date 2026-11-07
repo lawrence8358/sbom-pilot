@@ -45,7 +45,7 @@ export SBOM_PILOT_REPOSITORY_URL='https://github.com/lawrence8358/sbom-pilot'
 
 新流程的VSIX按模式存於 `packages/preview/`、`packages/private/`、`packages/public/`，正式檔名為 `<publisher>.sbom-pilot-<version>.vsix`。每次交付資料另建立獨立目錄，console顯示完整路徑，內含：
 
-例如本版公開包為 `packages/public/LawrenceShen.sbom-pilot-0.1.1.vsix`，私有測試包為 `packages/private/LawrenceShen.sbom-pilot-0.1.1.vsix`。請上傳新包；`packages/preview/`及舊測試入口的local-dev-placeholder包會因Publisher與LawrenceShen不符而被市集拒絕。
+例如本版公開包為 `packages/public/LawrenceShen.sbom-pilot-0.1.2.vsix`，私有測試包為 `packages/private/LawrenceShen.sbom-pilot-0.1.2.vsix`。請上傳新包；`packages/preview/`及舊測試入口的local-dev-placeholder包會因Publisher與LawrenceShen不符而被市集拒絕。
 
 - 本次VSIX、`listing.json`、有效的 `vss-extension.json`、實際generated manifests。
 - `marketplace/overview.md`、icon／hero／生成紀錄，以及保持相對結構的README、Dev、docs、examples與runtime授權。

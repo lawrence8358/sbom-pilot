@@ -107,7 +107,11 @@ export async function inspectRestoreGraph(
       });
     }
 
-    if (!result.some((project) => resolve(project.projectPath) === resolve(projectPath))) {
+    if (
+      !result.length ||
+      (!/\.slnx?$/i.test(projectPath) &&
+        !result.some((project) => resolve(project.projectPath) === resolve(projectPath)))
+    ) {
       throw new Error('NuGet 還原圖未包含指定專案。');
     }
 
@@ -128,9 +132,11 @@ export async function restoreDotnetProject(
   run: ProcessRunner,
   tempDirectory: string,
   credentials?: NuGetCredential[],
+  evaluatedProjects?: RestoreProject[],
 ): Promise<RestoreProject[]> {
   // 先固定完整還原圖與既有鎖檔，之後才允許認證進入 restore 子程序。
-  const projects = await inspectRestoreGraph(projectPath, sdk, run, tempDirectory);
+  const projects =
+    evaluatedProjects ?? (await inspectRestoreGraph(projectPath, sdk, run, tempDirectory));
   const locked = projects.filter((project) => project.hasLock);
   const before = await Promise.all(
     locked.map(async (project) => [project.lockPath, await digest(project.lockPath)] as const),

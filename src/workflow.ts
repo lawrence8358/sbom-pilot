@@ -1,4 +1,4 @@
-import { commandRedactor, withCommandLogging } from './command-log';
+import { commandRedactor, diagnosticJson, withCommandLogging } from './command-log';
 import { join } from 'node:path';
 import { mkdir } from 'node:fs/promises';
 import { validateConfig, type TaskConfig } from './config';
@@ -8,12 +8,12 @@ import { javascriptInstaller } from './install/javascript';
 import { dotnetInstaller } from './install/dotnet';
 import { frameworkInstaller } from './install/framework';
 import { combinedInstaller } from './install/combined';
-import { generateSbom, type SbomGenerator } from './scan';
+import { generateSbom, scanExcludes, type SbomGenerator } from './scan';
 import { validateSbom, type SbomValidator, type ValidatedSbom } from './validation';
 import { runProcess, type ProcessRunner } from './process';
 import { uploadToDependencyTrack } from './dt/upload';
 
-export type ArtifactPublisher = (sbom: ValidatedSbom) => Promise<void>;
+export type ArtifactPublisher = (sbom: ValidatedSbom, artifactName: string) => Promise<void>;
 export type SbomUploader = (sbom: ValidatedSbom) => Promise<void>;
 export interface WorkflowServices {
   log: (message: string) => void;
@@ -72,6 +72,7 @@ async function installDependencies(
       ...common,
       excludes: config.excludes,
       nugetCredentials: config.nugetCredentials,
+      target: config.dotnetTarget,
     });
   }
   if (config.environment === 'netframework') {
@@ -107,7 +108,9 @@ export async function runWorkflow(
 
   if (['dotnet', 'netframework'].includes(config.environment)) {
     services.log(
-      '.NET 專案路徑已解析為掃描根目錄；若輸入專案檔，會遞迴掃描檔案所在目錄，並套用排除規則。',
+      config.dotnetTarget
+        ? '.NET Core 已保留選取的方案／專案，將執行單次還原並依還原圖限制掃描範圍。'
+        : '.NET 專案路徑已解析為掃描根目錄；目錄模式會遞迴探索專案並套用排除規則。',
     );
   }
 
@@ -128,9 +131,27 @@ export async function runWorkflow(
   await stage('依賴安裝', () => installDependencies(config, tools, run, tempDirectory, services));
 
   // 只掃描一次，再驗證同一份檔案；上傳與成品不能各自重建 BOM。
-  const outputPath = join(tempDirectory, 'sbom', 'bom.json');
+  const outputPath = join(tempDirectory, 'sbom', config.sbomFileName!);
 
   await mkdir(join(tempDirectory, 'sbom'), { recursive: true });
+  services.log('##[section]開始產生 SBOM（cdxgen）');
+  services.log(
+    commandRedactor(config)(
+      `掃描設定：${diagnosticJson({
+        environment: config.environment,
+        scanRoot: config.projectPath,
+        restoreTarget: config.dotnetTarget,
+        requiredOnly: true,
+        specVersion: config.specVersion,
+        installDeps: false,
+        fetchLicense: config.fetchLicense,
+        noCache: config.noCache,
+        excludes: scanExcludes({ config, tools, outputPath }),
+        scopedToRestoreGraph: Boolean(tools.dotnetScanIncludes?.length),
+        artifact: `${config.artifactName}/${config.sbomFileName}`,
+      })}`,
+    ),
+  );
   await stage('SBOM 產生', () =>
     (services.generate ?? generateSbom)({ config, tools, outputPath }, run),
   );
@@ -157,7 +178,7 @@ export async function runWorkflow(
   }
 
   // 成品請求結束後才傳遞先前 DT 錯誤，不能吞掉任一失敗。
-  await stage('成品發佈', () => services.publish(sbom));
+  await stage('成品發佈', () => services.publish(sbom, config.artifactName!));
 
   if (uploadError) {
     throw uploadError;

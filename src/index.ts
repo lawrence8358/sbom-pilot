@@ -41,9 +41,9 @@ async function main(): Promise<void> {
       log: (message) => console.log(message),
 
       /** 排入 Agent 的 Build Artifact 上傳請求，保留檔案到工作清理以避免非同步讀取競爭。 */
-      publish: async (sbom) => {
+      publish: async (sbom, artifactName) => {
         // Agent 非同步處理上傳並回報錯誤；檔案保留到工作清理，不能在 finally 提前刪除。
-        tl.uploadArtifact('SBOM', sbom.path, 'SBOM');
+        tl.uploadArtifact(artifactName, sbom.path, artifactName);
         console.log('SBOM Build Artifact 上傳已排入 Agent 佇列；請由工作結果及成品頁確認完成。');
       },
     });

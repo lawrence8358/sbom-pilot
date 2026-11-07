@@ -24,7 +24,12 @@ test('.NET file paths resolve to their containing scan directory, including rela
       const file = join(directory, `Product.${extension}`);
       await writeFile(file, 'fixture');
       for (const input of [file, relative(process.cwd(), file)]) {
-        assert.equal((await validateConfig(config(input, environment))).projectPath, directory);
+        const validated = await validateConfig(config(input, environment));
+        assert.equal(validated.projectPath, directory);
+        if (environment === 'dotnet') {
+          assert.equal(validated.dotnetTarget, await realpath(file));
+          assert.equal((await validateConfig(validated)).dotnetTarget, await realpath(file));
+        }
       }
     }
   }
@@ -68,5 +73,5 @@ test('Classic solution filename reaches installation and the actual scanner as a
   });
   assert.equal(result.componentCount, 1);
   assert.deepEqual([installed, scanned, published], [1, 1, 1]);
-  assert.ok(logs.some(message => message.includes('所在目錄') && message.includes('遞迴')));
+  assert.ok(logs.some(message => message.includes('單次還原') && message.includes('還原圖')));
 }));

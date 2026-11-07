@@ -26,6 +26,9 @@ Implementation: tickets01-14 complete locally; ticket15 in progress; external ac
 - Q17：專案與 Extension 正式名稱為 **SBOM Pilot**，識別名稱為 `sbom-pilot`，Pipeline Task 顯示名稱為 **SBOM Pilot — Generate & Upload SBOM**。
 - Q18：README 以正體中文為主、面向使用者導入，涵蓋功能介紹、支援範圍、安裝方式、Classic／YAML 快速開始、參數表及疑難排解；另以開發文件說明建置、測試、VSIX 打包及版本管理。
 - Q19：專案公開發佈，採 **MIT** 授權，作者為 **Lawrence Shen**；交付規劃以公開專案與公開 Marketplace 擴充功能為目標。
+- Q20（2026-11-07追加，取代0.1.1的檔案轉目錄語意）：.NET Core選Solution／專案檔時，保留原目標並依MSBuild還原圖只restore一次，掃描限成員與ProjectReference閉包；目錄模式保留不同目錄SDK政策。
+- Q21（2026-11-07追加，覆寫Q16固定成品名稱）：新增選填artifactName及sbomFileName，預設仍SBOM/bom.json，可改為CycloneSBOM/PrimeX.cdx.json；暫存根目錄繼續內部管理。
+- Q22（2026-11-07追加）：掃描前提供可搜尋的Console section與安全設定摘要；修正Spec Version info，明示目前支援並驗證1.6。
 
 ## 專案識別、授權與文件
 

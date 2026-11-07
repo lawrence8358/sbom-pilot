@@ -42,6 +42,9 @@ export function scanArguments(request: ScanRequest): string[] {
     request.config.specVersion,
     '--install-deps',
     'false',
+    ...(request.tools.dotnetScanIncludes?.length
+      ? ['--include-regex', `{${request.tools.dotnetScanIncludes.join(',')}}`]
+      : []),
     ...scanExcludes(request).flatMap((pattern) => ['--exclude', pattern]),
     '-o',
     request.outputPath,

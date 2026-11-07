@@ -19,7 +19,7 @@ npm run package:dev
 npm run test:package
 ```
 
-`npm test` 編譯到 `.test-build`，用 Node test runner 執行測試並複製 Schema。`package:dev` 會先 build，再產生 `packages/local-dev-placeholder.sbom-pilot-0.1.1.vsix`；`test:package` 將 dist 與真正 VSIX 解到 Repo 外，檢查執行入口與包裝資源。執行產物、快取及日誌留在忽略目錄，不提交。
+`npm test` 編譯到 `.test-build`，用 Node test runner 執行測試並複製 Schema。`package:dev` 會先 build，再產生 `packages/local-dev-placeholder.sbom-pilot-0.1.2.vsix`；`test:package` 將 dist 與真正 VSIX 解到 Repo 外，檢查執行入口與包裝資源。執行產物、快取及日誌留在忽略目錄，不提交。
 
 格式採鎖定的 Prettier，只作用於 `src/**/*.ts`，不排序 import；`npm run format` 先以 AST 補具名函式用途註解前的必要空白行，再由 Prettier 修正格式；`check:source-spacing` 可獨立檢查。函式內依準備、判斷、執行、驗證及清理責任分段，避免逐行插空白。修改具名函式／方法／具名函式常數時，在實作前寫正體中文用途註解，說明責任及必要的不變條件；短匿名回呼不需逐個描述語法。`check:source-comments` 使用 TypeScript AST 找具名實作並檢查註解，仍需人工判斷說明是否有意義。
 
@@ -183,7 +183,7 @@ npm run packaging:submission
 
 `packaging:preview`使用明確標示的私有placeholder；`packaging:package -- --private`使用實際Publisher供測試組織分享；不帶flag產生public包。各自輸出 `packages/<mode>/`及獨立 `packages/submission/<mode>/`，包含該次VSIX、listing／overview、有效manifest、圖片、授權／操作文件及SHA256。`packaging:submission [--private]`只整理與目前來源／dist／身分吻合的正式包；來源、scripts、鎖檔、文件、素材或VSIX變動時拒絕舊產物。所有命令都不自動上傳。portal需手動選New extension→Azure DevOps、私有分享驗收後再公開，改版須同步增加版本；細節與官方來源見上架文件。
 
-舊測試入口的 VSIX 位於 packages/local-dev-placeholder.sbom-pilot-0.1.1.vsix，使用 public:false、Local Development 名稱與 placeholder publisher，只供本機檢查。上傳市集請使用已確認的 Publisher `LawrenceShen` 與 [公開 Repo](https://github.com/lawrence8358/sbom-pilot) 重新打包，從 packages/public/ 或 packages/private/ 選擇相符的套件；尚未確認正式市集安裝成功。
+舊測試入口的 VSIX 位於 packages/local-dev-placeholder.sbom-pilot-0.1.2.vsix，使用 public:false、Local Development 名稱與 placeholder publisher，只供本機檢查。上傳市集請使用已確認的 Publisher `LawrenceShen` 與 [公開 Repo](https://github.com/lawrence8358/sbom-pilot) 重新打包，從 packages/public/ 或 packages/private/ 選擇相符的套件；尚未確認正式市集安裝成功。
 
 確認 Publisher 權限、公開 HTTPS Repo、版本說明及 [live 驗收](docs/compatibility.md) 後設定：
 

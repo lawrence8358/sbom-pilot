@@ -1,5 +1,12 @@
 # 版本說明
 
+## 0.1.2 — Solution 單次還原與成品設定（2026-11-07）
+
+- .NET Core 保留方案／專案檔，依 MSBuild 還原圖只執行一次 restore；掃描僅包含成員與參照，避免無關專案及舊 assets 混入。目錄模式與其他模式相容。
+- 新增選填 `artifactName`、`sbomFileName`，可產生 `CycloneSBOM/PrimeX.cdx.json`；省略維持 `SBOM/bom.json`，並驗證安全名稱與 JSON 副檔名。
+- 掃描前提供 Console section 與安全設定摘要；補上 CycloneDX Spec Version 正確資訊文字。
+- Task、extension、package／lock 同步 0.1.2。
+
 ## 0.1.1 — .NET Core 專案路徑修正（2026-11-07）
 
 - 修正 Classic Pipeline 選擇 `PrimeEagleX.Backend.sln` 時出現「專案路徑必須是目錄」：.NET Core／Windows .NET Framework 現接受 `.sln`、`.slnx`、`.csproj`、`.fsproj`、`.vbproj`，並轉為檔案所在目錄進行既有遞迴還原與掃描。
