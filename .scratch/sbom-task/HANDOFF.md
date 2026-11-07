@@ -1,5 +1,13 @@
 # SBOM Pilot 續接入口
 
+## 最新交付 0.1.3（2026-11-08）
+
+工單[20](issues/20-release-docs-and-stage-logs.md)完成。實作b790c5d；八階段綠色標題（DT關閉則略過）、共用參數規劃、README唯一市集介紹、GitHub絕對文件／圖片、刪除CHANGELOG及重複overview、VSIX精簡且保留runtime授權。
+
+122單元、packaging CLI1項、Node20／24四入口、正式包四個真實解包案例皆通過，序列獨立Standards／Spec均0發現。正式包packages/public/LawrenceShen.sbom-pilot-0.1.3.vsix，512045bytes，SHA256 c0ee835e6769505c02dffd612168eb53ecc6762190165d4cd8408d0d6ed8bb84；submission public/LawrenceShen.sbom-pilot-0.1.3-O2rmRK，62個hash符合。
+
+Marketplace Public0.1.3已驗證，公開介紹已取回核對；GitHub main已push、公開圖片／文件HTTPS200。Azure85 [run2738](https://primeeagle.visualstudio.com/PrimeEagleX/_build/results?buildId=2738)成功，Task0.1.3／ubuntu24.04／Node24，7個已執行階段綠色標題可見、1次方案restore、223組件。artifact2175 SBOM/bom.json實際下載534763bytes再過Schema1.6。沒有儲存修改Pipeline設定。本次無未完成驗收；[review](reviews/20-release-docs-and-stage-logs.md)、[checkpoint](checkpoints/20.md)。整合分支改為main，使用者已授權並完成遠端push，舊的禁止remote條款屬歷史。以下版本為歷史紀錄。
+
 ## 最新追加修正 0.1.2（2026-11-07）
 
 [19方案還原與成品設定](issues/19-solution-restore-and-artifact-options.md)已完成，實作9797323；正式包packages/public/LawrenceShen.sbom-pilot-0.1.2.vsix，SHA256 06b0cda09bb1c23bc08af7f58408e0297b30450e9aafbd9abd1990f40b412475，submission public/LawrenceShen.sbom-pilot-0.1.2-53kFmS（109項hash符合）。122測試、雙Node與真實方案／PortalBackend測試通過。指定方案／專案單次還原且掃描限還原圖；新增成品名稱／檔名預設SBOM/bom.json、掃描section、SpecVersion說明。

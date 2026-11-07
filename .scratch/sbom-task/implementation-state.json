@@ -27,20 +27,20 @@
     "16",
     "17",
     "18",
-    "19"
+    "19",
+    "20"
   ],
   "activeWorktrees": [],
-  "reviewStatus": "01-16-independent-review-closed; 17-self-checked-and-package-verified; 18-self-checked-and-live-azure-verified; 19-self-checked-and-live-azure-default-custom-verified",
-  "reviewHead": "f70fe2b343d0a28992876c7f9e613b22c3b32c37",
+  "reviewStatus": "01-16-independent-review-closed; 17-self-checked-and-package-verified; 18-self-checked-and-live-azure-verified; 19-self-checked-and-live-azure-default-custom-verified; 20-independent-standards-spec-reviewed-and-live-azure-verified",
+  "reviewHead": "b790c5d",
   "externalValidation": [
     "Azure DevOps Server installation, YAML UI and asynchronous failure propagation (Services Classic success/artifact download verified in run2733)",
-    "public repository contents and release-source correspondence (repository currently empty)",
     "Windows/Linux arm64",
     "company feeds and enterprise Proxy/CA/client certificates"
   ],
   "notesDirectory": "../.sbom-pilot-notes",
   "recheckHead": "3c69674fed70adaf3a14255343bf7de57e97dc91",
-  "localImplementationStatus": "0.1.3-local-complete-publish-in-progress",
+  "localImplementationStatus": "0.1.3-complete-marketplace-github-main-and-azure-services-classic-verified",
   "currentCheckpoint": ".scratch/sbom-task/checkpoints/20.md",
   "cleanupStatus": "current-15-16-worktrees-removed; five protected old residual directories retained",
   "cleanupReport": ".scratch/sbom-task/reviews/current-worktree-cleanup.md",
@@ -48,19 +48,19 @@
     "publisher": "LawrenceShen",
     "publisherConfirmedBy": "user reported Marketplace publisher mismatch on 2026-11-06",
     "repositoryUrl": "https://github.com/lawrence8358/sbom-pilot",
-    "repositoryConfirmedBy": "user provided URL on 2026-11-06; anonymous GitHub read shows empty repository"
+    "repositoryConfirmedBy": "User explicitly requested main push; public main pushed and README/image/docs HTTPS verified on 2026-11-08."
   },
   "patchRelease": {
-    "version": "0.1.2",
-    "commit": "9797323",
-    "ticket": "19",
-    "localVerification": "122 tests; real PortalBackend220; single solution restore and stale-assets scope; VSIX109 hashes; dualNode probes",
-    "remoteStatus": "Marketplace Public0.1.2 verified; Azure Services Classic runs2734/2735 succeeded; default/custom artifacts downloaded and schema validated; Pipeline default names restored",
+    "version": "0.1.3",
+    "commit": "b790c5d",
+    "ticket": "20",
+    "localVerification": "122 tests; packaging CLI1; dualNode four entrypoints; real VSIX npm/artifact-failure/dotnet DT403/combined DT accepted; independent sequential Standards/Spec 0 findings",
+    "remoteStatus": "Marketplace Public0.1.3 verified; GitHub main pushed and public README/image/docs checked; Azure Services Classic2738 success; seven green stages, one restore, downloaded artifact schema validated",
     "azureEvidence": [
-      ".smoke/19/azure-2734-evidence.json",
-      ".smoke/19/azure-2735-evidence.json"
+      ".smoke/20/azure-2738-evidence.json"
     ],
-    "azureRunUrl": "https://primeeagle.visualstudio.com/PrimeEagleX/_build/results?buildId=2735"
+    "azureRunUrl": "https://primeeagle.visualstudio.com/PrimeEagleX/_build/results?buildId=2738",
+    "vsixSha256": "c0ee835e6769505c02dffd612168eb53ecc6762190165d4cd8408d0d6ed8bb84"
   },
   "remoteWriteAuthorization": "User explicitly requested Marketplace update and GitHub main push on 2026-11-07."
 }

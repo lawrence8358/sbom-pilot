@@ -46,3 +46,7 @@ User requested serial work after quota interruptions: at most one subagent (impl
 9797323完成0.1.2：指定方案／專案單次restore並使用還原圖限制掃描，保留鎖檔／認證，新增artifactName／sbomFileName預設SBOM/bom.json、掃描section與SpecVersion help。122單元、Node20聚焦6、真packaging1、雙Node四入口、真實特殊路徑／鎖檔／過期assets排除及PortalBackend220組件測試通過；正式包109雜湊符合。
 
 Marketplace Public0.1.2上傳驗證成功。Azure85 run2734預設與run2735自訂CycloneSBOM/PrimeX.cdx.json皆Success，各1次方案restore、17專案、223組件。2171／2172成品均實際下載534,763bytes再驗證Schema1.6。Classic info與新欄位驗證完成，測試後已Save恢復SBOM/bom.json並刷新回讀確認。工單19resolved，紀錄reviews/19-solution-restore-and-artifact-options.md；既有Server／YAML及其他平台外部驗收維持獨立。
+
+## 20 階段日誌與公開文件（2026-11-08）
+
+b790c5d實作0.1.3，122測試、封裝CLI1、Node20/24四入口與四個正式包真實案例通過；序列獨立雙軸review0發現。共用參數保持相容，README獨立作市集介紹、GitHub承載文件與hero，VSIX減至512045bytes且授權保留。市集Public0.1.3已驗證、GitHub main已push並核對連結；Azure85 run2738 Success、Task0.1.3、綠色標題可見、單次方案restore、223組件，成品2175下載534763bytes再次通過Schema1.6。詳見工單20 review/checkpoint。所有本次工作完成，其他未測平台條件維持獨立。
