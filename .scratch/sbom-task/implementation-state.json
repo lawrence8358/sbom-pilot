@@ -60,7 +60,10 @@
       ".smoke/20/azure-2738-evidence.json"
     ],
     "azureRunUrl": "https://primeeagle.visualstudio.com/PrimeEagleX/_build/results?buildId=2738",
-    "vsixSha256": "c0ee835e6769505c02dffd612168eb53ecc6762190165d4cd8408d0d6ed8bb84"
+    "vsixSha256": "c0ee835e6769505c02dffd612168eb53ecc6762190165d4cd8408d0d6ed8bb84",
+    "githubReleaseUrl": "https://github.com/lawrence8358/sbom-pilot/releases/tag/v0.1.3",
+    "githubReleaseSourceCommit": "fd923be",
+    "githubAssetDigestVerified": true
   },
   "remoteWriteAuthorization": "User explicitly requested Marketplace update and GitHub main push on 2026-11-07."
 }

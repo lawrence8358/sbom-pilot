@@ -6,7 +6,7 @@
 
 122單元、packaging CLI1項、Node20／24四入口、正式包四個真實解包案例皆通過，序列獨立Standards／Spec均0發現。正式包packages/public/LawrenceShen.sbom-pilot-0.1.3.vsix，512045bytes，SHA256 c0ee835e6769505c02dffd612168eb53ecc6762190165d4cd8408d0d6ed8bb84；submission public/LawrenceShen.sbom-pilot-0.1.3-O2rmRK，62個hash符合。
 
-Marketplace Public0.1.3已驗證，公開介紹已取回核對；GitHub main已push、公開圖片／文件HTTPS200。Azure85 [run2738](https://primeeagle.visualstudio.com/PrimeEagleX/_build/results?buildId=2738)成功，Task0.1.3／ubuntu24.04／Node24，7個已執行階段綠色標題可見、1次方案restore、223組件。artifact2175 SBOM/bom.json實際下載534763bytes再過Schema1.6。沒有儲存修改Pipeline設定。本次無未完成驗收；[review](reviews/20-release-docs-and-stage-logs.md)、[checkpoint](checkpoints/20.md)。整合分支改為main，使用者已授權並完成遠端push，舊的禁止remote條款屬歷史。以下版本為歷史紀錄。
+Marketplace Public0.1.3已驗證，公開介紹已取回核對；GitHub main已push、公開圖片／文件HTTPS200，[GitHub Release v0.1.3](https://github.com/lawrence8358/sbom-pilot/releases/tag/v0.1.3)與VSIX已公開，雲端資產hash相符。Azure85 [run2738](https://primeeagle.visualstudio.com/PrimeEagleX/_build/results?buildId=2738)成功，Task0.1.3／ubuntu24.04／Node24，7個已執行階段綠色標題可見、1次方案restore、223組件。artifact2175 SBOM/bom.json實際下載534763bytes再過Schema1.6。沒有儲存修改Pipeline設定。本次無未完成驗收；[review](reviews/20-release-docs-and-stage-logs.md)、[checkpoint](checkpoints/20.md)。整合分支改為main，使用者已授權並完成遠端push，舊的禁止remote條款屬歷史。以下版本為歷史紀錄。
 
 ## 最新追加修正 0.1.2（2026-11-07）
 
