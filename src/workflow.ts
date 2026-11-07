@@ -105,6 +105,12 @@ export async function runWorkflow(
 ): Promise<ValidatedSbom> {
   const config = await stage('參數驗證', () => validateConfig(input));
 
+  if (['dotnet', 'netframework'].includes(config.environment)) {
+    services.log(
+      '.NET 專案路徑已解析為掃描根目錄；若輸入專案檔，會遞迴掃描檔案所在目錄，並套用排除規則。',
+    );
+  }
+
   /** 選用測試注入或正式子程序執行器，所有後續階段共用相同執行介面。 */
   const run = withCommandLogging(services.run ?? runProcess, services.log, commandRedactor(config));
 

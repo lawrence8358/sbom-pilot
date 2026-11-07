@@ -74,7 +74,8 @@ const server = createServer(async (request, response) => {
 });
 await new Promise(done => server.listen(0, '127.0.0.1', done)); base = `http://127.0.0.1:${server.address().port}`;
 try {
-  const file = 'packages/local-dev-placeholder.sbom-pilot-0.1.0.vsix';
+  const version = JSON.parse(await readFile('package.json', 'utf8')).version;
+  const file = `packages/local-dev-placeholder.sbom-pilot-${version}.vsix`;
   const vsixBytes = await readFile(file); evidence.vsixSha256 = digest(vsixBytes);
   const zip = await JSZip.loadAsync(vsixBytes), unpacked = join(root, 'vsix');
   for (const [name, entry] of Object.entries(zip.files)) {

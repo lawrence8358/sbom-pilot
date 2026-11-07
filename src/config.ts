@@ -1,4 +1,5 @@
 import { realpath, stat } from 'node:fs/promises';
+import { dirname } from 'node:path';
 import { CDXGEN_VERSION, SUPPORTED_SPEC_VERSIONS, validateToolOptions } from './tool-options';
 import { DEFAULT_DT_URL, validateDtConfig, type DtConfig } from './dt/config';
 import {
@@ -174,10 +175,23 @@ export async function validateConfig(config: TaskConfig): Promise<TaskConfig> {
     throw new Error('排除規則必須是 glob 字串清單。');
   }
 
-  const projectPath = await realpath(config.projectPath);
+  let projectPath = await realpath(config.projectPath);
+  const projectStat = await stat(projectPath);
 
-  if (!(await stat(projectPath)).isDirectory()) {
-    throw new Error('專案路徑必須是目錄。');
+  if (!projectStat.isDirectory()) {
+    if (
+      ['dotnet', 'netframework'].includes(config.environment) &&
+      projectStat.isFile() &&
+      /\.(?:slnx?|csproj|fsproj|vbproj)$/i.test(projectPath)
+    ) {
+      projectPath = dirname(projectPath);
+    } else {
+      throw new Error(
+        ['dotnet', 'netframework'].includes(config.environment)
+          ? '專案路徑必須是目錄或 .sln／.slnx／.csproj／.fsproj／.vbproj 檔案。'
+          : '專案路徑必須是目錄。',
+      );
+    }
   }
 
   return {

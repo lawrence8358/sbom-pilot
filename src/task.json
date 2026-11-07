@@ -10,7 +10,7 @@
   "version": {
     "Major": 0,
     "Minor": 1,
-    "Patch": 0
+    "Patch": 1
   },
   "instanceNameFormat": "SBOM Pilot",
   "runsOn": [
@@ -52,7 +52,8 @@
       "type": "filePath",
       "label": "專案路徑",
       "required": true,
-      "defaultValue": "$(Build.SourcesDirectory)"
+      "defaultValue": "$(Build.SourcesDirectory)",
+      "helpMarkDown": ".NET Core／.NET Framework 可選目錄或 .sln／.slnx／.csproj／.fsproj／.vbproj；選檔案時遞迴還原與掃描其所在目錄，不依 solution 成員過濾。JavaScript／TypeScript 與合併模式請選共同根目錄。"
     },
     {
       "name": "excludes",

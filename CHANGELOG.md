@@ -1,5 +1,12 @@
 # 版本說明
 
+## 0.1.1 — .NET Core 專案路徑修正（2026-11-07）
+
+- 修正 Classic Pipeline 選擇 `PrimeEagleX.Backend.sln` 時出現「專案路徑必須是目錄」：.NET Core／Windows .NET Framework 現接受 `.sln`、`.slnx`、`.csproj`、`.fsproj`、`.vbproj`，並轉為檔案所在目錄進行既有遞迴還原與掃描。
+- 在參數說明、README 與日誌明示掃描範圍；solution 輸入不會依成員清單過濾，排除規則仍相對檔案所在目錄。JavaScript／TypeScript 及合併模式繼續要求目錄。
+- Task、extension、npm 版本同步為 `0.1.1`；保留 Task ID 與 major `0`，既有 `0.*` Pipeline 可使用更新。
+- 加入相對／絕對／空白路徑與實際掃描參數、Schema 驗證及發佈的回歸測試。
+
 ## 0.1.0 — 本機交付候選版（2026-11-03）
 
 - 單一 **SBOM Pilot — Generate & Upload SBOM** Task：Vue/npm/pnpm/Yarn、.NET Core、Windows .NET Framework、.NET Core 前後端合併，Classic Build 與 YAML 共用參數。

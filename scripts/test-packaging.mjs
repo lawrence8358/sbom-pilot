@@ -11,6 +11,7 @@ test('Marketplace CLI creates private/public bundles and rejects stale, mismatch
   await mkdir('.smoke', { recursive: true });
   const fixture = await mkdtemp(resolve('.smoke', 'marketplace-SYNTHETIC-'));
   const sourceRoots = [...PACKAGING_SOURCE_ROOTS, 'node_modules'];
+  const version = JSON.parse(await readFile('package.json', 'utf8')).version;
   for (const path of sourceRoots) await cp(path, join(fixture, path), { recursive: true });
   await writeFile(join(fixture, 'SYNTHETIC-FIXTURE.txt'), '僅供包裝測試：Publisher與Repo皆為合成字串，不可當正式交付或上傳。\n');
   const env = { ...process.env, SBOM_PILOT_PUBLISHER: 'sbom-fixture-only', SBOM_PILOT_REPOSITORY_URL: 'https://github.com/sbom-fixture-only/synthetic-never-publish' };
@@ -44,7 +45,7 @@ test('Marketplace CLI creates private/public bundles and rejects stale, mismatch
     await writeFile(iconPath, iconBytes);
   }
   run(['scripts/packaging.mjs', 'package', '--private']);
-  const privatePath = join(fixture, 'packages/private/sbom-fixture-only.sbom-pilot-0.1.0.vsix');
+  const privatePath = join(fixture, `packages/private/sbom-fixture-only.sbom-pilot-${version}.vsix`);
   const privateBytes = await readFile(privatePath);
   const privateZip = await JSZip.loadAsync(privateBytes);
   const privateXml = await privateZip.file('extension.vsixmanifest').async('string');
@@ -94,7 +95,7 @@ test('Marketplace CLI creates private/public bundles and rejects stale, mismatch
   run(['scripts/packaging.mjs', 'submission'], false);
   run(['scripts/packaging.mjs', 'submission', '--preview'], false);
   run(['scripts/packaging.mjs', 'package']);
-  const publicPath = join(fixture, 'packages/public/sbom-fixture-only.sbom-pilot-0.1.0.vsix');
+  const publicPath = join(fixture, `packages/public/sbom-fixture-only.sbom-pilot-${version}.vsix`);
   const publicZip = await JSZip.loadAsync(await readFile(publicPath));
   assert.match(await publicZip.file('extension.vsixmanifest').async('string'), /<GalleryFlags>[^<]*Public/);
   const publicReceipt = JSON.parse(await readFile(`${publicPath}.provenance.json`, 'utf8'));

@@ -48,7 +48,7 @@ Classic Build：在 Agent job 選擇 **Add task → SBOM Pilot**，設定「開�
 | `environment` | 何時選用 | 專案路徑與依賴準備 |
 | --- | --- | --- |
 | `javascript` | JavaScript／TypeScript 前端（例如 Angular、Vue），npm、pnpm 或 Yarn | 指向專案或 workspace 根目錄；以對應管理器嚴格安裝 |
-| `dotnet` | SDK-style .NET Core | 指向含 csproj／fsproj／vbproj 的目錄；選擇 SDK 後執行 dotnet restore |
+| `dotnet` | SDK-style .NET Core | 指向含 csproj／fsproj／vbproj 的目錄，或選擇 .sln／.slnx／專案檔，以檔案所在目錄遞迴還原及掃描 |
 | `netframework` | Windows .NET Framework | SDK-style、非 SDK PackageReference、packages.config；依格式使用 SDK 或 Agent 的 MSBuild |
 | `combined` | 前後端共同作為一個交付產品 | 指向前後端共同根目錄；先安裝各前端根目錄、再還原 .NET Core，最後一次遞迴掃描產生一份 SBOM |
 
@@ -70,6 +70,8 @@ pnpm workspace 指向含 `pnpm-workspace.yaml` 與鎖檔的共同根目錄；Yar
     environment: dotnet
     projectPath: '$(Build.SourcesDirectory)/backend'
 ```
+
+自 **0.1.1** 起，.NET Core／.NET Framework 的 `projectPath` 也接受 `.sln`、`.slnx`、`.csproj`、`.fsproj`、`.vbproj`。例如 Classic 可直接選擇 `PrimeEagleX.Backend.sln`，YAML 可填 `$(Build.SourcesDirectory)/PrimeEagleX.Backend.sln`。檔案會轉成其所在目錄，沿用遞迴還原與掃描並套用排除規則；掃描範圍包含該目錄下的專案，不依 solution 成員過濾。要縮小範圍，請指定適當子目錄或排除規則。
 
 Task 從實際還原目錄向上讀取 `global.json`，支援註解、完整 `sdk.version`、`rollForward` 與 `allowPrerelease`；沒有版本宣告時使用固定 SDK **10.0.101**。建議提交明確政策：
 
@@ -106,7 +108,7 @@ Task 從實際還原目錄向上讀取 `global.json`，支援註解、完整 `sd
 | 欄位 | 預設 | 說明 |
 | --- | --- | --- |
 | `environment` | `javascript` | 上述四種模式 |
-| `projectPath` | `$(Build.SourcesDirectory)` | 專案／workspace／合併產品共同根目錄；可含空白，不需在欄位值內加引號 |
+| `projectPath` | `$(Build.SourcesDirectory)` | 專案／workspace／合併產品共同根目錄；.NET Core／.NET Framework 可選 solution／專案檔，掃描其所在目錄；可含空白，不需在欄位值內加引號 |
 | `nodeVersion` | `24.x` | 最新符合 semver 範圍的掃描 Node，須 >=24；與 Agent handler 分別管理 |
 | `specVersion` | `1.6` | 以隨附官方 CycloneDX 1.6 Schema 驗證 |
 | `excludes` | 下列規則 | 相對根目錄的 glob，以逗號分隔，保留花括號內的逗號 |
