@@ -26,10 +26,11 @@
     "15",
     "16",
     "17",
-    "18"
+    "18",
+    "19"
   ],
   "activeWorktrees": [],
-  "reviewStatus": "01-16-independent-review-closed; 17-self-checked-and-package-verified; 18-self-checked-and-live-azure-verified",
+  "reviewStatus": "01-16-independent-review-closed; 17-self-checked-and-package-verified; 18-self-checked-and-live-azure-verified; 19-self-checked-and-live-azure-default-custom-verified",
   "reviewHead": "f70fe2b343d0a28992876c7f9e613b22c3b32c37",
   "externalValidation": [
     "Azure DevOps Server installation, YAML UI and asynchronous failure propagation (Services Classic success/artifact download verified in run2733)",
@@ -39,8 +40,8 @@
   ],
   "notesDirectory": "../.sbom-pilot-notes",
   "recheckHead": "3c69674fed70adaf3a14255343bf7de57e97dc91",
-  "localImplementationStatus": "0.1.1-complete-marketplace-and-azure-services-classic-verified",
-  "currentCheckpoint": ".scratch/sbom-task/checkpoints/18.md",
+  "localImplementationStatus": "0.1.2-complete-marketplace-and-azure-services-classic-default-custom-verified",
+  "currentCheckpoint": ".scratch/sbom-task/checkpoints/19.md",
   "cleanupStatus": "current-15-16-worktrees-removed; five protected old residual directories retained",
   "cleanupReport": ".scratch/sbom-task/reviews/current-worktree-cleanup.md",
   "releaseIdentity": {
@@ -50,12 +51,15 @@
     "repositoryConfirmedBy": "user provided URL on 2026-11-06; anonymous GitHub read shows empty repository"
   },
   "patchRelease": {
-    "version": "0.1.1",
-    "commit": "1bb265f",
-    "ticket": "18",
-    "localVerification": "119 tests; real PortalBackend 267 components; VSIX109 hashes; dualNode probes",
-    "remoteStatus": "Marketplace public0.1.1 verified; Azure Services Classic run2733 succeeded; artifact2170 downloaded and schema validated",
-    "azureEvidence": ".smoke/18/azure-2733-evidence.json",
-    "azureRunUrl": "https://primeeagle.visualstudio.com/PrimeEagleX/_build/results?buildId=2733"
+    "version": "0.1.2",
+    "commit": "9797323",
+    "ticket": "19",
+    "localVerification": "122 tests; real PortalBackend220; single solution restore and stale-assets scope; VSIX109 hashes; dualNode probes",
+    "remoteStatus": "Marketplace Public0.1.2 verified; Azure Services Classic runs2734/2735 succeeded; default/custom artifacts downloaded and schema validated; Pipeline default names restored",
+    "azureEvidence": [
+      ".smoke/19/azure-2734-evidence.json",
+      ".smoke/19/azure-2735-evidence.json"
+    ],
+    "azureRunUrl": "https://primeeagle.visualstudio.com/PrimeEagleX/_build/results?buildId=2735"
   }
 }

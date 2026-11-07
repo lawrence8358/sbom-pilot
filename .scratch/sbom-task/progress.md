@@ -40,3 +40,9 @@ User requested serial work after quota interruptions: at most one subagent (impl
 `1bb265f`已整合於feature/sbom-pilot。0.1.1正式VSIX與109項SHA、119測試、新回歸雙Node、真packaging CLI、dist／VSIX雙Node入口通過。真實PortalBackend使用相對PrimeEagleX.Backend.sln執行封裝Task，還原、掃描、Schema成功，267組件。修正是.NET檔案轉所在目錄，保持既有遞迴／排除範圍並明示不依solution成員過濾。
 
 使用者回覆後已上傳Marketplace0.1.1，驗證完成。原definition85設定、master78ef08f4與ubuntu-24.04啟動run2733成功，Task日誌版本0.1.1、Task1m58s／job2m3s。成品2170／SBOM/bom.json非同步上傳成功，實際下載550,201bytes、229組件、Schema1.6再次通過。工單18resolved。本機／Azure證據與交付位置見reviews/18-dotnet-project-file-path.md與HANDOFF。
+
+## 19 方案單次還原與成品設定（2026-11-07）
+
+9797323完成0.1.2：指定方案／專案單次restore並使用還原圖限制掃描，保留鎖檔／認證，新增artifactName／sbomFileName預設SBOM/bom.json、掃描section與SpecVersion help。122單元、Node20聚焦6、真packaging1、雙Node四入口、真實特殊路徑／鎖檔／過期assets排除及PortalBackend220組件測試通過；正式包109雜湊符合。
+
+Marketplace Public0.1.2上傳驗證成功。Azure85 run2734預設與run2735自訂CycloneSBOM/PrimeX.cdx.json皆Success，各1次方案restore、17專案、223組件。2171／2172成品均實際下載534,763bytes再驗證Schema1.6。Classic info與新欄位驗證完成，測試後已Save恢復SBOM/bom.json並刷新回讀確認。工單19resolved，紀錄reviews/19-solution-restore-and-artifact-options.md；既有Server／YAML及其他平台外部驗收維持獨立。

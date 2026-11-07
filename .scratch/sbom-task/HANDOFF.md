@@ -1,5 +1,11 @@
 # SBOM Pilot 續接入口
 
+## 最新追加修正 0.1.2（2026-11-07）
+
+[19方案還原與成品設定](issues/19-solution-restore-and-artifact-options.md)已完成，實作9797323；正式包packages/public/LawrenceShen.sbom-pilot-0.1.2.vsix，SHA256 06b0cda09bb1c23bc08af7f58408e0297b30450e9aafbd9abd1990f40b412475，submission public/LawrenceShen.sbom-pilot-0.1.2-53kFmS（109項hash符合）。122測試、雙Node與真實方案／PortalBackend測試通過。指定方案／專案單次還原且掃描限還原圖；新增成品名稱／檔名預設SBOM/bom.json、掃描section、SpecVersion說明。
+
+Marketplace Public0.1.2已上傳且完成驗證。原Pipeline85：run2734預設SBOM/bom.json、run2735自訂CycloneSBOM/PrimeX.cdx.json皆成功，Task版本0.1.2，各1次方案restore、17個圖內專案、223組件。Artifacts2171／2172皆非同步上傳完成、實際下載並再驗證Schema1.6。Classic info與欄位已檢查，測試後Pipeline恢復預設名稱、Save並刷新回讀確認。詳見[驗證紀錄](reviews/19-solution-restore-and-artifact-options.md)及[checkpoint](checkpoints/19.md)。本輪無未完成驗收，以下0.1.1／0.1.0為歷史紀錄。
+
 ## 最新追加修正 0.1.1（2026-11-07）
 
 [18 .NET Core 專案檔路徑](issues/18-dotnet-project-file-path.md) 的本機實作已提交 `1bb265f`。最新正式包是 `packages/public/LawrenceShen.sbom-pilot-0.1.1.vsix`，SHA256 `fb05c2f4ec10ed7d28f4cf81f3bc814cab61c7b1f255a249f4881e84eadc5b52`；交付資料 `packages/submission/public/LawrenceShen.sbom-pilot-0.1.1-VojLtl`，109項SHA全過。下方0.1.0屬歷史交付。
