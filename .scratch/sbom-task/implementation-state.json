@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "integrationBranch": "feature/sbom-pilot",
+  "integrationBranch": "main",
   "reviewBase": "e3a5bf6ed57b74c519d0d64285f2929d0195688b",
-  "noRemoteWrites": true,
+  "noRemoteWrites": false,
   "handoffDocument": ".scratch/sbom-task/HANDOFF.md",
   "dispatchPolicy": {
     "maxConcurrentSubagents": 1,
@@ -40,8 +40,8 @@
   ],
   "notesDirectory": "../.sbom-pilot-notes",
   "recheckHead": "3c69674fed70adaf3a14255343bf7de57e97dc91",
-  "localImplementationStatus": "0.1.2-complete-marketplace-and-azure-services-classic-default-custom-verified",
-  "currentCheckpoint": ".scratch/sbom-task/checkpoints/19.md",
+  "localImplementationStatus": "0.1.3-local-complete-publish-in-progress",
+  "currentCheckpoint": ".scratch/sbom-task/checkpoints/20.md",
   "cleanupStatus": "current-15-16-worktrees-removed; five protected old residual directories retained",
   "cleanupReport": ".scratch/sbom-task/reviews/current-worktree-cleanup.md",
   "releaseIdentity": {
@@ -61,5 +61,6 @@
       ".smoke/19/azure-2735-evidence.json"
     ],
     "azureRunUrl": "https://primeeagle.visualstudio.com/PrimeEagleX/_build/results?buildId=2735"
-  }
+  },
+  "remoteWriteAuthorization": "User explicitly requested Marketplace update and GitHub main push on 2026-11-07."
 }
