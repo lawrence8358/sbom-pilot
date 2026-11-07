@@ -21,14 +21,13 @@ try {
   const version = JSON.parse(await readFile('vss-extension.json', 'utf8')).version;
   const file = `local-dev-placeholder.sbom-pilot-${version}.vsix`;
   const archive = await JSZip.loadAsync(await readFile(vsix ?? join('packages', file)));
-  assert.ok(archive.file('marketplace/overview.md'));
-  assert.ok(archive.file('images/marketplace-hero.png'));
+  assert.ok(archive.file('README.md'));
+  assert.equal(archive.file('images/marketplace-hero.png'), null);
+  assert.ok(archive.file('dist/THIRD-PARTY-NOTICES.md'));
   const iconBytes = await archive.file('images/extension-icon.png').async('nodebuffer');
   assert.ok(iconBytes.length <= 1024 * 1024, `VSIX icon exceeds Marketplace 1024 KB limit: ${iconBytes.length} bytes`);
   assert.deepEqual(await archive.file('dist/icon.png').async('nodebuffer'), iconBytes);
-  // Check local Markdown links in shipped user/developer docs against the VSIX,
-  // including nested example/config files. Marketplace must not depend on an
-  // unpublished repository URL to make these relative links work.
+  // README uses public GitHub links; any remaining local links must exist in the archive.
   for (const [name, entry] of Object.entries(archive.files)) {
     if (entry.dir || name.startsWith('dist/') || !name.endsWith('.md')) continue;
     const contents = await entry.async('string');

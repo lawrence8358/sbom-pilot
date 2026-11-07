@@ -3,8 +3,11 @@
   "id": "sbom-pilot",
   "name": "SBOM Pilot",
   "publisher": "LawrenceShen",
-  "repository": { "type": "git", "uri": "https://github.com/lawrence8358/sbom-pilot" },
-  "version": "0.1.2",
+  "repository": {
+    "type": "git",
+    "uri": "https://github.com/lawrence8358/sbom-pilot"
+  },
+  "version": "0.1.3",
   "description": "產生 CycloneDX SBOM 的單一 Azure Pipelines Task。",
   "public": false,
   "targets": [
@@ -15,10 +18,12 @@
   "categories": [
     "Azure Pipelines"
   ],
-  "icons": { "default": "images/extension-icon.png" },
+  "icons": {
+    "default": "images/extension-icon.png"
+  },
   "content": {
     "details": {
-      "path": "marketplace/overview.md"
+      "path": "README.md"
     },
     "license": {
       "path": "LICENSE"
@@ -28,27 +33,13 @@
     {
       "path": "dist"
     },
-    { "path": "README.md", "addressable": true },
-    { "path": "marketplace", "addressable": true },
-    { "path": "images", "addressable": true },
-    { "path": "docs/marketplace.md", "addressable": true },
     {
-      "path": "THIRD-PARTY-NOTICES.md"
-    },
-    {
-      "path": "docs/framework.md",
+      "path": "README.md",
       "addressable": true
     },
-    { "path": "docs/package-managers.md", "addressable": true },
-    { "path": "docs/yarn.md", "addressable": true },
-    { "path": "docs/combined.md", "addressable": true },
-    { "path": "docs/npm-auth.md", "addressable": true },
-    { "path": "docs/nuget-auth.md", "addressable": true },
-    { "path": "docs/compatibility.md", "addressable": true },
-    { "path": "README-Dev.md", "addressable": true },
-    { "path": "CHANGELOG.md", "addressable": true },
-    { "path": "examples", "addressable": true },
-    { "path": "scripts/docker/combined.Dockerfile", "addressable": true
+    {
+      "path": "images/extension-icon.png",
+      "addressable": true
     }
   ],
   "contributions": [

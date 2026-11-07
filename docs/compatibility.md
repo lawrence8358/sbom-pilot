@@ -1,6 +1,6 @@
 # 執行相容性與驗收
 
-本頁是目前交付候選版的矩陣；本機／Docker、來源支持的候選組合與真實 Azure 驗收分開記錄。**Services／Server 的 VSIX 安裝、Classic／YAML UI、原生成品下載及 Agent 上傳失敗傳播均 UNVERIFIED**。Publisher `LawrenceShen` 與 [公開 Repo](https://github.com/lawrence8358/sbom-pilot) 已提供，市集成功上傳／安裝仍待驗收。
+本頁區分本機／Docker 與真實 Azure 驗收。Marketplace 已發布 0.1.2；Azure DevOps Services Classic 已完成真實執行與成品下載驗證。Server 安裝、YAML UI、Agent 非同步上傳失敗、arm64 與企業網路條件仍 UNVERIFIED。
 
 ## Handler 與平台
 
@@ -15,7 +15,7 @@
 | Windows x64／.NET Core | 先前 SDK6.0.428／9.0.316／10.0.101 真實 restore及掃描；最終 VSIX10.0.101 私有來源驗收 |
 | Windows x64／.NET Framework | MSBuild17.14.51；SDK net48、非 SDK PackageReference、packages.config；最終 VSIX 私有還原／依賴圖通過 |
 | Windows/Linux x64／管理器與私有來源 | npm11.19.1、pnpm10.34.2／native12.16.1、Classic1.22.22、Yarn4.18.1 PnP/node-modules 完整先前矩陣；Linux 私有 npm/nativepnpm12/PnP/combined及 NuGet 真實矩陣見認證文件 |
-| Azure DevOps Services | UNVERIFIED；需真實組織、Agent與下載證據 |
+| Azure DevOps Services Classic | 0.1.2：Ubuntu 24.04／Node24，.NET Core 方案單次還原，預設／自訂成品下載與 Schema 1.6 通過；[run2734](https://primeeagle.visualstudio.com/PrimeEagleX/_build/results?buildId=2734)、[run2735](https://primeeagle.visualstudio.com/PrimeEagleX/_build/results?buildId=2735)。YAML UI 與非同步失敗仍 UNVERIFIED |
 | Server2022.2／Agent3.238.0 | Node20_1 來源候選，安裝／Classic/YAML／Windows/Linux 均 UNVERIFIED |
 | Server2020.1.2／2019.1.2 官方 Agent3.225.0 | 低於 manifest 門檻，不列支援組合 |
 | Windows/Linux arm64 | 下載程式設計目標，UNVERIFIED |
@@ -25,11 +25,6 @@
 
 套件／SBOM hash、實際命令及資源記錄於交付 checkpoint；可重跑命令見 [README-Dev](../README-Dev.md)。既有完整認證矩陣見 [npm](npm-auth.md)、[NuGet](nuget-auth.md)，共同根目錄規則見 [combined](combined.md)。沒有將先前 SDK 預裝映像當作冷 SDK 證據。
 
-本輪追加：工單15已在 Windows／Linux x64 的 Node20／24 通過完整114項測試、175項中文說明、型別／格式／間距、建置及隔離 dist／VSIX 檢查；真實解包流程另涵蓋兩平台 Angular npm、Yarn4 PnP、原生 pnpm12、私有 combined 與 .NET Core／DT403 成品保留。其後命令日誌安全修正已通過 Windows Node20.20.2／24.22.1 完整116項測試，及 Linux Node24.22.2 的命令／DT 相關18項回歸；本次未重跑管理器下載／還原矩陣，既有真實流程證據與外部 UNVERIFIED 範圍分開保留。
-
-Docker Node24 image ID：sha256:e7add2a490bb17d97b485b8641bd88455fff7839ade0f5eba493c3508124d413；Node20：sha256:8f693eaa7e0a8e71560c9a82b55fd54c2ae920a2ba5d2cde28bac7d1c01c9ba5。容器是在本機 Docker 執行，不是真實 Azure Agent。
-
-[官方 Server／Agent 配對表](https://learn.microsoft.com/en-us/azure/devops/pipelines/agents/v4-agent?view=azure-devops#does-azure-devops-server-support-the-4x-agent) 指定2022.2配3.238.0；[Agent v3.238.0](https://github.com/microsoft/azure-pipelines-agent/blob/v3.238.0/src/Agent.Worker/Handlers/NodeHandler.cs) 含 Node20_1，兩者只支持來源候選。[Task schema](https://github.com/microsoft/azure-pipelines-task-lib/blob/master/tasks.schema.json) 允許雙 handler；[runner 政策](https://learn.microsoft.com/en-us/azure/devops/pipelines/agents/nodejs-runners?view=azure-devops) 可能變動，發佈前重查。
 ## Proxy、CA 與逾時
 
 工具下載與 DT 套用 Agent.ProxyUrl／Username／Password、regex bypass、CAInfo 與 client certificate；另遵循 HTTP_PROXY／HTTPS_PROXY／NO_PROXY。原生連線使用 CONNECT Proxy，認證只出現在 Proxy header，DT Key 只出現在目的服務 header，不放 CLI arguments 或錯誤文字。總請求逾時涵蓋 CONNECT 等待，回應有大小界限；DT TLS 略過只作用於 DT 目的連線，HTTPS Proxy 本身仍驗證憑證，沒有修改 NODE_TLS_REJECT_UNAUTHORIZED。
@@ -42,7 +37,7 @@ Docker Node24 image ID：sha256:e7add2a490bb17d97b485b8641bd88455fff7839ade0f5eb
 
 每個待驗證 Services／Server 組合各執行 Windows、Linux，分別使用 Classic Build 與 YAML；.NET Framework 的 Linux 列為不適用。先記錄 Server 年版／Update、Agent 完整版本、OS／架構、VSIX SHA-256、Task 版本、選用 handler、Node/cdxgen 實際版本。未知欄位保留 UNVERIFIED。
 
-1. 執行 `npm ci`、`npm test`，依[上架說明](marketplace.md)設定實際Publisher／Repo，再執行 `npm run packaging:package -- --private`。用 `node scripts/verify-package.mjs --vsix packages/private/LawrenceShen.sbom-pilot-0.1.2.vsix` 檢查實際私有包。Windows 以 `Get-FileHash packages/private/LawrenceShen.sbom-pilot-0.1.2.vsix -Algorithm SHA256` 記錄套件；Linux 用 `sha256sum`。使用實際Publisher私有包分享到測試組織，placeholder預覽僅供本機檢查。
+1. 執行 `npm ci`、`npm test`，依[上架說明](marketplace.md)設定實際Publisher／Repo，再執行 `npm run packaging:package -- --private`。用 `node scripts/verify-package.mjs --vsix packages/private/LawrenceShen.sbom-pilot-<version>.vsix` 檢查實際私有包。Windows 以 `Get-FileHash packages/private/LawrenceShen.sbom-pilot-<version>.vsix -Algorithm SHA256` 記錄套件；Linux 用 `sha256sum`。使用實際Publisher私有包分享到測試組織，placeholder預覽僅供本機檢查。
 2. 在測試組織／Collection 擴充功能管理頁上傳同一個 VSIX 並安裝。記錄安裝結果及版本。Classic Build 搜尋 SBOM Pilot，確認 JavaScript／TypeScript、.NET Core、.NET Framework、.NET Core 前後端合併選項；DT 關閉時 DT 欄位隱藏，而 projectPath、excludes、specVersion 仍顯示；開啟時要求 URL／UUID／Key。Classic Release 不應列出本 Task。
 3. 建立最小 Vue/npm 測試 Repo：package.json 含 `name:host-test-product`、`version:1.0.0`、`private:true`、dependencies.vue=`3.5.13`、devDependencies.chalk=`5.3.0`；main.js 內容 `import { createApp } from 'vue'; createApp({});`。在開發端執行 npm install 並提交 package.json、package-lock.json、main.js。Agent 保留必要 handler，但使用空的 SBOM Pilot 工具快取，讓單一 Task 自行準備掃描工具。
 4. Classic Build 加一個 SBOM Pilot，JavaScript／TypeScript、Repo 根目錄、Node24.x、Spec1.6、DT關閉；不加 NodeTool／npm／cdxgen Task。YAML 使用下方相同值。確認工具實際版本、required-only、Schema 驗證及組件數；缺 lockfile／不同步各跑一次並確認失敗。

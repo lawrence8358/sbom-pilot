@@ -131,14 +131,23 @@ test('workflow attempts artifact publication after DT error and returns failure;
   const tools: ToolContext = { node: process.execPath, npmCli: '', cdxgenCli: '', nodeVersion: '24.22.2', cdxgenVersion: '13.6.0', env: process.env };
   const input: TaskConfig = { environment: 'vue', projectPath: root, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: [], fetchLicense: true, noCache: true, uploadToDt: true, dt: config('http://127.0.0.1:1') };
   let uploaded = 0, published = 0;
-  const services = { log: () => {}, prepare: async () => tools, installer: { install: async () => {} }, generate: async () => {}, validate: async () => sbom,
-    upload: async (actual: typeof sbom) => { uploaded++; assert.equal(actual.path, sbom.path); throw new Error('DT rejected'); },
-    publish: async (actual: typeof sbom) => { published++; assert.equal(await readFile(actual.path, 'utf8'), validContents); },
+  const logs: string[] = [];
+  const services = { log: (message: string) => { logs.push(message); }, prepare: async () => tools, installer: { install: async () => {} }, generate: async () => {}, validate: async () => sbom,
+    upload: async (actual: typeof sbom) => { uploaded++; assert.equal(logs.at(-1), '##[section]開始上傳 SBOM 至 Dependency-Track（DT）'); assert.equal(actual.path, sbom.path); throw new Error('DT rejected'); },
+    publish: async (actual: typeof sbom) => { published++; assert.equal(logs.at(-1), '##[section]開始發佈 SBOM 成品（Azure Pipelines）'); assert.equal(await readFile(actual.path, 'utf8'), validContents); },
   };
   await assert.rejects(runWorkflow(input, join(root, 'run'), services), /DT 上傳.*DT rejected/);
   assert.equal(uploaded, 1); assert.equal(published, 1);
+  assert.deepEqual(logs.filter(line => line.startsWith('##[section]')), [
+    '##[section]開始驗證工作設定', '##[section]開始安裝／還原專案依賴',
+    '##[section]開始產生 SBOM（cdxgen）', '##[section]開始驗證 SBOM（CycloneDX）',
+    '##[section]開始上傳 SBOM 至 Dependency-Track（DT）', '##[section]開始發佈 SBOM 成品（Azure Pipelines）',
+  ]);
+  logs.length = 0;
   await runWorkflow({ ...input, uploadToDt: false }, join(root, 'off'), services);
   assert.equal(uploaded, 1); assert.equal(published, 2);
+  assert.ok(!logs.some(line => line.includes('開始上傳 SBOM 至')));
+  assert.ok(logs.includes('DT 上傳未啟用，略過此階段。'));
   await assert.rejects(runWorkflow(input, join(root, 'publish-failed'), { ...services, publish: async () => { throw new Error('artifact failed'); } }), /成品發佈/);
   const { upload: _injectedUpload, ...defaultServices } = services;
   const beforeDefaultUpload = published;

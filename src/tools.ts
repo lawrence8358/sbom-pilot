@@ -63,6 +63,7 @@ export function selectNodeVersion(versions: string[], range: string): string {
 
 /** 驗證官方 Node checksum／快取並隔離安裝固定 cdxgen，確認版本與 CLI 後回傳非秘密工具環境。 */
 export const prepareTools: ToolPreparer = async (request, run, log) => {
+  log('##[section]開始準備 Node.js 執行環境');
   validateToolOptions(request.nodeVersion, request.cdxgenVersion);
 
   if (!['x64', 'arm64'].includes(process.arch)) {
@@ -161,6 +162,7 @@ export const prepareTools: ToolPreparer = async (request, run, log) => {
 
   // cdxgen 安裝在隔離目錄，不使用任意全域工具或寫回來源。
   // 每次重新安裝，避免信任上次工作取消後留下的不完整目錄。
+  log('##[section]開始安裝 SBOM 掃描工具（cdxgen）');
   const cdxgenRoot = join(request.tempDirectory, 'cdxgen');
 
   await mkdir(cdxgenRoot, { recursive: true });

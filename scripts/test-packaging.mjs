@@ -48,6 +48,13 @@ test('Marketplace CLI creates private/public bundles and rejects stale, mismatch
   const privatePath = join(fixture, `packages/private/sbom-fixture-only.sbom-pilot-${version}.vsix`);
   const privateBytes = await readFile(privatePath);
   const privateZip = await JSZip.loadAsync(privateBytes);
+  assert.ok(privateZip.file('README.md'));
+  for (const prefix of ['docs/', 'examples/', 'marketplace/']) assert.ok(!Object.keys(privateZip.files).some(name => name.startsWith(prefix)));
+  assert.equal(privateZip.file('images/marketplace-hero.png'), null);
+  assert.equal(privateZip.file('README-Dev.md'), null);
+  assert.equal(privateZip.file('CHANGELOG.md'), null);
+  assert.ok(privateZip.file('dist/THIRD-PARTY-NOTICES.md'));
+  assert.ok(privateZip.file('dist/licenses/manifest.json'));
   const privateXml = await privateZip.file('extension.vsixmanifest').async('string');
   assert.match(privateXml, /Publisher="sbom-fixture-only"/);
   assert.doesNotMatch(privateXml.match(/<GalleryFlags>([^<]*)<\/GalleryFlags>/)?.[1] ?? '', /Public/);
@@ -60,7 +67,7 @@ test('Marketplace CLI creates private/public bundles and rejects stale, mismatch
     const [digest, path] = line.split('  ');
     assert.equal(hash(await readFile(join(bundle, path))), digest, `交付SHA256不符：${path}`);
   }
-  for (const path of ['src/command-log.ts', 'scripts/build.mjs', 'package-lock.json', 'vss-extension.json', 'docs/marketplace.md', 'images/extension-icon.png', 'marketplace/overview.md', 'dist/index.js']) {
+  for (const path of ['src/command-log.ts', 'scripts/build.mjs', 'package-lock.json', 'vss-extension.json', 'docs/marketplace.md', 'images/extension-icon.png', 'README.md', 'dist/index.js']) {
     const target = join(fixture, path), original = await readFile(target);
     await writeFile(target, Buffer.concat([original, Buffer.from('\n')]));
     run(['scripts/packaging.mjs', 'submission', '--private'], false);
@@ -82,7 +89,7 @@ test('Marketplace CLI creates private/public bundles and rejects stale, mismatch
   // 即使sidecar的VSIX hash被一併改寫，archive實際payload仍須匹配來源。
   const receiptPath = `${privatePath}.provenance.json`, receiptBytes = await readFile(receiptPath);
   const tamperedZip = await JSZip.loadAsync(privateBytes);
-  tamperedZip.file('marketplace/overview.md', 'tampered overview');
+  tamperedZip.file('README.md', 'tampered overview');
   const tamperedBytes = await tamperedZip.generateAsync({ type: 'nodebuffer' });
   const tamperedReceipt = JSON.parse(receiptBytes.toString());
   tamperedReceipt.vsix.sha256 = hash(tamperedBytes);

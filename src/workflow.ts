@@ -104,6 +104,7 @@ export async function runWorkflow(
   tempDirectory: string,
   services: WorkflowServices,
 ): Promise<ValidatedSbom> {
+  services.log('##[section]開始驗證工作設定');
   const config = await stage('參數驗證', () => validateConfig(input));
 
   if (['dotnet', 'netframework'].includes(config.environment)) {
@@ -128,6 +129,7 @@ export async function runWorkflow(
     ),
   );
 
+  services.log('##[section]開始安裝／還原專案依賴');
   await stage('依賴安裝', () => installDependencies(config, tools, run, tempDirectory, services));
 
   // 只掃描一次，再驗證同一份檔案；上傳與成品不能各自重建 BOM。
@@ -156,6 +158,7 @@ export async function runWorkflow(
     (services.generate ?? generateSbom)({ config, tools, outputPath }, run),
   );
 
+  services.log('##[section]開始驗證 SBOM（CycloneDX）');
   const sbom = await stage('SBOM 驗證', () =>
     (services.validate ?? validateSbom)(outputPath, config.specVersion),
   );
@@ -166,6 +169,7 @@ export async function runWorkflow(
   let uploadError: unknown;
 
   if (config.uploadToDt) {
+    services.log('##[section]開始上傳 SBOM 至 Dependency-Track（DT）');
     try {
       await stage('DT 上傳', () =>
         services.upload
@@ -175,9 +179,12 @@ export async function runWorkflow(
     } catch (error) {
       uploadError = error;
     }
+  } else {
+    services.log('DT 上傳未啟用，略過此階段。');
   }
 
   // 成品請求結束後才傳遞先前 DT 錯誤，不能吞掉任一失敗。
+  services.log('##[section]開始發佈 SBOM 成品（Azure Pipelines）');
   await stage('成品發佈', () => services.publish(sbom, config.artifactName!));
 
   if (uploadError) {

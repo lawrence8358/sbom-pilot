@@ -6,3 +6,4 @@ dist/
 *.log
 .taskkey
 .packaging-manifest.json
+需求.md

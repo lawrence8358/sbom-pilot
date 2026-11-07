@@ -1,203 +1,155 @@
 # SBOM Pilot
 
-[Marketplace 產品介紹](marketplace/overview.md) · [包裝與上架操作](docs/marketplace.md)
+![SBOM Pilot](https://raw.githubusercontent.com/lawrence8358/sbom-pilot/main/images/marketplace-hero.png)
 
-在 Azure Pipelines 加入一個 **SBOM Pilot — Generate & Upload SBOM** Task，即可準備工具、安裝／還原依賴，並產生交付產品的 CycloneDX 1.6 JSON。結果以名稱為 `SBOM` 的 Build Artifact 提供，也可選擇上傳到既有 Dependency-Track（DT）專案。
+在 Azure Pipelines 加入一個 **SBOM Pilot — Generate & Upload SBOM** Task，即可準備 Node.js 與 cdxgen、安裝／還原專案依賴，產生 CycloneDX 1.6 JSON，並發佈為 Build Artifact。也可將同一份 SBOM 上傳到既有 Dependency-Track（DT）專案。
 
-## 支援與前置條件
+## 安裝與前置條件
 
-- 使用 **Classic Build 或 YAML Build**；Classic Release 不適用。
-- Agent 使用 Windows 或 Linux。.NET Framework 只適用 Windows；目前實測為 x64，arm64 尚待驗證。Task 提供 `Node20_1`／`Node24` handler，manifest 最低 Agent 為 `3.238.0`；特定 Server／Agent 配對仍須依[相容矩陣](docs/compatibility.md)驗收。
-- Agent 的暫存目錄與工具快取可寫，並能存取 nodejs.org、npm registry、有效套件來源及所需授權資訊來源。Linux 需有 tar／bash；Windows 需有 PowerShell。
-- JavaScript 專案提交 manifest 與**一種管理器的一份一致 lockfile**；workspace 指向共同根目錄。原生套件的編譯工具由 Agent 提供。
-- .NET Core 可由 Task 準備 SDK；傳統 .NET Framework 另需 Agent 預裝 MSBuild >=17.8、NuGet Restore targets、相符 targeting pack／workloads。
+從 [Azure DevOps Marketplace](https://marketplace.visualstudio.com/items?itemName=LawrenceShen.sbom-pilot) 選擇 **Get it free** 並安裝至組織。Azure DevOps Server 請由 Collection 管理員依該 Server 的擴充功能管理流程安裝 VSIX。
 
-不需另加 NodeTool、Corepack、UseDotNet、套件安裝或 Authenticate Task。首次執行會下載工具；這不是離線掃描工具。
+- 適用 Classic Build 與 YAML Build，使用 Windows／Linux Agent；Classic Release 不適用。.NET Framework 限 Windows。
+- Task 提供 Node20_1／Node24 handler，最低 Agent 版本為 3.238.0。目前實測 x64；arm64、特定 Server／Agent 配對與企業網路條件見[相容性](https://github.com/lawrence8358/sbom-pilot/blob/main/docs/compatibility.md)。
+- Agent 暫存與工具快取需可寫，並能存取 nodejs.org、npm registry、NuGet／專案套件與授權資訊來源。Linux 需 tar／bash，Windows 需 PowerShell。
+- JavaScript／TypeScript 專案需提交 package.json 與一種管理器的一份一致鎖檔；workspace 指向共同根目錄。原生套件的編譯工具由 Agent 提供。
+- .NET Core 可由 Task 準備 SDK；傳統 .NET Framework 需預裝 MSBuild >=17.8、NuGet Restore targets、相符 targeting pack／workloads。
 
-## 安裝
+不需另外加入 NodeTool、Corepack、UseDotNet、套件安裝或 Authenticate Task。首次執行會下載工具。
 
-由維護者依[開發說明](README-Dev.md)產生 VSIX，在組織或 Collection 的擴充功能管理介面上傳並安裝。權限與操作位置依 Azure DevOps 管理政策而定。
+## 快速開始
 
-`package:dev`／`packaging:preview` 產生 Publisher 為 `local-dev-placeholder` 的本機測試套件。**上傳市集請使用 `packaging:package` 產出的 `LawrenceShen.sbom-pilot-<version>.vsix`**；正式 Publisher 為 `LawrenceShen`，[公開專案](https://github.com/lawrence8358/sbom-pilot)已提供。設定方式與實際上傳路徑見[上架說明](docs/marketplace.md)。目前尚未確認市集安裝成功，真實 Services／Server 安裝與成品下載仍待環境驗收；[版本內容](CHANGELOG.md)與[驗收狀態](docs/compatibility.md)另有記錄。
+.NET Core 選擇方案檔，可對整個方案執行一次還原：
 
-## 第一次執行
-
-安裝擴充功能後，對含有效 npm lockfile 的 JavaScript／TypeScript 前端專案（例如 Angular 或 Vue）使用：
-
-```yaml
+~~~yaml
 steps:
   - checkout: self
   - task: SbomPilot@0
     displayName: 產生交付產品 SBOM
     inputs:
-      environment: javascript
-      projectPath: '$(Build.SourcesDirectory)'
-      uploadToDt: false
-```
+      environment: dotnet
+      projectPath: '$(Build.SourcesDirectory)/Product.sln'
+~~~
 
-其餘欄位使用預設值即可。若專案位於子目錄，將 `projectPath` 改為該專案或 workspace 根目錄，例如 `$(Build.SourcesDirectory)/frontend`。
+JavaScript／TypeScript（例如 Vue、Angular）只需改成：
 
-Classic Build：在 Agent job 選擇 **Add task → SBOM Pilot**，設定「開發環境」與「專案路徑」，保持「推送到 DT」關閉，儲存並執行。欄位與 YAML 相同。
-
-工作成功且 Agent 完成上傳後，預設在 Build 結果的成品頁選擇 **SBOM**，下載 `bom.json`；自訂名稱時選擇對應成品與檔案。Task 日誌的「已排入佇列」表示已要求 Agent 上傳；請以工作結果及成品頁確認完成。Agent 非同步上傳失敗時會回報工作失敗。
-
-## 選擇開發環境
-
-四種模式共用同一個 Task，只需調整 `environment` 與 `projectPath`：
-
-| `environment` | 何時選用 | 專案路徑與依賴準備 |
-| --- | --- | --- |
-| `javascript` | JavaScript／TypeScript 前端（例如 Angular、Vue），npm、pnpm 或 Yarn | 指向專案或 workspace 根目錄；以對應管理器嚴格安裝 |
-| `dotnet` | SDK-style .NET Core | 可選 .sln／.slnx／專案檔，以還原圖執行一次 restore 並限制掃描範圍；選目錄則遞迴探索 |
-| `netframework` | Windows .NET Framework | SDK-style、非 SDK PackageReference、packages.config；依格式使用 SDK 或 Agent 的 MSBuild |
-| `combined` | 前後端共同作為一個交付產品 | 指向前後端共同根目錄；先安裝各前端根目錄、再還原 .NET Core，最後一次遞迴掃描產生一份 SBOM |
-
-### JavaScript／TypeScript：npm／pnpm／Yarn
-
-Task 依 `package.json`、workspace 設定與鎖檔工作，不要求 Vue、Angular 或其他框架標記；同樣適用一般 JavaScript／TypeScript 套件專案。舊 YAML `environment: vue` 仍是 `javascript` 的相容別名，並非第五種模式。
-
-npm 使用 `package-lock.json` 或 `npm-shrinkwrap.json`，pnpm 使用 `pnpm-lock.yaml`，Yarn 使用 `yarn.lock`。缺少鎖檔、競爭鎖檔或 manifest 不一致會失敗，不會自動修正。優先採用 `packageManager` 的精確版本及有效的 Yarn 專案執行檔；無宣告時使用固定 fallback。安裝腳本沿用所選管理器政策。
-
-pnpm workspace 指向含 `pnpm-workspace.yaml` 與鎖檔的共同根目錄；Yarn workspace 也指定共同根目錄，保留 `.yarnrc`／`.yarnrc.yml`、PnP／node-modules 設定。
-
-範例：[pnpm workspace](examples/pnpm-workspace/package.json)、[Yarn Classic](examples/yarn-classic-workspace/package.json)、[Yarn PnP](examples/yarn-modern-workspace/package.json)。版本、嚴格安裝及衝突規則見[管理器文件](docs/package-managers.md)與 [Yarn 文件](docs/yarn.md)。
-
-### .NET Core
-
-```yaml
-- task: SbomPilot@0
-  inputs:
-    environment: dotnet
-    projectPath: '$(Build.SourcesDirectory)/backend'
-```
-
-自 **0.1.2** 起，.NET Core 的 `projectPath` 選擇 `.sln`、`.slnx`、`.csproj`、`.fsproj`、`.vbproj` 時，保留該檔案作為還原目標，只執行一次 `dotnet restore`。例如 Classic 選 `PrimeEagleX.Backend.sln`，YAML 填 `$(Build.SourcesDirectory)/PrimeEagleX.Backend.sln`。掃描限 MSBuild 還原圖的專案與 ProjectReference 閉包，未加入 Solution 的旁邊專案及舊 assets 不納入。排除規則相對於檔案所在目錄；被排除的成員仍可能由 Solution 還原，但不作為掃描輸入。參照與還原輸出須位於此根目錄內；跨根目錄時請使用包含所有輸入的共同目錄模式。目錄模式沿用逐專案 SDK 政策與還原；.NET Framework 選檔案仍以所在目錄探索。
-
-Task 從實際還原目錄向上讀取 `global.json`，支援註解、完整 `sdk.version`、`rollForward` 與 `allowPrerelease`；沒有版本宣告時使用固定 SDK **10.0.101**。建議提交明確政策：
-
-```json
-{ "sdk": { "version": "10.0.101", "rollForward": "disable" } }
-```
-
-相容 SDK 已存在時直接驗證使用，缺少時以 Microsoft 官方安裝腳本準備至工具快取。保留分層 NuGet.Config；已有 NuGet lockfile 才開啟 locked mode，沒有選用鎖檔的合法專案仍可執行。所有 ProjectReference 必須產生有效 assets。`global.json sdk.paths` 目前不支援；特殊 workload、自訂 SDK／targets 需具備可評估的 Agent 條件。
-
-### .NET Framework
-
-```yaml
-- task: SbomPilot@0
-  inputs:
-    environment: netframework
-    projectPath: '$(Build.SourcesDirectory)'
-```
-
-限 Windows。SDK-style 沿用 SDK 政策；非 SDK PackageReference 與 packages.config 使用 Agent 的 Visual Studio MSBuild。Task 不安裝整套 Visual Studio；packages.config 須可由 solution 或 `repositoryPath` 判定套件位置，不要求新增 NuGet lockfile。完整條件與範例見 [.NET Framework 文件](docs/framework.md)。
-
-### .NET Core 前後端合併
-
-```yaml
-- task: SbomPilot@0
-  inputs:
-    environment: combined
-    projectPath: '$(Build.SourcesDirectory)/product'
-```
-
-共同根目錄可含獨立前端或 workspace，以及 SDK-style .NET Core 後端。不需另填前後端路徑；共用排除規則、單次遞迴掃描、一份 SBOM，啟用 DT 時對應同一個交付產品 UUID。傳統 .NET Framework 使用獨立的 `netframework` 模式。參考[合併範例](examples/combined-product/package.json)及[根目錄規則](docs/combined.md)。
-
-## 常用設定
-
-| 欄位 | 預設 | 說明 |
-| --- | --- | --- |
-| `environment` | `javascript` | 上述四種模式 |
-| `projectPath` | `$(Build.SourcesDirectory)` | 專案／workspace／合併產品共同根目錄；.NET Core 選 solution／專案檔時單次還原並依還原圖掃描；可含空白，不需在欄位值內加引號 |
-| `artifactName` | `SBOM` | Build Artifact 名稱，例如 `CycloneSBOM`；選填，清空沿用預設 |
-| `sbomFileName` | `bom.json` | JSON 檔名，例如 `PrimeX.cdx.json`；只填檔名，不含目錄；選填，清空沿用預設 |
-| `nodeVersion` | `24.x` | 最新符合 semver 範圍的掃描 Node，須 >=24；與 Agent handler 分別管理 |
-| `specVersion` | `1.6` | 以隨附官方 CycloneDX 1.6 Schema 驗證 |
-| `excludes` | 下列規則 | 相對根目錄的 glob，以逗號分隔，保留花括號內的逗號 |
-| `fetchLicense` | `true` | 補充授權資料，可能額外連線；關閉不刪除鎖檔已有授權，也不保證完全不連線 |
-| `noCache` | `true` | 停用 cdxgen metadata 快取；不變更 npm 或 Agent 工具快取 |
-| `uploadToDt` | `false` | 上傳到既有 DT 專案；關閉時不讀取或驗證 DT 欄位 |
-
-預設排除規則：
-
-```text
-**/_Design{,Front}/**,**/bin/**,**/obj/**,**/node_modules/**,**/dist/**
-```
-
-YAML 使用 `excludes: ''` 或在 Classic 清空欄位，可取消自訂排除；cdxgen 內建忽略仍適用。.NET 掃描僅將預設 `**/obj/**` 轉為 `**/obj/!(project.assets.json)`，保留已驗證的間接依賴資料；其他自訂 glob 不改寫。遮蔽必要 assets、或資料超出掃描根目錄時會明確失敗。
-
-布林欄位接受 `true`／`false`（不分大小寫），不接受 `yes`、`0` 或空白。輸出與工具路徑由 Task 管理；有效 SBOM 保留到 Agent 工作清理，供非同步成品上傳讀取。
-
-## 私有來源與進階設定
-
-認證值一律存入 **Secret Pipeline Variables**，欄位只填 `$(variableName)`，不把明文寫進 YAML。公開與私有來源可並存，不需建立新 Service Connection 或額外 Authenticate Task。
-
-| 欄位 | 預設 | 格式與用途 |
-| --- | --- | --- |
-| `npmCredentials` | 空白 | registry URL 與 token 或 username/password，另可明確映射既有認證變數；[完整格式](docs/npm-auth.md) |
-| `nugetCredentials` | 空白 | 每筆 source、url、username、password；驗證整個還原範圍的來源身分；[完整格式](docs/nuget-auth.md) |
-| `cdxgenVersion` | `13.6.0` | 精確的 `@cdxgen/cdxgen` 13.x 穩定版；空白用預設，其他 major／預發版會拒絕，實際 Node engines／CLI 亦須相容 |
-| `dtApiUrl` | `http://localhost:8081` | DT 開啟時必填，服務根網址可含反向代理路徑；localhost 指 Agent |
-| `dtProjectUuid` | 無 | DT 開啟時必填，既有專案 UUID，不自動建立專案 |
-| `dtApiKey` | 無 | DT 開啟時必填，以 Secret Variable 傳入 |
-| `skipDtTlsCertificateCheck` | `false` | 只略過 DT 目的 HTTPS 憑證驗證，不改變其他工具／Proxy 的 TLS |
-
-工具下載與 DT 連線使用 Agent Proxy／CA，子工具取得相應環境設定。Agent regex bypass 與子工具 `NO_PROXY` 規則不同，Windows NuGet 仍需系統 CA 信任。企業環境驗收步驟見[相容性文件](docs/compatibility.md)。
-
-### 選用 DT 上傳
-
-先在 DT 建立交付產品專案，取得 UUID 與可上傳 BOM 的 Key，並將 Key 存為秘密變數 `dtApiKey`：
-
-```yaml
+~~~yaml
 - task: SbomPilot@0
   inputs:
     environment: javascript
-    projectPath: '$(Build.SourcesDirectory)'
-    uploadToDt: true
-    dtApiUrl: 'https://<dt-service-host>'
-    dtProjectUuid: '<existing-project-uuid>'
-    dtApiKey: '$(dtApiKey)'
-```
+    projectPath: '$(Build.SourcesDirectory)/frontend'
+~~~
 
-Classic 勾選「推送到 DT」後顯示對應欄位。Task 將已驗證 SBOM 原始位元組以 Base64 PUT 到 `/api/v1/bom`；成品保留同一份檔案。**DT 接受上傳即完成此階段，不等待背景匯入或弱點分析。**
+Classic Build：在 Agent job 選 **Add task → SBOM Pilot**，設定「開發環境」與「專案路徑」，儲存並執行。欄位與 YAML 相同。
 
-請求最多30秒，暫時網路錯誤及 HTTP408／429／500／502／503／504 最多嘗試3次；401／403不重試、不跟隨重新導向。重試可能再次提交已接受但回應遺失的資料。DT 失敗時仍要求 Agent 發佈有效 SBOM，最後 Task 失敗；仍須核對工作結果及成品頁。
+成功後在 Build 結果的成品頁選 **SBOM**，下載 **bom.json**。Task 顯示「已排入佇列」代表已要求 Agent 上傳，請以工作結果及成品頁確認上傳完成。
 
-## 核對執行命令
+## 選擇開發環境與路徑
 
-每個工具子程序開始前，Task 會以單行 `[command]` JSON 顯示實際 `executable`、完整 `argv` 清單與 `cwd`。JSON 保留空參數、空白、引號、Unicode 與 glob 的參數邊界；控制字元以跳脫表示，`#` 寫成 `\u0023`，避免 Azure Agent 將顯示內容當成日誌控制命令；`JSON.parse` 可還原非秘密原值。執行仍使用原始參數及 `shell: false`，日誌不是可直接貼入 shell 的命令字串。掃描時另列 `FETCH_LICENSE`／`CDXGEN_NO_CACHE`，可核對 `--required-only`、`--spec-version`、`--exclude` 與 `--install-deps false`。
+四種模式使用相同參數名稱，不需分別設定前端與後端路徑。
 
-已知 DT、npm、NuGet 及代理帳密、常見編碼、URL userinfo 與認證旗標值會在 Task 輸出前改為 `***`；遮罩來源包含已驗證的 Task 認證設定及相關子程序／代理認證；其餘參數與路徑會顯示。Task 不列印整份環境或原始子程序 stdout／stderr。Agent 的 setsecret 控制命令仍用於提前登錄遮罩。
+| environment | 適用專案 | projectPath |
+| --- | --- | --- |
+| javascript | JavaScript／TypeScript、Vue、Angular；npm／pnpm／Yarn | 專案或 workspace 根目錄 |
+| dotnet | SDK-style .NET Core | .sln／.slnx／.csproj／.fsproj／.vbproj，或專案目錄 |
+| netframework | Windows .NET Framework，含 SDK-style、PackageReference、packages.config | 專案目錄；選方案／專案檔時以所在目錄探索 |
+| combined | .NET Core 前後端作為同一交付產品 | 包含前後端的共同根目錄 |
 
-掃描與 DT 上傳分開：`[http]` 顯示實際 `PUT` 目的 URL 和 `X-Api-Key: ***`，對應原始需求的獨立 REST 上傳，不會假造 cdxgen `--api-key` 命令。原始範例的 `-p true` 是 cdxgen 的 [SBOM tree table 顯示選項](https://github.com/cdxgen/cdxgen/blob/v13.6.0/bin/cdxgen.js#L249-L253)；本 Task 提供有效成品與組件摘要，不轉印該子程序表格。
+**JavaScript**：依 package.json、workspace 與鎖檔選擇管理器，執行 npm ci、pnpm frozen 或 Yarn frozen／immutable 安裝。缺少鎖檔、競爭鎖檔或 manifest 不一致會失敗，不自動修正。舊 YAML 的 environment: vue 仍可使用，等同 javascript。參考[管理器](https://github.com/lawrence8358/sbom-pilot/blob/main/docs/package-managers.md)、[Yarn](https://github.com/lawrence8358/sbom-pilot/blob/main/docs/yarn.md)及 [workspace 範例](https://github.com/lawrence8358/sbom-pilot/blob/main/examples/pnpm-workspace/package.json)。
 
-## 問題排查與結果限制
+**.NET Core**：選方案／專案檔時只執行一次 dotnet restore，掃描限制在還原圖內專案與 ProjectReference；方案外的舊 assets 不納入。排除規則相對檔案所在目錄，被排除成員仍可能由方案還原。參照與輸出需位於此根目錄內；跨根目錄時使用包含全部輸入的共同目錄模式。選目錄時遞迴探索並逐專案還原，不保證只還原一次。
 
-| 現象 | 先檢查 |
-| --- | --- |
-| 找不到管理器／lockfile 衝突 | 專案或 workspace 根目錄、唯一鎖檔、精確 packageManager；用相同版本在本機修正並提交，Task 不猜測或改寫 |
-| 私有來源失敗 | URL 路徑、Secret Variable 格式／權限、既有設定優先序；[npm](docs/npm-auth.md)／[NuGet](docs/nuget-auth.md)另列來源隔離規則 |
-| 工具準備失敗 | 下載來源、Proxy／CA、可寫暫存與快取、Node >=24；不完整快取需依錯誤修復 |
-| .NET 還原失敗 | global.json、SDK／TFM、鎖檔、ProjectReference、MSBuild／targeting pack／workloads，以及 NuGet.Config |
-| SBOM 驗證失敗 | cdxgen 版本與必要 assets；檔案存在但未通過 Schema 不會發佈 |
-| 成品不見 | 確認為 Build 工作，查看 Agent 上傳及工作結果；Classic Release 不支援 |
-| DT 401／403／404／TLS 失敗 | Key 權限、UUID、服務根網址、Agent 可達性與 CA；略過 TLS 僅作用於 DT |
+Task 向上讀取 global.json 的完整 sdk.version、rollForward 與 allowPrerelease，缺少版本宣告時採 SDK 10.0.101；已有相容 SDK 就沿用，否則下載。保留分層 NuGet.Config，已有 NuGet lockfile 才使用 locked mode。global.json 的 sdk.paths 目前不支援；自訂 SDK／targets 與 workload 需具備可評估的 Agent 條件。
 
-為避免洩漏來源認證，Task 不轉印原始子程序輸出。`--required-only` 固定啟用，代表 cdxgen 的 required scope，並非逐項核對實際部署成品；Yarn workspace 可能保留上游標記為 required 的部分開發依賴，詳見 [Yarn 限制](docs/yarn.md)。
+**.NET Framework**：傳統格式使用 Agent 預裝 MSBuild，不安裝整套 Visual Studio；packages.config 需可由 solution 或 repositoryPath 判定套件位置。詳見 [.NET Framework](https://github.com/lawrence8358/sbom-pilot/blob/main/docs/framework.md)。
 
-[相容矩陣與手動驗收](docs/compatibility.md)區分本機／容器證據及尚未驗證的 Azure、企業網路與 arm64 項目。[開發說明](README-Dev.md)提供建置、測試、架構與發佈準備。
+**前後端合併**：設定 environment: combined、projectPath: '$(Build.SourcesDirectory)/product'。Task 安裝各前端根目錄並還原 .NET Core，再以 -t dotnet -t js 單次遞迴掃描，共用排除規則，產生一份 SBOM。啟用 DT 時對應同一產品 UUID；傳統 .NET Framework 使用獨立 netframework 模式。詳見[合併規則](https://github.com/lawrence8358/sbom-pilot/blob/main/docs/combined.md)與[範例](https://github.com/lawrence8358/sbom-pilot/blob/main/examples/combined-product/package.json)。
 
-MIT License · Copyright © 2026 Lawrence Shen。第三方授權見 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。
+## 參數
 
-### 自訂成品名稱與掃描日誌
+| YAML 名稱／Classic 欄位 | 預設 | 用途 |
+| --- | --- | --- |
+| environment／開發環境 | javascript | 上述四種模式 |
+| projectPath／專案路徑 | $(Build.SourcesDirectory) | 必填；專案、workspace 或合併產品根目錄，.NET 可選檔案；值可含空白，不另加內層引號 |
+| nodeVersion／Node.js 版本 | 24.x | 最新符合 semver 範圍的版本，需 >=24；與 Agent handler 分別管理 |
+| excludes／排除規則 | 見下方 | 相對掃描根目錄的 glob，以逗號分隔，保留花括號內的逗號；清空表示不加自訂排除 |
+| specVersion／CycloneDX Spec Version | 1.6 | 產生與驗證 SBOM 的規格，不論是否啟用 DT 都適用 |
+| artifactName／成品名稱 | SBOM | Build Artifact 名稱；清空沿用預設 |
+| sbomFileName／SBOM 檔名 | bom.json | 單一 .json 檔名，不含目錄；清空沿用預設 |
+| uploadToDt／推送到 DT | false | 啟用後上傳同一份已驗證 SBOM |
 
-```yaml
+預設排除規則：
+
+~~~text
+**/_Design{,Front}/**,**/bin/**,**/obj/**,**/node_modules/**,**/dist/**
+~~~
+
+可以追加 **/UnitTest/** 等專案相對 glob，不會依名稱自動排除所有測試專案。.NET 還原／掃描保留必要 obj/assets 例外，供解析間接依賴；cdxgen 自身忽略規則仍適用。
+
+所有模式固定使用 --required-only 及 --install-deps false：先由 Task 安裝／還原，再由 cdxgen 掃描。required scope 不等於逐項核對部署成品，Yarn workspace 可能保留上游標記為 required 的部分開發依賴，詳見 [Yarn 限制](https://github.com/lawrence8358/sbom-pilot/blob/main/docs/yarn.md)。
+
+### DT 設定
+
+啟用 uploadToDt 後，Classic 會顯示 DT 欄位。先在 DT 建立專案，將可上傳 BOM 的 API Key 存入 Secret Pipeline Variable。
+
+| YAML 名稱／Classic 欄位 | 預設 | 用途 |
+| --- | --- | --- |
+| dtApiUrl／DT API URL | http://localhost:8081 | 必填服務根網址，可含反向代理路徑；Task 附加 /api/v1/bom；localhost 指 Agent |
+| dtProjectUuid／DT Project UUID | 無 | 必填既有專案 UUID，不自動建立專案 |
+| dtApiKey／DT API Key | 無 | 必填秘密變數參照，例如 $(dtApiKey) |
+| skipDtTlsCertificateCheck／略過 DT TLS 憑證檢查 | false | 進階選項；只作用於 DT HTTPS，不改變其他工具 TLS |
+
+~~~yaml
 - task: SbomPilot@0
   inputs:
     environment: dotnet
-    projectPath: '$(Build.SourcesDirectory)/PrimeEagleX.Backend.sln'
+    projectPath: '$(Build.SourcesDirectory)/Product.sln'
     artifactName: CycloneSBOM
-    sbomFileName: PrimeX.cdx.json
-```
+    sbomFileName: Product.cdx.json
+    uploadToDt: true
+    dtApiUrl: 'https://dt.company.example'
+    dtProjectUuid: '<existing-project-uuid>'
+    dtApiKey: '$(dtApiKey)'
+~~~
 
-成品為 `CycloneSBOM/PrimeX.cdx.json`。省略這兩個欄位時維持 `SBOM/bom.json`。DT 使用同一份已驗證 JSON；改名不會再掃描一次。掃描開始前會顯示「開始產生 SBOM（cdxgen）」與安全設定摘要，可依此定位真正掃描指令。
+成品為 CycloneSBOM/Product.cdx.json；DT 接收相同 JSON 位元組。DT 上傳成功表示 API 接受，不等待背景匯入或弱點分析。DT 失敗時仍嘗試發佈有效成品，最後 Task 回報失敗。無效 SBOM 不上傳、不發佈。
+
+請求最多30秒，暫時網路錯誤與 HTTP 408／429／500／502／503／504 最多嘗試3次；401／403不重試、不跟隨重新導向。回應遺失時，重試可能再次提交。
+
+### 進階設定與私有套件
+
+| YAML 名稱／Classic 欄位 | 預設 | 用途 |
+| --- | --- | --- |
+| npmCredentials／私有 npm 來源認證 | 空白 | JSON 清單：registry 與 token，或 username/password；供 javascript／combined 使用 |
+| nugetCredentials／私有 NuGet 來源認證 | 空白 | JSON 清單：source、url、username、password；供 dotnet／netframework／combined 使用 |
+| cdxgenVersion／cdxgen 版本 | 13.6.0 | @cdxgen/cdxgen 13.x 穩定精確版本；清空用預設，準備後驗證實際版本與 CLI |
+| fetchLicense／補充授權資訊 | true | 補充授權，可能額外連線；關閉不移除鎖檔已有授權，也不保證完全不連線 |
+| noCache／停用 cdxgen 快取 | true | 停用 metadata 快取，不影響 npm 或 Agent 工具快取 |
+
+認證 JSON 存入 Secret Pipeline Variables，欄位只填 $(npmCredentials) 或 $(nugetCredentials)，不要把密碼直接寫入 YAML。來源路由沿用 Repo 的 .npmrc／Yarn／NuGet.Config；npm 與 NuGet 的身分格式不同，分開設定。完整範例與來源對應規則見[私有 npm 認證](https://github.com/lawrence8358/sbom-pilot/blob/main/docs/npm-auth.md)與[私有 NuGet 認證](https://github.com/lawrence8358/sbom-pilot/blob/main/docs/nuget-auth.md)。布林欄位接受 true／false，不接受 yes、0 或空白。
+
+## 執行日誌與問題排查
+
+日誌以綠色階段標題顯示：
+
+1. 開始驗證工作設定
+2. 開始準備 Node.js 執行環境（可重用已驗證的快取）
+3. 開始安裝 SBOM 掃描工具（cdxgen）
+4. 開始安裝／還原專案依賴
+5. 開始產生 SBOM（cdxgen）
+6. 開始驗證 SBOM（CycloneDX）
+7. 開始上傳 SBOM 至 Dependency-Track（DT，未啟用則略過）
+8. 開始發佈 SBOM 成品（Azure Pipelines）
+
+每個子程序以單行 [command] JSON 顯示 executable、argv 與 cwd，掃描前提供設定摘要。秘密顯示為 ***，不轉印原始子程序輸出。JSON 用於核對參數，並非可直接貼入 shell 的命令。DT 上傳另列 [http] PUT 與遮罩 Header。
+
+| 問題 | 檢查項目 |
+| --- | --- |
+| 工具準備失敗 | 下載來源、Proxy／CA、可寫暫存與快取、Node >=24 |
+| 安裝或還原失敗 | 正確根目錄、唯一鎖檔、packageManager、global.json、SDK／MSBuild、套件來源與認證 |
+| SBOM 驗證失敗 | cdxgen 版本與必要 assets；僅有檔案存在不足以發佈 |
+| 找不到成品 | 使用 Build 工作，核對 Agent 上傳與整個工作結果 |
+| DT 401／403／404／TLS | Key 權限、UUID、服務根網址、Agent 可達性與 CA |
+
+工具與 DT 連線沿用 Agent Proxy／CA 設定，企業 Proxy／CA／client certificate 條件需依實際環境驗證。更完整的支援範圍見[相容性](https://github.com/lawrence8358/sbom-pilot/blob/main/docs/compatibility.md)。
+
+[原始碼與問題回報](https://github.com/lawrence8358/sbom-pilot) · [開發與打包](https://github.com/lawrence8358/sbom-pilot/blob/main/README-Dev.md) · [MIT License](https://github.com/lawrence8358/sbom-pilot/blob/main/LICENSE) · [第三方授權](https://github.com/lawrence8358/sbom-pilot/blob/main/THIRD-PARTY-NOTICES.md)

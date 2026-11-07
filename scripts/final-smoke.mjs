@@ -75,7 +75,7 @@ const server = createServer(async (request, response) => {
 await new Promise(done => server.listen(0, '127.0.0.1', done)); base = `http://127.0.0.1:${server.address().port}`;
 try {
   const version = JSON.parse(await readFile('package.json', 'utf8')).version;
-  const file = `packages/local-dev-placeholder.sbom-pilot-${version}.vsix`;
+  const file = process.argv.find(arg => arg.startsWith('--vsix='))?.slice(7) ?? `packages/local-dev-placeholder.sbom-pilot-${version}.vsix`;
   const vsixBytes = await readFile(file); evidence.vsixSha256 = digest(vsixBytes);
   const zip = await JSZip.loadAsync(vsixBytes), unpacked = join(root, 'vsix');
   for (const [name, entry] of Object.entries(zip.files)) {
@@ -173,6 +173,17 @@ try {
     });
     const output = `${result.stdout}${result.stderr}`, redacted = output.split(/\r?\n/).filter(line => !line.startsWith('##vso[task.setsecret]')).join('\n'); safe(redacted);
     await writeFile(join(evidenceDirectory, `${name}.log`), redacted);
+    const sections = redacted.split(/\r?\n/).filter(line => line.startsWith('##[section]'));
+    assert.deepEqual(sections, [
+      '##[section]開始驗證工作設定',
+      '##[section]開始準備 Node.js 執行環境',
+      '##[section]開始安裝 SBOM 掃描工具（cdxgen）',
+      '##[section]開始安裝／還原專案依賴',
+      '##[section]開始產生 SBOM（cdxgen）',
+      '##[section]開始驗證 SBOM（CycloneDX）',
+      ...(dt ? ['##[section]開始上傳 SBOM 至 Dependency-Track（DT）'] : []),
+      '##[section]開始發佈 SBOM 成品（Azure Pipelines）',
+    ]);
     const commands = redacted.split(/\r?\n/).filter(line => line.startsWith('[command] ')).map(line => JSON.parse(line.slice(10)));
     assert.ok(commands.length >= 6, 'Actual Task command diagnostics missing');
     const scans = commands.filter(command => command.argv.includes('--required-only'));

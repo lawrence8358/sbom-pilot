@@ -102,7 +102,7 @@ export async function createSubmission(receiptPath, options = {}) {
   await writeJson(join(output, 'provenance.json'), receipt);
   await writeJson(join(output, 'listing.json'), {
     mode: receipt.mode, publisher: receipt.manifest.publisher, id: receipt.manifest.id, name: receipt.manifest.name, version: receipt.manifest.version, public: receipt.manifest.public,
-    repository: receipt.manifest.repository?.uri ?? null, overview: receipt.manifest.content.details.path, icon: receipt.manifest.icons.default, hero: 'images/marketplace-hero.png',
+    repository: receipt.manifest.repository?.uri ?? null, overview: receipt.manifest.content.details.path, icon: receipt.manifest.icons.default, hero: 'https://raw.githubusercontent.com/lawrence8358/sbom-pilot/main/images/marketplace-hero.png',
     status: receipt.mode === 'preview' ? 'LOCAL PREVIEW ONLY — placeholder不可正式上架' : '僅本機準備，未上傳／未驗證Publisher權限或Repo公開性',
     unverified: ['Azure DevOps Services/Server 安裝、Classic/YAML、成品下載／非同步失敗傳播', 'arm64、企業feeds/Proxy/CA/client certificates'],
   });

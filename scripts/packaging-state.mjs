@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { validateReleaseIdentity } from './release-identity.mjs';
 
 // 建置快照與隔離CLI fixture共用來源輸入；fixture另加自己的工具相依。
-export const PACKAGING_SOURCE_ROOTS = ['src', 'scripts', 'test', 'docs', 'examples', 'images', 'marketplace', 'package.json', 'package-lock.json', 'tsconfig.json', 'vss-extension.json', 'README.md', 'README-Dev.md', 'CHANGELOG.md', 'LICENSE', 'THIRD-PARTY-NOTICES.md', '.gitattributes', '.gitignore'];
+export const PACKAGING_SOURCE_ROOTS = ['src', 'scripts', 'test', 'docs', 'examples', 'images', 'package.json', 'package-lock.json', 'tsconfig.json', 'vss-extension.json', 'README.md', 'README-Dev.md', 'LICENSE', 'THIRD-PARTY-NOTICES.md', '.gitattributes', '.gitignore'];
 
 export const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 export const readJson = async path => JSON.parse(await readFile(path, 'utf8'));
@@ -71,14 +71,14 @@ export async function packagingConfig({ local = false, privatePackage = false } 
   assert.equal(tool.version, pkg.devDependencies['tfx-cli']);
   assert.equal(lock.packages['node_modules/tfx-cli'].version, tool.version);
   assert.equal(manifest.icons?.default, 'images/extension-icon.png');
-  assert.equal(manifest.content?.details?.path, 'marketplace/overview.md');
+  assert.equal(manifest.content?.details?.path, 'README.md');
   assert.ok(!manifest.screenshots?.some(item => item.path === 'images/marketplace-hero.png'), 'hero是插畫，不是UI截圖。');
   const icon = await pngSize(manifest.icons.default, 1024 * 1024);
   assert.equal(icon.width, icon.height, '圖示必須正方形。');
   await pngSize('images/marketplace-hero.png');
   const overview = await readFile(manifest.content.details.path, 'utf8');
   assert.match(overview, /marketplace-hero\.png/);
-  assert.match(overview, /UNVERIFIED/);
+  assert.ok(overview.includes('https://raw.githubusercontent.com/lawrence8358/sbom-pilot/main/images/marketplace-hero.png'));
   manifest.publisher = local ? 'local-dev-placeholder' : identity.publisher;
   manifest.public = !local && !privatePackage;
   if (local) {
