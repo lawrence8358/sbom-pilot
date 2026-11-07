@@ -34,3 +34,9 @@ User requested serial work after quota interruptions: at most one subagent (impl
 
 ## 17 圖示大小修正（2026-11-06）
 使用者同意後本機縮原圖至256×256／60,594 bytes；新增preflight與實際VSIX大小限制，精確邊界及真CLI全過。正式包與109個hash、Node20/24四組入口核對通過；runtime不變。詳見reviews/17-icon-size.md，最新產物見HANDOFF。未上傳市集。
+
+## 18 .NET Core 專案路徑修正（2026-11-07）
+
+`1bb265f`已整合於feature/sbom-pilot。0.1.1正式VSIX與109項SHA、119測試、新回歸雙Node、真packaging CLI、dist／VSIX雙Node入口通過。真實PortalBackend使用相對PrimeEagleX.Backend.sln執行封裝Task，還原、掃描、Schema成功，267組件。修正是.NET檔案轉所在目錄，保持既有遞迴／排除範圍並明示不依solution成員過濾。
+
+Marketplace0.1.0權限與Azure原run2732已讀取確認。0.1.1尚未上傳，因獨立操作窗口消失已詢問使用者；Azure0.1.1實跑與成品下載待完成。本機證據與交付位置見reviews/18-dotnet-project-file-path.md與HANDOFF。

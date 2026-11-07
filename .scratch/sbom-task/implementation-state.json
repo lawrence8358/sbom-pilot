@@ -39,8 +39,8 @@
   ],
   "notesDirectory": "../.sbom-pilot-notes",
   "recheckHead": "3c69674fed70adaf3a14255343bf7de57e97dc91",
-  "localImplementationStatus": "complete-local-external-validation-pending",
-  "currentCheckpoint": ".scratch/sbom-task/checkpoints/17.md",
+  "localImplementationStatus": "0.1.1-complete-local-marketplace-upload-and-live-azure-pending",
+  "currentCheckpoint": ".scratch/sbom-task/checkpoints/18.md",
   "cleanupStatus": "current-15-16-worktrees-removed; five protected old residual directories retained",
   "cleanupReport": ".scratch/sbom-task/reviews/current-worktree-cleanup.md",
   "releaseIdentity": {
@@ -48,5 +48,12 @@
     "publisherConfirmedBy": "user reported Marketplace publisher mismatch on 2026-11-06",
     "repositoryUrl": "https://github.com/lawrence8358/sbom-pilot",
     "repositoryConfirmedBy": "user provided URL on 2026-11-06; anonymous GitHub read shows empty repository"
+  },
+  "patchRelease": {
+    "version": "0.1.1",
+    "commit": "1bb265f",
+    "ticket": "18",
+    "localVerification": "119 tests; real PortalBackend 267 components; VSIX109 hashes; dualNode probes",
+    "remoteStatus": "not uploaded; waiting for user reply about disappearing Chrome windows"
   }
 }

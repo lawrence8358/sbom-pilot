@@ -1,5 +1,13 @@
 # SBOM Pilot 續接入口
 
+## 最新追加修正 0.1.1（2026-11-07）
+
+[18 .NET Core 專案檔路徑](issues/18-dotnet-project-file-path.md) 的本機實作已提交 `1bb265f`。最新正式包是 `packages/public/LawrenceShen.sbom-pilot-0.1.1.vsix`，SHA256 `fb05c2f4ec10ed7d28f4cf81f3bc814cab61c7b1f255a249f4881e84eadc5b52`；交付資料 `packages/submission/public/LawrenceShen.sbom-pilot-0.1.1-VojLtl`，109項SHA全過。下方0.1.0屬歷史交付。
+
+原0.1.0在有效PrimeEagleX.Backend.sln重現「專案路徑必須是目錄」；0.1.1已支援.NET方案／專案檔轉所在目錄，完整119測試、3項新回歸雙Node、真CLI及4組dist／VSIX入口通過。使用真實PortalBackend與相對.sln執行封裝內Task成功，267組件、Schema1.6驗證通過。使用者專案來源WIP未修改。
+
+尚未上傳0.1.1或重跑Azure：Chrome已確認run2732／definition85及LawrenceShen可管理的public0.1.0；上傳前獨立操作窗口兩次消失，已詢問是否正使用／關閉窗口或要自行上傳，等待回覆。不要宣稱Azure0.1.1驗收完成。續接先讀[18 checkpoint](checkpoints/18.md)與[驗證紀錄](reviews/18-dotnet-project-file-path.md)，無需重跑已通過的本機矩陣。
+
 01–16 本機實作與獨立審查完成；[17 圖示過大修正](issues/17-marketplace-icon-size.md) 已於2026-11-06取得同意、完成本機縮圖及封裝驗證。沒有未完成的本機實作或執行中測試；市集實際上傳與Azure安裝仍待驗收。
 
 17 新圖示為256×256、60,594 bytes，保留原設計。preflight／archive檢查、1024 KB精確邊界、真CLI及Node20/24四組檢查全過。最新正式包仍在packages/public/LawrenceShen.sbom-pilot-0.1.0.vsix；SHA256 35f995b420ec1523056aeee4037fac8dec87356220bf0d2b3abe47b46d86a039。交付目錄改為packages/submission/public/LawrenceShen.sbom-pilot-0.1.0-0wMWgX，109項hash通過。詳見[17驗證](reviews/17-icon-size.md)及[checkpoint](checkpoints/17.md)。以下舊HUW3Lx與preview屬歷史產物，含超標圖示，不可用來重試上傳。
