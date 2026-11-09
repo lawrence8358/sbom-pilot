@@ -87,7 +87,7 @@ Task 向上讀取 global.json 的完整 sdk.version、rollForward 與 allowPrere
 
 可以追加 **/UnitTest/** 等專案相對 glob，不會依名稱自動排除所有測試專案。.NET 還原／掃描保留必要 obj/assets 例外，供解析間接依賴；cdxgen 自身忽略規則仍適用。
 
-所有模式固定使用 --required-only 及 --install-deps false：先由 Task 安裝／還原，再由 cdxgen 掃描。required scope 不等於逐項核對部署成品，Yarn workspace 可能保留上游標記為 required 的部分開發依賴，詳見 [Yarn 限制](https://github.com/lawrence8358/sbom-pilot/blob/main/docs/yarn.md)。
+所有模式固定使用 --required-only 及 --install-deps false：先由 Task 安裝／還原，再由 cdxgen 掃描。前端及前後端合併模式另加 --no-babel，依 lockfile 的開發依賴標記過濾，避免建置設定檔中的 import 將開發工具判為 required。required scope 不等於逐項核對部署成品，Yarn workspace 可能保留上游標記為 required 的部分開發依賴，詳見 [Yarn 限制](https://github.com/lawrence8358/sbom-pilot/blob/main/docs/yarn.md)。
 
 ### OSV 弱點掃描
 

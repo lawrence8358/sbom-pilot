@@ -38,6 +38,7 @@ export function scanArguments(request: ScanRequest): string[] {
     '-r',
     ...types.flatMap((type) => ['-t', type]),
     '--required-only',
+    ...(types.includes('js') ? ['--no-babel'] : []),
     '--spec-version',
     request.config.specVersion,
     '--install-deps',

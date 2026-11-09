@@ -159,3 +159,12 @@ test('child runner reports exit and timeout without exposing child output', asyn
   await assert.rejects(runProcess({ executable: process.execPath, args: ['-e', 'console.error("SECRET");process.exit(2)'], cwd: process.cwd() }), error => error instanceof Error && !error.message.includes('SECRET') && /exit 2/.test(error.message));
   await assert.rejects(runProcess({ executable: process.execPath, args: ['-e', 'setTimeout(()=>{},10000)'], cwd: process.cwd(), timeoutMs: 30 }), /逾時/);
 });
+
+test('frontend scans disable Babel while backend scans retain their existing options', () => {
+  for (const environment of ['javascript', 'vue', 'combined', 'dotnet', 'netframework'] as const) {
+    const args = scanArguments({ config: { ...config('project'), environment }, tools, outputPath: 'bom.json' });
+    assert.equal(args.includes('--no-babel'), ['javascript', 'vue', 'combined'].includes(environment), environment);
+    assert.ok(args.includes('--required-only'));
+    assert.equal(args[args.indexOf('--install-deps') + 1], 'false');
+  }
+});
