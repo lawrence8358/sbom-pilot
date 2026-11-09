@@ -2,7 +2,7 @@
 
 ![SBOM Pilot](https://raw.githubusercontent.com/lawrence8358/sbom-pilot/main/images/marketplace-hero.png)
 
-在 Azure Pipelines 加入一個 **SBOM Pilot — Generate & Upload SBOM** Task，即可準備 Node.js 與 cdxgen、安裝／還原專案依賴，產生 CycloneDX 1.6 JSON，並發佈為 Build Artifact。也可將同一份 SBOM 上傳到既有 Dependency-Track（DT）專案。
+在 Azure Pipelines 加入一個 **SBOM Pilot — Generate & Upload SBOM** Task，即可準備 Node.js 與 cdxgen、安裝／還原專案依賴，產生 CycloneDX 1.6 JSON，並預設執行 OSV 弱點掃描，將 SBOM 與 Markdown 報告發佈為 Build Artifact。也可將同一份 SBOM 上傳到既有 Dependency-Track（DT）專案。
 
 ## 安裝與前置條件
 
@@ -41,7 +41,7 @@ JavaScript／TypeScript（例如 Vue、Angular）只需改成：
 
 Classic Build：在 Agent job 選 **Add task → SBOM Pilot**，設定「開發環境」與「專案路徑」，儲存並執行。欄位與 YAML 相同。
 
-成功後在 Build 結果的成品頁選 **SBOM**，下載 **bom.json**。Task 顯示「已排入佇列」代表已要求 Agent 上傳，請以工作結果及成品頁確認上傳完成。
+成功後在 Build 結果的成品頁選 **SBOM**，下載 **sbom.cdx.json** 與 **sbom.osv.md**。Task 顯示「已排入佇列」代表已要求 Agent 上傳，請以工作結果及成品頁確認上傳完成。新版預設 SBOM 檔名由 bom.json 改為 sbom.cdx.json；既有 Pipeline 明確設定的 sbomFileName 仍會保留，下載腳本請依實際設定調整。
 
 ## 選擇開發環境與路徑
 
@@ -74,7 +74,9 @@ Task 向上讀取 global.json 的完整 sdk.version、rollForward 與 allowPrere
 | excludes／排除規則 | 見下方 | 相對掃描根目錄的 glob，以逗號分隔，保留花括號內的逗號；清空表示不加自訂排除 |
 | specVersion／CycloneDX Spec Version | 1.6 | 產生與驗證 SBOM 的規格，不論是否啟用 DT 都適用 |
 | artifactName／成品名稱 | SBOM | Build Artifact 名稱；清空沿用預設 |
-| sbomFileName／SBOM 檔名 | bom.json | 單一 .json 檔名，不含目錄；清空沿用預設 |
+| sbomFileName／SBOM 檔名 | sbom.cdx.json | 單一 .json 檔名，不含目錄；清空沿用預設 |
+| runOsv／執行 OSV 弱點掃描 | true | 所有模式預設勾選，位於 DT 勾選框上方；取消時不下載或執行 OSV |
+| osvVersion／OSV Scanner 版本 | latest | OSV 啟用時顯示；每次取得官方 Latest 穩定版本，也可填精確版本，例如 2.7.1 |
 | uploadToDt／推送到 DT | false | 啟用後上傳同一份已驗證 SBOM |
 
 預設排除規則：
@@ -86,6 +88,32 @@ Task 向上讀取 global.json 的完整 sdk.version、rollForward 與 allowPrere
 可以追加 **/UnitTest/** 等專案相對 glob，不會依名稱自動排除所有測試專案。.NET 還原／掃描保留必要 obj/assets 例外，供解析間接依賴；cdxgen 自身忽略規則仍適用。
 
 所有模式固定使用 --required-only 及 --install-deps false：先由 Task 安裝／還原，再由 cdxgen 掃描。required scope 不等於逐項核對部署成品，Yarn workspace 可能保留上游標記為 required 的部分開發依賴，詳見 [Yarn 限制](https://github.com/lawrence8358/sbom-pilot/blob/main/docs/yarn.md)。
+
+### OSV 弱點掃描
+
+預設將本次已驗證的 SBOM 交給 [Google OSV Scanner](https://github.com/google/osv-scanner)，單次掃描取得 JSON 後產生 **sbom.osv.md**。報告包含醒目的危急／高／中／低／未知分級、CVSS 分數、可點選的 CVE 與 OSV 識別碼、套件版本及修復版本，依嚴重程度由高至低排序，頁首列出各級數量。CVE 從 OSV 別名取得；沒有編號時標為「未提供」，缺少評分則標為「未知」，不自行推測。相同弱點別名合併成一列；相同套件的不同版本分開列出。
+
+報告與 SBOM 放在同一個 artifactName 中，也使用 [Azure Pipelines Markdown Summary](https://learn.microsoft.com/en-us/azure/devops/pipelines/scripts/logging-commands?view=azure-devops#uploadsummary-add-some-markdown-content-to-the-build-summary) 附到此次 CI 執行結果。開啟該次 Pipeline run 的 **Extensions（擴充功能）** 頁籤即可查看 **sbom.osv.md**，不必下載；入口與 Markdown 外觀依 Services／Server 版本而異，並非保證顯示在 Summary 首頁的固定位置。成品仍可下載保存。無弱點也會保留報告與摘要；自訂 SBOM 檔名仍可掃描。OSV 弱點報告與軟體組成清單是不同檔案，DT 接收的仍是原 SBOM。
+
+[官方安裝文件](https://google.github.io/osv-scanner/installation/)沒有提供 npm install 方式。Task 以 Node.js 下載官方 Windows／Linux x64／arm64 執行檔，驗證 SHA-256 與實際版本，不需要為 OSV 預裝 PowerShell、Go 或額外安裝 Task。
+
+osvVersion: latest 每次透過官方 releases/latest 解析 Latest 正式 release，該次執行固定該版本並記錄日誌；不使用預覽版，也不在失敗時默默退回舊版。指定精確版本可重現掃描工具行為；弱點資料本身仍隨 OSV 資料庫更新。未來新版若 CLI 不相容會明確失敗，可指定已驗證版本。
+
+工具保存於 Agent.ToolsDirectory/sbom-pilot-osv，依版本／作業系統／架構分開。每次重用前驗證檔案 SHA-256、實際版本及必要 CLI 選項；完整快取不重新下載，損壞或缺失則重新取得。相同持久 Agent 可跨執行重用；雲端每次新建 VM 通常沒有先前快取，仍需首次下載。無 Agent.ToolsDirectory 時只使用此次工作暫存。
+
+OSV 發現弱點會記警告並發佈報告，Task 不因此失敗。下載、連線、無可掃描套件或報告產生失敗則讓 Task 失敗，仍嘗試發佈已驗證的 SBOM；DT 與成品錯誤也會保留。OSV 下載需能存取 github.com 與其 release 資產來源，掃描需連到 api.osv.dev 等 OSV 服務；Proxy／CA 條件見[相容性](https://github.com/lawrence8358/sbom-pilot/blob/main/docs/compatibility.md)。
+
+~~~yaml
+- task: SbomPilot@0
+  inputs:
+    environment: dotnet
+    projectPath: '$(Build.SourcesDirectory)/Product.sln'
+    runOsv: true
+    osvVersion: latest # 或固定 2.7.1；不需反覆安裝已驗證的相同版本
+    sbomFileName: sbom.cdx.json
+~~~
+
+只需要 SBOM 時設定 runOsv: false。
 
 ### DT 設定
 
@@ -137,8 +165,12 @@ Task 向上讀取 global.json 的完整 sdk.version、rollForward 與 allowPrere
 4. 開始安裝／還原專案依賴
 5. 開始產生 SBOM（cdxgen）
 6. 開始驗證 SBOM（CycloneDX）
-7. 開始上傳 SBOM 至 Dependency-Track（DT，未啟用則略過）
-8. 開始發佈 SBOM 成品（Azure Pipelines）
+7. 開始準備 OSV Scanner（版本與工具快取，未啟用則略過）
+8. 開始 OSV 弱點掃描（未啟用則略過）
+9. 開始上傳 SBOM 至 Dependency-Track（DT，未啟用則略過）
+10. 開始發佈 SBOM 成品（Azure Pipelines）
+11. 開始發佈 OSV 弱點報告（Azure Pipelines，有完成報告時）
+12. 開始發佈 OSV 報告至 CI 摘要（有完成報告時）
 
 每個子程序以單行 [command] JSON 顯示 executable、argv 與 cwd，掃描前提供設定摘要。秘密顯示為 ***，不轉印原始子程序輸出。JSON 用於核對參數，並非可直接貼入 shell 的命令。DT 上傳另列 [http] PUT 與遮罩 Header。
 
@@ -147,6 +179,7 @@ Task 向上讀取 global.json 的完整 sdk.version、rollForward 與 allowPrere
 | 工具準備失敗 | 下載來源、Proxy／CA、可寫暫存與快取、Node >=24 |
 | 安裝或還原失敗 | 正確根目錄、唯一鎖檔、packageManager、global.json、SDK／MSBuild、套件來源與認證 |
 | SBOM 驗證失敗 | cdxgen 版本與必要 assets；僅有檔案存在不足以發佈 |
+| OSV 掃描失敗 | 官方 GitHub release 下載、版本與 SHA-256、OSV API 連線、可掃描套件；有弱點只警告 |
 | 找不到成品 | 使用 Build 工作，核對 Agent 上傳與整個工作結果 |
 | DT 401／403／404／TLS | Key 權限、UUID、服務根網址、Agent 可達性與 CA |
 

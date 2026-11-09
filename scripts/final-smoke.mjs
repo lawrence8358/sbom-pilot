@@ -161,12 +161,12 @@ try {
     }
     return values;
   }
-  async function scenario(name, environment, product, { dt = false, npmAuth = false, nugetAuth = false, failArtifact = false, handler = process.execPath, expected = [] } = {}) {
+  async function scenario(name, environment, product, { dt = false, npmAuth = false, nugetAuth = false, failArtifact = false, osv = false, handler = process.execPath, expected = [] } = {}) {
     const temp = join(root, `temp-${name}`); await mkdir(temp);
     const before = await hashes(product), dtStart = dtBodies.length, requestStart = requests.length;
     const result = await run(handler, [...(failArtifact ? ['--require', probe] : []), entry], root, {
       BUILD_BUILDID: '12', RELEASE_RELEASEID: '', SYSTEM_DEBUG: 'true', AGENT_TEMPDIRECTORY: temp, AGENT_TOOLSDIRECTORY: cache,
-      INPUT_ENVIRONMENT: environment, INPUT_PROJECTPATH: product, INPUT_NODEVERSION: '24.x', INPUT_CDXGENVERSION: '13.6.0', INPUT_SPECVERSION: '1.6',
+      INPUT_RUNOSV: osv ? undefined : 'false', INPUT_OSVVERSION: 'latest', INPUT_ENVIRONMENT: environment, INPUT_PROJECTPATH: product, INPUT_NODEVERSION: '24.x', INPUT_CDXGENVERSION: '13.6.0', INPUT_SPECVERSION: '1.6',
       INPUT_UPLOADTODT: dt ? 'true' : 'false', INPUT_DTAPIURL: `${base}/${dt || 'accepted'}`, INPUT_DTPROJECTUUID: 'd40ce445-3566-49d5-bd8d-2601d73cf0d4', INPUT_DTAPIKEY: dtKey,
       INPUT_NPMCREDENTIALS: npmAuth ? npmCredential : '', INPUT_NUGETCREDENTIALS: nugetAuth ? nugetCredential : '', INPUT_FETCHLICENSE: 'false', INPUT_NOCACHE: 'true',
       NUGET_PACKAGES: join(root, `nuget-${name}`), NUGET_HTTP_CACHE_PATH: join(root, `nuget-http-${name}`),
@@ -181,8 +181,11 @@ try {
       '##[section]開始安裝／還原專案依賴',
       '##[section]開始產生 SBOM（cdxgen）',
       '##[section]開始驗證 SBOM（CycloneDX）',
+      ...(osv ? ['##[section]開始準備 OSV Scanner（版本與工具快取）', '##[section]開始 OSV 弱點掃描'] : []),
       ...(dt ? ['##[section]開始上傳 SBOM 至 Dependency-Track（DT）'] : []),
       '##[section]開始發佈 SBOM 成品（Azure Pipelines）',
+      ...(osv ? ['##[section]開始發佈 OSV 弱點報告（Azure Pipelines）'] : []),
+      ...(osv ? ['##[section]開始發佈 OSV 報告至 CI 摘要'] : []),
     ]);
     const commands = redacted.split(/\r?\n/).filter(line => line.startsWith('[command] ')).map(line => JSON.parse(line.slice(10)));
     assert.ok(commands.length >= 6, 'Actual Task command diagnostics missing');
@@ -202,9 +205,9 @@ try {
     const failed = dt === 'fail' || failArtifact;
     assert.match(output, failed ? /task.complete result=Failed/ : /task.complete result=Succeeded/, `Handler outcome wrong: ${name}; see redacted evidence log`);
     const artifacts = [...output.matchAll(/##vso\[artifact.upload[^\]]*\]([^\r\n]+)/g)];
-    assert.equal(artifacts.length, failArtifact ? 0 : 1);
+    assert.equal(artifacts.length, failArtifact ? 0 : osv ? 2 : 1);
     const runs = (await readdir(temp)).filter(file => file.startsWith('sbom-pilot-')); assert.equal(runs.length, 1);
-    const bomFile = join(temp, runs[0], 'sbom', 'bom.json'), bytes = await readFile(bomFile), bom = JSON.parse(bytes); safe(bytes.toString());
+    const bomFile = join(temp, runs[0], 'sbom', 'sbom.cdx.json'), bytes = await readFile(bomFile), bom = JSON.parse(bytes); safe(bytes.toString());
     await validateSbom(bomFile, '1.6');
     await writeFile(join(evidenceDirectory, `${name}.bom.json`), bytes);
     for (const dependency of expected) assert.ok(bom.components?.some(item => item.name === dependency), `Missing ${dependency}`);
@@ -222,13 +225,24 @@ try {
     if (!failArtifact) {
       const data = artifacts[0][1].replaceAll('%0D', '\r').replaceAll('%0A', '\n').replaceAll('%AZP25', '%');
       assert.deepEqual(await readFile(data), bytes, 'Queued artifact must remain readable after handler exits');
+      if (osv) {
+        assert.ok(artifacts.every(match => match[0].includes('artifactname=SBOM;')));
+        const reportPath = artifacts[1][1].replaceAll('%0D', '\r').replaceAll('%0A', '\n').replaceAll('%AZP25', '%');
+        assert.equal(basename(reportPath), 'sbom.osv.md');
+        const report = await readFile(reportPath, 'utf8'); safe(report); assert.ok(report.trim().length);
+        assert.match(report, /風險等級.*CVE/);
+        const summaries = [...output.matchAll(/##vso\[task\.uploadsummary\]([^\r\n]+)/g)];
+        assert.equal(summaries.length, 1);
+        assert.equal(summaries[0][1], artifacts[1][1], 'summary and artifact must use the same retained report');
+        await writeFile(join(evidenceDirectory, `${name}.osv.md`), report);
+      }
     }
     for (const [file, value] of before) assert.equal(await sourceDigest(file), value, `Source config/lock mutated: ${file}`);
     const calls = requests.slice(requestStart);
     if (npmAuth) assert.ok(calls.some(call => call.path.includes('/private/npm/') && call.path.endsWith('package.tgz') && call.authorized));
     if (nugetAuth) assert.ok(calls.some(call => call.path.includes('/private/nuget/') && call.path.endsWith('.nupkg') && call.authorized));
     assert.ok(!calls.some(call => call.path.startsWith('/public/') && call.hasAuth), 'Private credential reached public feed');
-    const item = { name, environment, dt: dt || 'off', artifact: failArtifact ? 'local adapter failure injected; no upload command' : 'one upload command, retained identical valid file', sha256: digest(bytes), components: bom.components.length, requests: calls.length, visibleCommands: commands.length, visibleScan: scan, handler: (await checked(handler, ['--version'], root)).stdout.trim() };
+    const item = { name, environment, dt: dt || 'off', osv, artifact: failArtifact ? 'local adapter failure injected; no upload command' : osv ? 'two uploads to same artifact, retained SBOM and Markdown report' : 'one upload command, retained identical valid file', sha256: digest(bytes), components: bom.components.length, requests: calls.length, visibleCommands: commands.length, visibleScan: scan, handler: (await checked(handler, ['--version'], root)).stdout.trim() };
     evidence.cases.push(item); await writeFile(join(evidenceDirectory, 'evidence.json'), JSON.stringify(evidence, null, 2));
     console.log(`FINAL PASS ${name}: ${item.components} components; ${item.sha256}`);
   }
@@ -249,7 +263,7 @@ try {
       await scenario(name, 'combined', product, { dt: 'accepted', npmAuth: true, nugetAuth: true, expected: ['private', 'pilot-public', 'Pilot.Private', 'Pilot.Public'] });
     } else {
       await javascript(product, false);
-      await scenario(name, 'vue', product, { failArtifact: name === 'artifact-failure', expected: ['pilot-public'], handler: process.env.SBOM_FINAL_NODE20 || process.execPath });
+      await scenario(name, 'vue', product, { osv: name === 'osv', failArtifact: name === 'artifact-failure', expected: ['pilot-public'], handler: process.env.SBOM_FINAL_NODE20 || process.execPath });
     }
   }
   const inventory = JSON.parse(await readFile(join(dirname(entry), 'licenses/manifest.json')));

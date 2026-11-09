@@ -43,7 +43,7 @@ for (const scenario of [
   const lockPath = join(project, 'locks', 'product.lock.json');
   const hashLock = async () => createHash('sha256').update(await readFile(lockPath)).digest('hex');
   const before = scenario.locked ? await hashLock() : undefined;
-  const config = { environment: 'dotnet', projectPath: project, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: parseExcludes(DEFAULT_EXCLUDES), fetchLicense: false, noCache: true, uploadToDt: false };
+  const config = { environment: 'dotnet', projectPath: project, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: parseExcludes(DEFAULT_EXCLUDES), fetchLicense: false, noCache: true, runOsv: false, uploadToDt: false };
   let publications = 0;
   const logs = [];
   const services = { log: message => { logs.push(message); console.log(message); }, prepare: async () => ({ ...tools, env: { ...tools.env } }), publish: async () => { publications++; } };
@@ -75,7 +75,7 @@ if (process.env.SBOM_PILOT_TEST_SDK_DOWNLOAD === '1') {
   const sdk = await prepareDotnetSdk(project, runProcess, { cacheDirectory: join(root, 'download-cache'), tempDirectory: join(root, 'download-temp'), env: { ...process.env, DOTNET_HOST_PATH: join(root, 'missing-host', process.platform === 'win32' ? 'dotnet.exe' : 'dotnet') }, log: console.log });
   assert.equal(sdk.version, '10.0.101');
   assert.ok(sdk.executable.startsWith(join(root, 'download-cache')));
-  const acquired = await runWorkflow({ environment: 'dotnet', projectPath: project, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: parseExcludes(DEFAULT_EXCLUDES), fetchLicense: false, noCache: true, uploadToDt: false }, join(root, 'run-acquired-sdk'), {
+  const acquired = await runWorkflow({ environment: 'dotnet', projectPath: project, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: parseExcludes(DEFAULT_EXCLUDES), fetchLicense: false, noCache: true, runOsv: false, uploadToDt: false }, join(root, 'run-acquired-sdk'), {
     log: console.log, prepare: async () => ({ ...tools, env: { ...tools.env, ...sdk.env } }), publish: async () => {},
   });
   const acquiredBom = JSON.parse(await readFile(acquired.path, 'utf8'));

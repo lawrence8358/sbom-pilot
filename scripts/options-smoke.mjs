@@ -25,7 +25,7 @@ for (const [directory, dependency, version] of [['.', 'vue', '3.5.13'], ['_Desig
   await writeFile(join(cwd, 'main.js'), `import item from '${dependency}'; console.log(item);\n`);
   await runProcess({ executable: tools.node, args: [tools.npmCli, 'install', '--package-lock-only', '--no-audit', '--no-fund'], cwd, env: tools.env });
 }
-const config = { environment: 'vue', projectPath: project, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: [], fetchLicense: false, noCache: false, uploadToDt: false };
+const config = { environment: 'vue', projectPath: project, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: [], fetchLicense: false, noCache: false, runOsv: false, uploadToDt: false };
 for (const [label, excludes, fetchLicense, noCache] of [['all', [], false, false], ['excluded', parseExcludes(' , **/_Design{,Front}/**, ,'), true, true]]) {
   const outputPath = join(root, `${label}.json`);
   await generateSbom({ config: { ...config, excludes, fetchLicense, noCache }, tools, outputPath }, runProcess);

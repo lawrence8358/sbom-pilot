@@ -6,10 +6,12 @@ export interface Command {
   cwd: string;
   env?: NodeJS.ProcessEnv;
   timeoutMs?: number;
+  acceptedExitCodes?: readonly number[];
 }
 export interface ProcessResult {
   stdout: string;
   stderr: string;
+  exitCode?: number;
 }
 export type ProcessRunner = (command: Command) => Promise<ProcessResult>;
 
@@ -71,8 +73,8 @@ export const runProcess: ProcessRunner = (command) =>
     child.on('close', (code) => {
       clearTimeout(timeout);
 
-      if (code === 0) {
-        resolve({ stdout, stderr });
+      if (code !== null && (command.acceptedExitCodes ?? [0]).includes(code)) {
+        resolve({ stdout, stderr, exitCode: code });
       } else {
         reject(
           new Error(

@@ -145,7 +145,7 @@ test('missing restore assets and changed existing lock fail before SBOM generati
 }));
 
 test('dotnet workflow uses common validation/publication and scan contract', () => fixture(async root => {
-  const config = { environment: 'dotnet', projectPath: root, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: [], fetchLicense: false, noCache: true, uploadToDt: false };
+  const config = { environment: 'dotnet', projectPath: root, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: [], fetchLicense: false, noCache: true, runOsv: false, uploadToDt: false };
   const args = scanArguments({ config, tools, outputPath: 'bom.json' });
   assert.equal(args[args.indexOf('-t') + 1], 'dotnet');
   assert.ok(args.includes('--required-only'));
@@ -157,7 +157,7 @@ test('dotnet workflow uses common validation/publication and scan contract', () 
 }));
 
 test('dotnet scan retains verified obj assets but rejects custom exclusions hiding dependency inputs', () => fixture(async root => {
-  const config = { environment: 'dotnet', projectPath: root, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: ['**/obj/**'], fetchLicense: false, noCache: true, uploadToDt: false };
+  const config = { environment: 'dotnet', projectPath: root, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: ['**/obj/**'], fetchLicense: false, noCache: true, runOsv: false, uploadToDt: false };
   const request = { config, tools: { ...tools, dotnetAssets: [join(root, 'obj', 'project.assets.json')] }, outputPath: join(root, 'bom.json') };
   assert.deepEqual(scanExcludes(request), ['**/obj/!(project.assets.json)']);
   let ran = false;

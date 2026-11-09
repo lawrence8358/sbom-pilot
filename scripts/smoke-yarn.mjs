@@ -18,7 +18,7 @@ const { javascriptInstaller } = await import('../.test-build/src/install/javascr
 const { inspectJavaScriptProject } = await import('../.test-build/src/install/project.js');
 const { DEFAULT_EXCLUDES, parseExcludes } = await import('../.test-build/src/config.js');
 const tools = await prepareTools({ nodeVersion: '24.x', cdxgenVersion: '13.6.0', tempDirectory: process.env.AGENT_TEMPDIRECTORY }, runProcess, console.log);
-const config = root => ({ environment: 'vue', projectPath: root, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: parseExcludes(DEFAULT_EXCLUDES), fetchLicense: false, noCache: true, uploadToDt: false });
+const config = root => ({ environment: 'vue', projectPath: root, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: parseExcludes(DEFAULT_EXCLUDES), fetchLicense: false, noCache: true, runOsv: false, uploadToDt: false });
 const digest = async path => createHash('sha256').update(await readFile(path)).digest('hex');
 const exists = async path => access(path).then(() => true, () => false);
 

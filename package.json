@@ -1,6 +1,6 @@
 {
   "name": "sbom-pilot",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "private": true,
   "description": "SBOM Pilot Azure Pipelines task",
   "author": "Lawrence Shen",
@@ -12,6 +12,7 @@
     "test:final": "node scripts/final-smoke.mjs",
     "test": "node scripts/test.mjs",
     "test:smoke": "node scripts/smoke.mjs",
+    "test:smoke:osv": "node scripts/smoke-osv.mjs",
     "test:options-smoke": "node scripts/options-smoke.mjs",
     "test:smoke:pnpm": "node scripts/smoke-pnpm.mjs",
     "test:dotnet": "node --test .test-build/test/dotnet.test.js",

@@ -23,7 +23,7 @@ await runProcess({ executable: process.execPath, args: [npmCli, 'install', '--pa
 const lockPath = join(project, 'package-lock.json');
 const hash = async () => createHash('sha256').update(await readFile(lockPath)).digest('hex');
 const before = await hash();
-const result = await runWorkflow({ environment: 'vue', projectPath: project, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: parseExcludes(DEFAULT_EXCLUDES), fetchLicense: true, noCache: true, uploadToDt: false }, join(root, 'run'), {
+const result = await runWorkflow({ environment: 'vue', projectPath: project, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: parseExcludes(DEFAULT_EXCLUDES), fetchLicense: true, noCache: true, runOsv: false, uploadToDt: false }, join(root, 'run'), {
   log: console.log,
   publish: async sbom => { console.log(`Local artifact adapter received validated SBOM (${sbom.componentCount} components). Live Agent publication not tested here.`); },
 });

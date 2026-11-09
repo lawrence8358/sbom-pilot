@@ -12,7 +12,7 @@ import { runProcess, type ProcessRunner } from '../src/process';
 import { selectNodeVersion, type ToolContext } from '../src/tools';
 import { validateToolOptions, validateCdxgenPackage, parseCdxgenVersion, validateCdxgenHelp } from '../src/tool-options';
 
-const config = (projectPath: string): TaskConfig => ({ environment: 'vue', projectPath, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: parseExcludes(DEFAULT_EXCLUDES), fetchLicense: true, noCache: true, uploadToDt: false });
+const config = (projectPath: string): TaskConfig => ({ environment: 'vue', projectPath, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: parseExcludes(DEFAULT_EXCLUDES), fetchLicense: true, noCache: true, runOsv: false, uploadToDt: false });
 const tools: ToolContext = { node: process.execPath, npmCli: 'npm-cli.js', cdxgenCli: 'cdxgen.js', nodeVersion: '24.22.1', cdxgenVersion: '13.6.0', env: process.env };
 async function fixture(action: (root: string) => Promise<void>) {
   const root = await mkdtemp(join(tmpdir(), 'sbom-pilot-test-'));
@@ -44,12 +44,12 @@ test('runtime input parsing applies defaults, keeps blank excludes and rejects i
     assert.throws(() => readTaskConfig(name => name === 'projectPath' ? 'root' : name === 'fetchLicense' ? value : undefined), /true.*false/);
   }
 });
-test('actual Azure SDK adapter preserves explicit blank input after SDK vault loading', async () => {
+test('actual Azure SDK adapter preserves explicit blank input after SDK vault loading', () => fixture(async root => {
   await runProcess({ executable: process.execPath,
     args: ['-e', "const {readAzureInput}=require('./.test-build/src/azure-inputs');if(readAzureInput('excludes')!=='')process.exit(2);if(readAzureInput('nodeVersion')!=='24.x')process.exit(3)"],
-    cwd: process.cwd(), env: { ...process.env, INPUT_EXCLUDES: '', INPUT_NODEVERSION: '24.x' },
+    cwd: process.cwd(), env: { ...process.env, AGENT_TEMPDIRECTORY: root, INPUT_EXCLUDES: '', INPUT_NODEVERSION: '24.x' },
   });
-});
+}));
 test('tool overrides reject old package names, prereleases and incompatible runtime before install', () => {
   assert.doesNotThrow(() => validateToolOptions('24.x', '13.6.0'));
   for (const version of ['12.0.0', '14.0.0', '13.x', '13.6.0-beta.1', 'latest']) assert.throws(() => validateToolOptions('24.x', version), /13.x/);

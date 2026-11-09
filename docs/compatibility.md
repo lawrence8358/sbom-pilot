@@ -1,6 +1,6 @@
 # 執行相容性與驗收
 
-本頁區分本機／Docker 與真實 Azure 驗收。Marketplace 已發布 0.1.2；Azure DevOps Services Classic 已完成真實執行與成品下載驗證。Server 安裝、YAML UI、Agent 非同步上傳失敗、arm64 與企業網路條件仍 UNVERIFIED。
+本頁區分本機／Docker 與真實 Azure 驗收。Marketplace 已發布 0.1.3，Azure DevOps Services Classic 的既有流程已完成真實執行與成品下載驗證。0.2.0 的 OSV／CVE／CI 摘要目前為本機與容器驗證，尚未發布或在真實 Azure 驗收。Server 安裝、YAML UI、Agent 非同步上傳失敗、arm64 與企業網路條件仍 UNVERIFIED。
 
 ## Handler 與平台
 
@@ -26,6 +26,20 @@
 套件／SBOM hash、實際命令及資源記錄於交付 checkpoint；可重跑命令見 [README-Dev](../README-Dev.md)。既有完整認證矩陣見 [npm](npm-auth.md)、[NuGet](nuget-auth.md)，共同根目錄規則見 [combined](combined.md)。沒有將先前 SDK 預裝映像當作冷 SDK 證據。
 
 ## Proxy、CA 與逾時
+
+### OSV 掃描與版本快取
+
+0.2.0 新增預設啟用的 OSV 掃描與 `sbom.cdx.json` 預設檔名。`runOsv: false` 可保留只產生 SBOM 的流程。`osvVersion: latest` 以 GitHub 網站 `/releases/latest` 轉址解析官方 Latest 穩定版，不呼叫有共用 IP 配額的 REST API；仍受 GitHub 網站流量限制。也可指定穩定精確版本。解析最多三次、每次30秒；binary 與 SHA256SUMS 下載固定到同一 tag，使用既有有界下載政策。
+
+OSV 工具快取放在 `Agent.ToolsDirectory/sbom-pilot-osv/<version>/<platform>-<arch>`，完整快取先驗 SHA-256、版本及 CLI 後重用，無須下載。快取不包含弱點結果；掃描仍查詢當時 OSV 資料。持久 Agent 可跨執行重用；新建雲端 Agent 通常需重新下載。本次測試證據見工單21，不將歷史0.1.3的 Azure 成功視為新版已驗收。arm64 目前僅檔名選擇已測，實際硬體未驗證。
+
+Node 下載沿用既有 Agent Proxy／CA／client certificate 支援；OSV 子程序取得標準 Proxy 及 SSL_CERT_FILE，掃描連線仍依 Go 工具本身能力，不能推定 Node 的 client certificate／regex bypass 會自動套用。需能存取 GitHub release 資產、api.osv.dev 與 OSV 掃描所需的外部服務。企業 Proxy／CA、Services／Server 真正成品上傳與失敗傳遞仍需對應環境驗收。
+
+OSV 結束碼0／1各代表無弱點／有弱點，兩者都發佈報告，有弱點只警告。單次 JSON 掃描後，由官方群組最大 CVSS 分數與 CVE 別名產生 Markdown，無評分／CVE 時明示未知／未提供。報告同時發佈 Build Artifact 及 `task.uploadsummary`，後者依官方文件在執行結果的 Extensions 顯示；不保證出現在 Summary 首頁固定位置。兩種發佈獨立嘗試，保留檔案供 Agent 非同步讀取。
+
+其他結束碼（包含127一般錯誤、128無套件、129 API錯誤）、逾時、缺少／空白／不相容 JSON 報告均使 Task 失敗，仍嘗試發佈有效 SBOM。OSV／DT／成品／摘要多重錯誤一併回報。
+
+### 共用網路政策
 
 工具下載與 DT 套用 Agent.ProxyUrl／Username／Password、regex bypass、CAInfo 與 client certificate；另遵循 HTTP_PROXY／HTTPS_PROXY／NO_PROXY。原生連線使用 CONNECT Proxy，認證只出現在 Proxy header，DT Key 只出現在目的服務 header，不放 CLI arguments 或錯誤文字。總請求逾時涵蓋 CONNECT 等待，回應有大小界限；DT TLS 略過只作用於 DT 目的連線，HTTPS Proxy 本身仍驗證憑證，沒有修改 NODE_TLS_REJECT_UNAUTHORIZED。
 
@@ -59,7 +73,7 @@ steps:
       noCache: true
 ```
 
-5. 從 Build 結果下載 SBOM/bom.json，以官方1.6 Schema 驗證。從 Agent.TempDirectory 的本次 `sbom-pilot-*/sbom/bom.json` 計算 SHA-256，與下載檔案比對；Windows用Get-FileHash，Linux用sha256sum。確認 Vue 與依賴關係、記錄 chalk 的 required scope 結果；不得將 scope 結果宣稱為實際部署逐項核對。
+5. 從 Build 結果下載 SBOM/sbom.cdx.json，以官方1.6 Schema 驗證。從 Agent.TempDirectory 的本次 `sbom-pilot-*/sbom/sbom.cdx.json` 計算 SHA-256，與下載檔案比對；Windows用Get-FileHash，Linux用sha256sum。確認 Vue 與依賴關係、記錄 chalk 的 required scope 結果；不得將 scope 結果宣稱為實際部署逐項核對。
 6. 設定既有 DT UUID 及 Secret Pipeline Variable Key。成功時僅應記錄「已接受上傳」，不等待匯入。改用無效 Key／不可達測試端點再跑，Task 必須失敗，但有效成品仍可下載且 hash 一致。檢查 debug、成功與重試日誌沒有明文 Key／Proxy 密碼。
 7. 在隔離的測試 Agent／Proxy 阻擋此次 Build Artifact 容器上傳請求（依 Agent diagnostics 確認其實際 URL），保留其他還原／工具來源可達，再跑原 Task。確認產生有效 SBOM 後 Agent 上傳失敗，最終步驟 Failed；測試時不可設定 continueOnError。另可用不存在檔案的 artifact.upload logging command 診斷 Agent，但此探針不能當作 SBOM Pilot 本身發佈失敗已驗收。
 8. 企業情境另跑 authenticated Proxy、bypass、內部 CA、DT預設TLS／略過的矩陣。記錄具體憑證與 Proxy 類型但不保存秘密。完成後將實際結果／hash／版本填回驗證紀錄；沒有執行的列保持 UNVERIFIED。

@@ -3,6 +3,10 @@
 Integration branch: `feature/sbom-pilot`
 Initial specification commit: `e3a5bf6`
 
+## 21 OSV 弱點掃描與 CI 摘要（2026-11-09）
+
+本輪位於feature/osv-scanner，使用者要求撤回提交後HEAD保持7dd8827，全部變更維持未提交，不commit／merge／push／發布。OSV預設開啟、latest或精確版本、Agent校驗快取、風險／CVE Markdown、同成品及CI Extensions摘要、sbom.cdx.json預設檔名完成。136單元、Windows/Linux真OSV、封裝與序列獨立複查結果見[21驗證](reviews/21-osv-scanner.md)；最新狀態以[21 checkpoint](checkpoints/21.md)為準，真Azure呈現尚未驗收。以下為既有歷史進度。
+
 The user authorized implementation on a local branch, with no remote push or PR. Each implementer uses an isolated worktree and commits before integration. Ticket triage labels remain the configured five labels; implementation progress is tracked here separately.
 
 | Ticket | Progress | Evidence |

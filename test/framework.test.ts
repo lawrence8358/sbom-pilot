@@ -110,7 +110,7 @@ test('restore failure, missing packages, modified config and targeting pack fail
 }));
 
 test('Framework scanner requires traditional dependency inputs and uses shared required-only contract', () => fixture(async root => {
-  const config: TaskConfig = { environment: 'netframework', projectPath: root, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: ['packages/**'], fetchLicense: false, noCache: true, uploadToDt: false };
+  const config: TaskConfig = { environment: 'netframework', projectPath: root, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: ['packages/**'], fetchLicense: false, noCache: true, runOsv: false, uploadToDt: false };
   const tools: ToolContext = { node: process.execPath, npmCli: 'npm', cdxgenCli: 'cdxgen', nodeVersion: '24.22.2', cdxgenVersion: '13.6.0', env: {}, dotnetPackageFiles: [join(root, 'packages', 'Package.nupkg')] };
   const request = { config, tools, outputPath: join(root, 'bom.json') };
   const args = scanArguments(request);

@@ -1,5 +1,19 @@
 # SBOM Pilot 續接入口
 
+## 最新授權：提交與推送 0.2.0
+
+使用者已明確要求 commit 並推上 GitHub，覆蓋本輪先前的未提交限制；目前依此授權整合並推送 origin/main。市集仍由使用者手動上傳，不建立 GitHub Release、不啟動雲端 CI。下方未提交狀態為歷史；完成回讀紀錄見21 checkpoint。
+
+## 本輪追加 0.2.0／工單21（2026-11-09，未提交）
+
+使用者指定中間版號0.2.0，最新上傳用包packages/public/LawrenceShen.sbom-pilot-0.2.0.vsix，將由使用者手動上傳。
+
+使用者已確認OSV全部模式預設啟用、官方Latest／精確版本、同Agent校驗快取、弱點警告但技術失敗，報告和SBOM同成品；追加預設sbom.cdx.json、OSV選項在DT上方、逐列風險／CVE及CI Extensions直接查看。
+
+使用者要求取回本機commit，已mixed reset回原7dd8827，所有修改保留在feature/osv-scanner工作區。**不得自行commit、merge、push或發布。** 原有差異/是使用者未追蹤參考資料，勿修改／提交，其中歷史設定勿回顯。
+
+讀[21 checkpoint](checkpoints/21.md)及[完整規格](../osv-scanner/spec.md)接續；state保留active ticket21，不能把舊0.1.3完成狀態當成本輪完成證據。原歷史記錄如下。
+
 ## 最新交付 0.1.3（2026-11-08）
 
 工單[20](issues/20-release-docs-and-stage-logs.md)完成。實作b790c5d；八階段綠色標題（DT關閉則略過）、共用參數規劃、README唯一市集介紹、GitHub絕對文件／圖片、刪除CHANGELOG及重複overview、VSIX精簡且保留runtime授權。

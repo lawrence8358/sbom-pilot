@@ -26,7 +26,7 @@ const hash = async path => createHash('sha256').update(await readFile(path)).dig
 const sourceConfig = repository => `<configuration><packageSources><clear/><add key="nuget.org" value="https://api.nuget.org/v3/index.json"/></packageSources>${repository ? `<config><add key="repositoryPath" value="${repository}"/></config>` : ''}</configuration>`;
 const classicProject = references => `<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003"><Import Project="$(MSBuildExtensionsPath)\\$(MSBuildToolsVersion)\\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\\$(MSBuildToolsVersion)\\Microsoft.Common.props')"/><PropertyGroup><TargetFrameworkVersion>v4.8</TargetFrameworkVersion><OutputType>Library</OutputType><OutputPath>bin\\Debug\\</OutputPath><AssemblyName>FrameworkProduct</AssemblyName><ProjectGuid>{52F4CE86-C95F-4D82-AD93-2B230B84FCAD}</ProjectGuid></PropertyGroup>${references}<Import Project="$(MSBuildToolsPath)\\Microsoft.CSharp.targets"/></Project>`;
 const packageReference = version => `<ItemGroup><PackageReference Include="Microsoft.Extensions.Logging" Version="${version}"/></ItemGroup>`;
-const config = projectPath => ({ environment: 'netframework', projectPath, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: parseExcludes(DEFAULT_EXCLUDES), fetchLicense: false, noCache: true, uploadToDt: false });
+const config = projectPath => ({ environment: 'netframework', projectPath, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: parseExcludes(DEFAULT_EXCLUDES), fetchLicense: false, noCache: true, runOsv: false, uploadToDt: false });
 const evidence = [];
 let referenceLibraries;
 

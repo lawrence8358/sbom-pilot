@@ -2,6 +2,7 @@ import { realpath, stat } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { CDXGEN_VERSION, SUPPORTED_SPEC_VERSIONS, validateToolOptions } from './tool-options';
 import { DEFAULT_DT_URL, validateDtConfig, type DtConfig } from './dt/config';
+import { validateOsvVersion } from './osv';
 import {
   parseNpmCredentials,
   validateNpmCredentials,
@@ -22,6 +23,8 @@ export interface TaskConfig {
   dotnetTarget?: string;
   artifactName?: string;
   sbomFileName?: string;
+  runOsv?: boolean;
+  osvVersion?: string;
   nodeVersion: string;
   cdxgenVersion: string;
   specVersion: string;
@@ -121,12 +124,15 @@ export function readTaskConfig(read: InputReader): TaskConfig {
   };
   const excludes = read('excludes');
   const uploadToDt = boolean('uploadToDt', false);
+  const runOsv = boolean('runOsv', true);
 
   return {
     environment: text('environment', 'javascript'),
     projectPath: text('projectPath'),
     artifactName: read('artifactName')?.trim() || 'SBOM',
-    sbomFileName: read('sbomFileName')?.trim() || 'bom.json',
+    sbomFileName: read('sbomFileName')?.trim() || 'sbom.cdx.json',
+    runOsv,
+    osvVersion: runOsv ? read('osvVersion')?.trim() || 'latest' : undefined,
     nodeVersion: text('nodeVersion', '24.x'),
     cdxgenVersion: read('cdxgenVersion')?.trim() || CDXGEN_VERSION,
     specVersion: text('specVersion', '1.6'),
@@ -173,8 +179,12 @@ export async function validateConfig(config: TaskConfig): Promise<TaskConfig> {
 
   validateToolOptions(config.nodeVersion, config.cdxgenVersion);
 
+  const runOsv = config.runOsv ?? true;
+  if (typeof runOsv !== 'boolean') throw new Error('參數 runOsv 必須是布林值。');
+  const osvVersion = runOsv ? validateOsvVersion(config.osvVersion ?? 'latest') : undefined;
+
   const artifactName = config.artifactName ?? 'SBOM';
-  const sbomFileName = config.sbomFileName ?? 'bom.json';
+  const sbomFileName = config.sbomFileName ?? 'sbom.cdx.json';
 
   for (const [label, value] of [
     ['成品名稱', artifactName],
@@ -233,6 +243,8 @@ export async function validateConfig(config: TaskConfig): Promise<TaskConfig> {
     dotnetTarget,
     artifactName,
     sbomFileName,
+    runOsv,
+    osvVersion,
     dt: config.uploadToDt ? validateDtConfig(config.dt) : undefined,
     nugetCredentials:
       config.nugetCredentials === undefined

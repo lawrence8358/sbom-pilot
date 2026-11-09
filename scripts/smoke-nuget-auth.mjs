@@ -108,7 +108,7 @@ try {
     }
     const before = await Promise.all(immutable.map(async file => [file, await hash(file)]));
     for (const path of [env.NUGET_PACKAGES, env.NUGET_HTTP_CACHE_PATH, join(projectDirectory, 'obj')]) await rm(path, { recursive: true, force: true });
-    const config = { environment: format === 'dotnet' ? 'dotnet' : 'netframework', projectPath: product, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: parseExcludes(DEFAULT_EXCLUDES), fetchLicense: false, noCache: true, uploadToDt: false, nugetCredentials: [credential] };
+    const config = { environment: format === 'dotnet' ? 'dotnet' : 'netframework', projectPath: product, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: parseExcludes(DEFAULT_EXCLUDES), fetchLicense: false, noCache: true, runOsv: false, uploadToDt: false, nugetCredentials: [credential] };
     let restoreCalls = 0;
     const run = async command => {
       assertNoSecrets(JSON.stringify(command.args));

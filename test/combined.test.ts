@@ -14,7 +14,7 @@ import type { ToolContext } from '../src/tools';
 import type { ProcessRunner, Command } from '../src/process';
 
 const tools: ToolContext = { node: process.execPath, npmCli: 'npm-cli.js', cdxgenCli: 'cdxgen.js', nodeVersion: '24.22.2', cdxgenVersion: '13.6.0', env: { PATH: 'original' } };
-const config = (root: string): TaskConfig => ({ environment: 'combined', projectPath: root, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: parseExcludes(DEFAULT_EXCLUDES), fetchLicense: false, noCache: true, uploadToDt: false });
+const config = (root: string): TaskConfig => ({ environment: 'combined', projectPath: root, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: parseExcludes(DEFAULT_EXCLUDES), fetchLicense: false, noCache: true, runOsv: false, uploadToDt: false });
 async function fixture(action: (root: string) => Promise<void>) {
   const root = await mkdtemp(join(tmpdir(), 'sbom-combined-'));
   try { await action(root); } finally { await rm(root, { recursive: true, force: true }); }

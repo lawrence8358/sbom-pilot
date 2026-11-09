@@ -16,7 +16,7 @@ npm run test:packaging
 
 npm test 編譯測試並檢查凍結安裝、還原範圍、認證隔離、掃描、Schema、DT、命令遮罩與錯誤傳遞。test:packaging 在隔離目錄實際建立私有／公開 VSIX，驗證身分、payload、來源新鮮度與竄改拒絕。
 
-真實工具測試依改動選擇 test:smoke、test:smoke:pnpm、test:smoke:yarn、test:smoke:dotnet、test:smoke:framework、test:smoke:combined、test:smoke:npm-auth、test:smoke:nuget-auth。這些會下載並執行真實工具；一般測試不自動改寫專案鎖檔。
+真實工具測試依改動選擇 test:smoke、test:smoke:osv、test:smoke:pnpm、test:smoke:yarn、test:smoke:dotnet、test:smoke:framework、test:smoke:combined、test:smoke:npm-auth、test:smoke:nuget-auth。這些會下載並執行真實工具；一般測試不自動改寫專案鎖檔。OSV smoke 使用官方 latest（可用 OSV_SMOKE_VERSION 指定）、真實 API、有弱點／無弱點 SBOM、自訂檔名與快取重用，證據在 .smoke/21；其他既有 smoke 明確關閉 OSV，避免將新增外部連線混入原測試範圍。
 
 npm run package:dev 建立本機測試 VSIX；npm run test:final -- --cases=npm,artifact-failure 解包後執行真實 handler，驗證 DT 成功／失敗、同份成品、階段日誌與成品 adapter 故障。正式包可加 --vsix=packages/public/LawrenceShen.sbom-pilot-<version>.vsix 驗證同一個出貨檔案。npm test 與 final harness 共用 .test-build，不可同時執行。
 
@@ -27,6 +27,7 @@ npm run package:dev 建立本機測試 VSIX；npm run test:final -- --cases=npm,
 | src/task.json、config.ts、azure-inputs.ts | 公開欄位、解析、驗證與秘密讀取 |
 | src/index.ts、workflow.ts | Azure adapter、依序執行各階段、DT 失敗仍發佈有效成品 |
 | src/tools.ts、node-cache.ts | Node 校驗與快取、隔離 cdxgen 安裝 |
+| src/osv.ts、osv-report.ts | 官方 Latest 解析、校驗與版本快取、單次 JSON 掃描、風險分級／CVE Markdown 報告 |
 | src/install/、dotnet/ | 嚴格安裝、還原圖、SDK／MSBuild、來源認證 |
 | src/scan.ts、validation.ts | 單次掃描與隨附 CycloneDX Schema 驗證 |
 | src/dt/、network/、process.ts | DT REST、Proxy／CA、程序與錯誤隔離 |

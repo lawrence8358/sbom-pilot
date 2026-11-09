@@ -15,7 +15,7 @@ async function fixture(action: (root: string) => Promise<void>) {
   finally { await rm(directory, { recursive: true, force: true }); }
 }
 const config = (projectPath: string, extra: Record<string,string | undefined> = {}) =>
-  readTaskConfig(name => ({ projectPath, environment: 'dotnet', ...extra })[name]);
+  readTaskConfig(name => ({ projectPath, environment: 'dotnet', runOsv: 'false', ...extra })[name]);
 
 test('solution input restores exactly once and scopes scanner to graph members even with unrelated stale assets', () => fixture(async root => {
   const solution = join(root, 'Product.sln');
@@ -61,7 +61,7 @@ test('artifact defaults and custom names flow through the output path and publis
       generate:async request=>{generated=request.outputPath;await writeFile(generated,JSON.stringify({bomFormat:'CycloneDX',specVersion:'1.6',version:1,components:[]}));},
       publish:async (...values: unknown[])=>{published=String(values[1]);},
     });
-    assert.equal(generated,join(root,'temp','sbom',extra.sbomFileName??'bom.json'));
+    assert.equal(generated,join(root,'temp','sbom',extra.sbomFileName??'sbom.cdx.json'));
     assert.equal(published,extra.artifactName??'SBOM');
   }
 }));

@@ -14,7 +14,7 @@ async function fixture(action: (root: string) => Promise<void>) {
 }
 
 const config = (projectPath: string, environment = 'dotnet') =>
-  readTaskConfig(name => ({ projectPath, environment, fetchLicense: 'false' })[name]);
+  readTaskConfig(name => ({ projectPath, environment, fetchLicense: 'false', runOsv: 'false' })[name]);
 
 test('.NET file paths resolve to their containing scan directory, including relative paths and spaces', () => fixture(async root => {
   const directory = join(root, 'Product with spaces');

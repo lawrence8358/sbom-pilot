@@ -46,6 +46,18 @@ async function main(): Promise<void> {
         tl.uploadArtifact(artifactName, sbom.path, artifactName);
         console.log('SBOM Build Artifact 上傳已排入 Agent 佇列；請由工作結果及成品頁確認完成。');
       },
+
+      /** 將已完成的 Markdown 報告發佈到相同成品，保留檔案直到 Agent 完成非同步讀取。 */
+      publishReport: async (report, artifactName) => {
+        tl.uploadArtifact(artifactName, report.path, artifactName);
+        console.log('OSV 弱點報告上傳已排入 Agent 佇列；請由工作結果及成品頁確認完成。');
+      },
+
+      /** 將同一份 Markdown 附加到此次 CI 的 Extensions 摘要，無需下載成品。 */
+      publishSummary: async (report) => {
+        tl.uploadSummary(report.path);
+        console.log('OSV 弱點報告已排入 CI 摘要上傳佇列；請於執行結果的 Extensions 查看。');
+      },
     });
     tl.setResult(tl.TaskResult.Succeeded, 'SBOM 已產生並驗證，成品上傳已排入佇列。');
   } catch (error) {

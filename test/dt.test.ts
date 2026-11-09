@@ -129,7 +129,7 @@ test('redirects are not followed, malformed acceptance and oversized responses f
 }));
 test('workflow attempts artifact publication after DT error and returns failure; disabled DT makes no request', () => fixture(async (root, sbom) => {
   const tools: ToolContext = { node: process.execPath, npmCli: '', cdxgenCli: '', nodeVersion: '24.22.2', cdxgenVersion: '13.6.0', env: process.env };
-  const input: TaskConfig = { environment: 'vue', projectPath: root, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: [], fetchLicense: true, noCache: true, uploadToDt: true, dt: config('http://127.0.0.1:1') };
+  const input: TaskConfig = { environment: 'vue', projectPath: root, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: [], fetchLicense: true, noCache: true, runOsv: false, uploadToDt: true, dt: config('http://127.0.0.1:1') };
   let uploaded = 0, published = 0;
   const logs: string[] = [];
   const services = { log: (message: string) => { logs.push(message); }, prepare: async () => tools, installer: { install: async () => {} }, generate: async () => {}, validate: async () => sbom,
@@ -144,7 +144,7 @@ test('workflow attempts artifact publication after DT error and returns failure;
     '##[section]開始上傳 SBOM 至 Dependency-Track（DT）', '##[section]開始發佈 SBOM 成品（Azure Pipelines）',
   ]);
   logs.length = 0;
-  await runWorkflow({ ...input, uploadToDt: false }, join(root, 'off'), services);
+  await runWorkflow({ ...input, runOsv: false, uploadToDt: false }, join(root, 'off'), services);
   assert.equal(uploaded, 1); assert.equal(published, 2);
   assert.ok(!logs.some(line => line.includes('開始上傳 SBOM 至')));
   assert.ok(logs.includes('DT 上傳未啟用，略過此階段。'));
