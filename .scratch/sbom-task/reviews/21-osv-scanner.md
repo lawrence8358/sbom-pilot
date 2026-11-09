@@ -46,3 +46,11 @@
 - 交付目錄：packages/submission/public/LawrenceShen.sbom-pilot-0.2.0-awfqgv。
 - packaging:check／package（內含archive、身分、public旗標、來源新鮮度校驗）及Node20/24的dist／VSIX四入口通過。僅版號及文件調整，不重跑未受影響的功能測試。
 - 使用者會手動上傳；未commit、merge、push、上傳或啟動CI。0.1.4候選包保留為歷史，後續以0.2.0為交付。
+
+## GitHub 同步完成
+
+- 依使用者最新授權提交38f289f並將feature/osv-scanner快轉整合main。
+- git push origin main成功，git ls-remote回讀確認遠端main與38f289f一致。
+- 提交前136/136測試通過，git diff --check與0.2.0來源／dist建置收據核對通過。
+- 工單21本機實作與GitHub同步完成；差異/保持未追蹤，packages維持忽略。
+- 未上傳市集、未建立GitHub Release、未啟動CI；0.2.0成品仍由使用者手動上傳。

@@ -1,7 +1,7 @@
 # 21: OSV 弱點掃描、工具快取與成品報告
 
 Type: task
-Status: ready-for-human
+Status: resolved
 Blocked by: 20
 
 ## 規格
@@ -27,3 +27,5 @@ Blocked by: 20
 ## Answer
 
 本機實作、文件、136單元、Windows/Linux真OSV與封裝驗證及獨立審查完成；交付保留未提交狀態，未發布。完整結果與限制見 [21驗證](../reviews/21-osv-scanner.md)。
+
+- 使用者後續授權commit及push，0.2.0實作38f289f已整合main並推至GitHub、遠端SHA回讀一致。市集仍由使用者手動上傳。

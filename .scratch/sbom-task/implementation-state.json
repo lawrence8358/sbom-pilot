@@ -28,19 +28,12 @@
     "17",
     "18",
     "19",
-    "20"
+    "20",
+    "21"
   ],
-  "activeWorktrees": [
-    {
-      "ticket": "21",
-      "branch": "feature/osv-scanner",
-      "worktree": ".",
-      "phase": "verified-authorized-for-push",
-      "checkpoint": ".scratch/sbom-task/checkpoints/21.md"
-    }
-  ],
-  "reviewStatus": "01-16-independent-review-closed; 17-self-checked-and-package-verified; 18-self-checked-and-live-azure-verified; 19-self-checked-and-live-azure-default-custom-verified; 20-independent-standards-spec-reviewed-and-live-azure-verified; 21-independent-standards-spec-reviewed-local-uncommitted",
-  "reviewHead": "b790c5d",
+  "activeWorktrees": [],
+  "reviewStatus": "01-16-independent-review-closed; 17-self-checked-and-package-verified; 18-self-checked-and-live-azure-verified; 19-self-checked-and-live-azure-default-custom-verified; 20-independent-standards-spec-reviewed-and-live-azure-verified; 21-independent-standards-spec-reviewed-integrated-github-pushed",
+  "reviewHead": "38f289f",
   "externalValidation": [
     "Azure DevOps Server installation, YAML UI and asynchronous failure propagation (Services Classic success/artifact download verified in run2733)",
     "Windows/Linux arm64",
@@ -48,7 +41,7 @@
   ],
   "notesDirectory": "../.sbom-pilot-notes",
   "recheckHead": "3c69674fed70adaf3a14255343bf7de57e97dc91",
-  "localImplementationStatus": "0.2.0-osv-verified-uncommitted-public-package-ready-for-manual-upload",
+  "localImplementationStatus": "0.2.0-complete-github-main-pushed-marketplace-manual",
   "currentCheckpoint": ".scratch/sbom-task/checkpoints/21.md",
   "cleanupStatus": "current-15-16-worktrees-removed; five protected old residual directories retained",
   "cleanupReport": ".scratch/sbom-task/reviews/current-worktree-cleanup.md",
@@ -75,13 +68,14 @@
   },
   "remoteWriteAuthorization": "User explicitly requested commit and push to GitHub for 0.2.0 in current conversation.",
   "currentWorkAuthorization": "User explicitly requested commit and GitHub push for 0.2.0; supersedes previous uncommitted-only instruction. Marketplace upload remains manual; no automated release or CI.",
-  "pendingLocalChange": {
+  "minorRelease": {
     "ticket": "21",
     "version": "0.2.0",
     "base": "7dd8827",
     "package": "packages/public/LawrenceShen.sbom-pilot-0.2.0.vsix",
     "sha256": "f6bbcf4c89db5dab1e3dc8741ae63b8462f8a260aec5a7c69c5bae0d2d222c91",
     "report": ".scratch/sbom-task/reviews/21-osv-scanner.md",
-    "remoteStatus": "Authorized commit and push to origin/main; verification pending. Marketplace remains manual."
+    "remoteStatus": "GitHub origin/main pushed and SHA verified; Marketplace remains manual.",
+    "commit": "38f289f"
   }
 }

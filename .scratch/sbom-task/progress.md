@@ -54,3 +54,11 @@ Marketplace Public0.1.2上傳驗證成功。Azure85 run2734預設與run2735自�
 ## 20 階段日誌與公開文件（2026-11-08）
 
 b790c5d實作0.1.3，122測試、封裝CLI1、Node20/24四入口與四個正式包真實案例通過；序列獨立雙軸review0發現。共用參數保持相容，README獨立作市集介紹、GitHub承載文件與hero，VSIX減至512045bytes且授權保留。市集Public0.1.3已驗證、GitHub main已push並核對連結；Azure85 run2738 Success、Task0.1.3、綠色標題可見、單次方案restore、223組件，成品2175下載534763bytes再次通過Schema1.6。詳見工單20 review/checkpoint。所有本次工作完成，其他未測平台條件維持獨立。
+
+## GitHub 同步完成
+
+- 依使用者最新授權提交38f289f並將feature/osv-scanner快轉整合main。
+- git push origin main成功，git ls-remote回讀確認遠端main與38f289f一致。
+- 提交前136/136測試通過，git diff --check與0.2.0來源／dist建置收據核對通過。
+- 工單21本機實作與GitHub同步完成；差異/保持未追蹤，packages維持忽略。
+- 未上傳市集、未建立GitHub Release、未啟動CI；0.2.0成品仍由使用者手動上傳。
