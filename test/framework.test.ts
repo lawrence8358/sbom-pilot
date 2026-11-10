@@ -37,7 +37,7 @@ test('solution context is derived from an actual project reference, not an unrel
   assert.equal(await findSolutionDirectory(project, root), root);
 }));
 
-async function restoreFixture(root: string, style: string, options: { lock?: boolean; failRestore?: boolean; missingPayload?: boolean; changeConfig?: boolean; missingTargets?: boolean; invalidAssets?: 'targets' | 'libraries' | 'identity' } = {}): Promise<{ run: ProcessRunner; calls: Command[]; project: string; tool: MSBuildTool; config: string }> {
+async function restoreFixture(root: string, style: string | undefined, options: { lock?: boolean; failRestore?: boolean; missingPayload?: boolean; changeConfig?: boolean; missingTargets?: boolean; invalidAssets?: 'targets' | 'libraries' | 'identity' } = {}): Promise<{ run: ProcessRunner; calls: Command[]; project: string; tool: MSBuildTool; config: string }> {
   const project = join(root, 'Product.csproj');
   const config = join(root, 'packages.config');
   const lock = join(root, 'custom.lock.json');
@@ -94,6 +94,25 @@ test('packages.config uses built-in NuGet, verifies restored payload and needs n
   const restore = f.calls.find(command => command.args.includes('-target:Restore'))!;
   assert.ok(restore.args.includes('-p:RestorePackagesConfig=true'));
   assert.equal(restore.args.includes('-p:RestoreLockedMode=true'), false);
+}));
+
+test('traditional project without NuGet packages (no projectStyle) skips restore but still checks targeting pack', () => fixture(async root => {
+  for (const style of [undefined, 'Unknown']) {
+    const directory = join(root, style ?? 'none'); await mkdir(directory);
+    const f = await restoreFixture(directory, style);
+    const restored = await restoreFrameworkProject(f.project, directory, f.tool, f.run, join(directory, 'temp'));
+    assert.deepEqual(restored, { assets: [], packageFiles: [] });
+    assert.equal(f.calls.some(command => command.args.includes('-target:Restore')), false);
+    assert.ok(f.calls.some(command => command.args.includes('-target:GetReferenceAssemblyPaths')));
+  }
+  const missing = join(root, 'targets'); await mkdir(missing);
+  const f = await restoreFixture(missing, undefined, { missingTargets: true });
+  await assert.rejects(restoreFrameworkProject(f.project, missing, f.tool, f.run, join(missing, 'temp')), /Targeting Pack/);
+}));
+
+test('unsupported legacy restore styles still fail the graph evaluation', () => fixture(async root => {
+  const f = await restoreFixture(root, 'ProjectJson');
+  await assert.rejects(restoreFrameworkProject(f.project, root, f.tool, f.run, join(root, 'temp')), /Restore graph 評估失敗/);
 }));
 
 test('restore failure, missing packages, modified config and targeting pack failure are explicit', () => fixture(async root => {

@@ -22,7 +22,7 @@ const hash = async (path: string) =>
     .digest('hex');
 interface GraphRestore {
   projectPath: string;
-  projectStyle: string;
+  projectStyle?: string;
   outputPath?: string;
   configFilePaths?: string[];
   sources?: Record<string, unknown>;
@@ -185,6 +185,10 @@ async function packageFiles(
   }
 }
 
+/** NuGet 對未使用 PackageReference／packages.config 的傳統專案不輸出 projectStyle（或標為 Unknown），代表沒有 NuGet 依賴。 */
+const withoutPackages = (entry: GraphRestore) =>
+  entry.projectStyle === undefined || entry.projectStyle === 'Unknown';
+
 /** 用實際 MSBuild 評估完整還原圖，驗證支援格式與入口專案後刪除暫存 graph。 */
 async function readFrameworkGraph(
   projectPath: string,
@@ -221,7 +225,10 @@ async function readFrameworkGraph(
       metadata.some(
         (entry) =>
           !entry?.projectPath ||
-          !['PackageReference', 'PackagesConfig'].includes(entry.projectStyle),
+          !(
+            withoutPackages(entry) ||
+            ['PackageReference', 'PackagesConfig'].includes(entry.projectStyle!)
+          ),
       )
     ) {
       throw new Error('Unsupported restore format');
@@ -296,6 +303,9 @@ export async function restoreFrameworkProject(
   const configs: string[] = [];
 
   for (const entry of metadata) {
+    if (withoutPackages(entry)) {
+      continue;
+    }
     if (entry.projectStyle === 'PackageReference') {
       if (!entry.outputPath) {
         throw new Error('PackageReference 缺少評估後的還原輸出位置。');
@@ -352,6 +362,9 @@ export async function restoreFrameworkProject(
     preserved.map(async (path) => [path, await hash(path)] as const),
   );
 
+  // 整個還原圖都沒有 NuGet 依賴時不需還原，仍須檢查 targeting pack。
+  const restorable = metadata.some((entry) => !withoutPackages(entry));
+
   try {
     /** 以評估後的 MSBuild 參數執行還原，只有既有鎖檔存在時要求 locked mode。 */
     const restore = (env: NodeJS.ProcessEnv) =>
@@ -369,7 +382,7 @@ export async function restoreFrameworkProject(
         env,
       });
 
-    if (credentials?.length) {
+    if (restorable && credentials?.length) {
       await withFrameworkSourceReader(
         properties.NuGetRestoreTargets,
         tool,
@@ -377,7 +390,7 @@ export async function restoreFrameworkProject(
         tempDirectory,
         (read) => withNuGetCredentials(credentials, metadata, read, tool.env, restore),
       );
-    } else {
+    } else if (restorable) {
       await restore(tool.env);
     }
   } catch (error) {

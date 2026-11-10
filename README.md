@@ -60,7 +60,7 @@ Classic Build：在 Agent job 選 **Add task → SBOM Pilot**，設定「開發�
 
 Task 向上讀取 global.json 的完整 sdk.version、rollForward 與 allowPrerelease，缺少版本宣告時採 SDK 10.0.101；已有相容 SDK 就沿用，否則下載。保留分層 NuGet.Config，已有 NuGet lockfile 才使用 locked mode。global.json 的 sdk.paths 目前不支援；自訂 SDK／targets 與 workload 需具備可評估的 Agent 條件。
 
-**.NET Framework**：傳統格式使用 Agent 預裝 MSBuild，不安裝整套 Visual Studio；packages.config 需可由 solution 或 repositoryPath 判定套件位置。詳見 [.NET Framework](https://github.com/lawrence8358/sbom-pilot/blob/main/docs/framework.md)。
+**.NET Framework**：傳統格式使用 Agent 預裝 MSBuild，不安裝整套 Visual Studio；packages.config 需可由 solution 或 repositoryPath 判定套件位置；未使用任何 NuGet 套件的傳統專案會略過還原，仍檢查 targeting pack。詳見 [.NET Framework](https://github.com/lawrence8358/sbom-pilot/blob/main/docs/framework.md)。
 
 **前後端合併**：設定 environment: combined、projectPath: '$(Build.SourcesDirectory)/product'。Task 安裝各前端根目錄並還原 .NET Core，再以 -t dotnet -t js 單次遞迴掃描，共用排除規則，產生一份 SBOM。啟用 DT 時對應同一產品 UUID；傳統 .NET Framework 使用獨立 netframework 模式。詳見[合併規則](https://github.com/lawrence8358/sbom-pilot/blob/main/docs/combined.md)與[範例](https://github.com/lawrence8358/sbom-pilot/blob/main/examples/combined-product/package.json)。
 
