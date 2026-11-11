@@ -1,5 +1,5 @@
 import { commandRedactor, diagnosticJson, withCommandLogging } from './command-log';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { mkdir } from 'node:fs/promises';
 import { validateConfig, type TaskConfig } from './config';
 import { prepareTools, type ToolPreparer, type ToolContext } from './tools';
@@ -12,9 +12,10 @@ import { generateSbom, scanExcludes, type SbomGenerator } from './scan';
 import { validateSbom, type SbomValidator, type ValidatedSbom } from './validation';
 import { runProcess, type ProcessRunner } from './process';
 import { uploadToDependencyTrack } from './dt/upload';
-import { scanOsv, type OsvScanner, type OsvReport } from './osv';
+import { createOsvScanner, type OsvScanner, type OsvReport } from './osv';
 import { partitionOsvFindings, osvThresholdMessage } from './osv-threshold';
 import { logOsvIssues } from './osv-issues';
+import { developmentExtraFindings } from './osv-report';
 
 export type ArtifactPublisher = (sbom: ValidatedSbom, artifactName: string) => Promise<void>;
 export type SbomUploader = (sbom: ValidatedSbom) => Promise<void>;
@@ -104,7 +105,7 @@ async function installDependencies(
   });
 }
 
-/** 依序準備、還原、單次掃描及驗證；依 OSV 門檻阻擋 DT，發佈有效成品後彙整錯誤。 */
+/** 共用一次還原產生並驗證兩份 SBOM；依完整 OSV 門檻阻擋 DT，發佈成品後彙整錯誤。 */
 export async function runWorkflow(
   input: TaskConfig,
   tempDirectory: string,
@@ -126,7 +127,7 @@ export async function runWorkflow(
 
   await mkdir(tempDirectory, { recursive: true });
 
-  // 工具與依賴準備完成後，才開始產生唯一一份掃描輸出。
+  // 工具與依賴準備完成後，兩份掃描共用同一份還原資料。
   const tools = await stage('工具準備', () =>
     (services.prepare ?? prepareTools)(
       { nodeVersion: config.nodeVersion, cdxgenVersion: config.cdxgenVersion, tempDirectory },
@@ -138,8 +139,20 @@ export async function runWorkflow(
   services.log('##[section]開始安裝／還原專案依賴');
   await stage('依賴安裝', () => installDependencies(config, tools, run, tempDirectory, services));
 
-  // 只掃描一次，再驗證同一份檔案；上傳與成品不能各自重建 BOM。
+  // 產品與完整 SBOM 只在必要套件篩選及輸出路徑上有差異。
   const outputPath = join(tempDirectory, 'sbom', config.sbomFileName!);
+  const fullFileName = config.sbomFileName!.replace(/\.json$/i, '-dev.json');
+  if (fullFileName === config.sbomFileName) {
+    throw new StageError('參數驗證', new Error('完整 SBOM 與產品 SBOM 檔名不可相同。'));
+  }
+  const outputs = [
+    { outputPath, requiredOnly: true, artifact: `${config.artifactName}/${config.sbomFileName}` },
+    {
+      outputPath: join(tempDirectory, 'sbom', fullFileName),
+      requiredOnly: false,
+      artifact: `${config.artifactName}/${fullFileName}`,
+    },
+  ];
 
   await mkdir(join(tempDirectory, 'sbom'), { recursive: true });
   services.log('##[section]開始產生 SBOM（cdxgen）');
@@ -149,64 +162,85 @@ export async function runWorkflow(
         environment: config.environment,
         scanRoot: config.projectPath,
         restoreTarget: config.dotnetTarget,
-        requiredOnly: true,
+        outputs,
         specVersion: config.specVersion,
         installDeps: false,
         fetchLicense: config.fetchLicense,
         noCache: config.noCache,
         excludes: scanExcludes({ config, tools, outputPath }),
         scopedToRestoreGraph: Boolean(tools.dotnetScanIncludes?.length),
-        artifact: `${config.artifactName}/${config.sbomFileName}`,
       })}`,
     ),
   );
-  await stage('SBOM 產生', () =>
-    (services.generate ?? generateSbom)({ config, tools, outputPath }, run),
-  );
-
-  services.log('##[section]開始驗證 SBOM（CycloneDX）');
-  const sbom = await stage('SBOM 驗證', () =>
-    (services.validate ?? validateSbom)(outputPath, config.specVersion),
-  );
-
-  services.log(`CycloneDX ${config.specVersion} 驗證通過；組件數：${sbom.componentCount}。`);
+  const sboms: ValidatedSbom[] = [];
+  for (const output of outputs) {
+    const label = output.requiredOnly ? '產品 SBOM' : '完整 SBOM';
+    await stage(`SBOM 產生（${label}）`, () =>
+      (services.generate ?? generateSbom)({ config, tools, ...output }, run),
+    );
+    services.log(`##[section]開始驗證 SBOM（CycloneDX，${label}）`);
+    const validated = await stage(`SBOM 驗證（${label}）`, () =>
+      (services.validate ?? validateSbom)(output.outputPath, config.specVersion),
+    );
+    services.log(
+      `${label} CycloneDX ${config.specVersion} 驗證通過；組件數：${validated.componentCount}。`,
+    );
+    sboms.push(validated);
+  }
+  const sbom = sboms[0];
 
   // OSV／門檻／DT 各自保留錯誤，仍嘗試發佈有效 SBOM 及已完成的報告。
   const errors: unknown[] = [];
-  let report: OsvReport | undefined;
+  const reports: (OsvReport | undefined)[] = [];
   let dtBlocked = false;
 
   if (config.runOsv) {
     const threshold = config.osvFailOn!;
 
-    try {
-      report = await stage('OSV 弱點掃描', () =>
-        (services.scanOsv ?? scanOsv)(
-          {
-            sbom,
-            version: config.osvVersion!,
-            tempDirectory,
-            cacheDirectory: process.env.AGENT_TOOLSDIRECTORY || join(tempDirectory, 'tools-cache'),
-            env: tools.env,
-          },
-          run,
-          services.log,
-        ),
-      );
+    /** 同次工作流程的兩份 SBOM 共用一次工具取得，測試可注入掃描服務。 */
+    const scan = services.scanOsv ?? createOsvScanner();
+
+    for (const [index, validated] of sboms.entries()) {
+      const variant = index === 0 ? 'product' : 'full';
+      const label = index === 0 ? '產品 SBOM' : '完整 SBOM';
+      try {
+        reports[index] = await stage(`OSV 弱點掃描（${label}）`, () =>
+          scan(
+            {
+              sbom: validated,
+              variant,
+              version: config.osvVersion!,
+              tempDirectory,
+              cacheDirectory:
+                process.env.AGENT_TOOLSDIRECTORY || join(tempDirectory, 'tools-cache'),
+              env: tools.env,
+            },
+            run,
+            services.log,
+          ),
+        );
+      } catch (error) {
+        errors.push(error);
+        if (threshold !== 'warnOnly') {
+          dtBlocked = true;
+          if (config.uploadToDt)
+            services.log(`${label} OSV 弱點掃描失敗且門檻非「僅警告」；已略過 DT 上傳。`);
+        }
+      }
+    }
+    const report = reports[1];
+    if (report) {
       const groups = partitionOsvFindings(report.findingList, threshold);
       const { exceeded } = groups;
-      logOsvIssues(groups, services.log);
+      const devExtra = reports[0]
+        ? developmentExtraFindings(reports[0].findingList, report.findingList)
+        : [];
+      logOsvIssues(groups, services.log, devExtra);
       if (exceeded.length) {
         dtBlocked = true;
         const message = osvThresholdMessage(exceeded, threshold, Boolean(config.uploadToDt));
         services.log(message);
         errors.push(new Error(message));
-      }
-    } catch (error) {
-      errors.push(error);
-      if (threshold !== 'warnOnly') {
-        dtBlocked = true;
-        if (config.uploadToDt) services.log('OSV 弱點掃描失敗且門檻非「僅警告」；已略過 DT 上傳。');
       }
     }
   } else {
@@ -215,11 +249,15 @@ export async function runWorkflow(
 
   if (config.uploadToDt && !dtBlocked) {
     services.log('##[section]開始上傳 SBOM 至 Dependency-Track（DT）');
+    const dtSbom = config.dtSbomVariant === 'product' ? sboms[0] : sboms[1];
+    services.log(
+      `DT 上傳版本：${config.dtSbomVariant === 'product' ? '產品 SBOM' : '完整 SBOM'}（${basename(dtSbom.path)}）。`,
+    );
     try {
       await stage('DT 上傳', () =>
         services.upload
-          ? services.upload(sbom)
-          : uploadToDependencyTrack(sbom, config.dt!, services.log),
+          ? services.upload(dtSbom)
+          : uploadToDependencyTrack(dtSbom, config.dt!, services.log),
       );
     } catch (error) {
       errors.push(error);
@@ -230,28 +268,34 @@ export async function runWorkflow(
 
   // 成品請求結束後才傳遞先前 OSV／門檻／DT 錯誤，不能吞掉任一失敗。
   services.log('##[section]開始發佈 SBOM 成品（Azure Pipelines）');
-  try {
-    await stage('成品發佈', () => services.publish(sbom, config.artifactName!));
-  } catch (error) {
-    errors.push(error);
+  for (const validated of sboms) {
+    try {
+      await stage('成品發佈', () => services.publish(validated, config.artifactName!));
+    } catch (error) {
+      errors.push(error);
+    }
   }
 
-  if (report) {
+  for (const report of reports) {
+    if (!report) continue;
     services.log('##[section]開始發佈 OSV 弱點報告（Azure Pipelines）');
     try {
       await stage('OSV 成品發佈', async () => {
         if (!services.publishReport) throw new Error('缺少 OSV 報告成品發佈介面。');
-        await services.publishReport(report!, config.artifactName!);
+        await services.publishReport(report, config.artifactName!);
       });
     } catch (error) {
       errors.push(error);
     }
+  }
 
+  const productReport = reports[0];
+  if (productReport) {
     services.log('##[section]開始發佈 OSV 報告至 CI 摘要');
     try {
       await stage('OSV 摘要發佈', async () => {
         if (!services.publishSummary) throw new Error('缺少 OSV 報告摘要發佈介面。');
-        await services.publishSummary(report!);
+        await services.publishSummary(productReport);
       });
     } catch (error) {
       errors.push(error);

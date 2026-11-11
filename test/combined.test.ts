@@ -138,7 +138,7 @@ test('combined scan uses one recursive invocation with dotnet/js and readable re
   assert.ok(scanExcludes(request).includes('**/_Design{,Front}/**'));
 });
 
-test('default combined workflow prepares frontend/backend and publishes exactly one validated BOM', () => fixture(async root => {
+test('default combined workflow prepares frontend/backend and publishes both validated SBOMs', () => fixture(async root => {
   await manifest(join(root, 'frontend'));
   await writeFile(join(root, 'frontend/package-lock.json'), '{}');
   const backend = join(root, 'backend'); await mkdir(backend);
@@ -161,8 +161,8 @@ test('default combined workflow prepares frontend/backend and publishes exactly 
   };
   let published = 0;
   const result = await runWorkflow(config(root), join(root, 'temp'), { log: () => {}, run: runner, prepare: async () => ({ ...tools, env: { ...tools.env } }), publish: async sbom => { published++; assert.equal(sbom.componentCount, 2); } });
-  assert.equal(published, 1);
-  assert.equal(calls.filter(command => command.args[0] === tools.cdxgenCli).length, 1);
+  assert.equal(published, 2);
+  assert.equal(calls.filter(command => command.args[0] === tools.cdxgenCli).length, 2);
   assert.equal(calls.filter(command => command.args[0] === 'restore').length, 1);
   assert.equal(calls.filter(command => command.args.includes('ci')).length, 1);
   assert.equal(JSON.parse(await readFile(result.path, 'utf8')).components.length, 2);

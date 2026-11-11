@@ -10,6 +10,8 @@ export interface OsvFinding {
   name: string;
   version: string;
   fixed: string[];
+  published?: string;
+  modified?: string;
 }
 const ratings = [
   { severity: 'critical', label: '危急', name: 'Critical', icon: '🔴', minimum: 9 },
@@ -24,6 +26,23 @@ export const osvSeverityOrder: readonly OsvSeverity[] = ratings.map((item) => it
 export const osvSeverityLabels = Object.fromEntries(
   ratings.map((item) => [item.severity, item.label]),
 ) as Record<OsvSeverity, string>;
+
+/** 以生態系、套件、版本與排序後的 OSV ID 集合識別弱點，不受日期或評分變動影響。 */
+export function osvFindingIdentity(finding: OsvFinding): string {
+  return JSON.stringify([
+    finding.ecosystem,
+    finding.name,
+    finding.version,
+    [...new Set(finding.ids)].sort(),
+  ]);
+}
+
+/** 保留完整 SBOM 中產品 SBOM 沒有的弱點，供開發套件額外弱點與 issue 標記共用。 */
+export function developmentExtraFindings(product: OsvFinding[], full: OsvFinding[]): OsvFinding[] {
+  const productIds = new Set(product.map(osvFindingIdentity));
+
+  return full.filter((finding) => !productIds.has(osvFindingIdentity(finding)));
+}
 
 /** 驗證 JSON 物件形狀，避免上游不相容資料被視為無弱點。 */
 function record(value: unknown): RecordValue {
@@ -119,6 +138,26 @@ function fixedVersions(
   return [...fixes].sort();
 }
 
+/** 將匹配記錄的有效時間轉為 UTC 日期，缺少或無法解析時不提供日期。 */
+function vulnerabilityDate(
+  vulnerabilities: RecordValue[],
+  field: 'published' | 'modified',
+): string | undefined {
+  const times = vulnerabilities
+    .map((item) => item[field])
+    .filter(
+      (value): value is string =>
+        typeof value === 'string' && /T.*(?:Z|[+-]\d{2}:\d{2})$/i.test(value),
+    )
+    .map((value) => Date.parse(value))
+    .filter(Number.isFinite);
+  if (!times.length) return;
+
+  return new Date(field === 'published' ? Math.min(...times) : Math.max(...times))
+    .toISOString()
+    .slice(0, 10);
+}
+
 /** 將 OSV 別名群組轉為每個套件／版本一列，避免 GHSA 與 CVE 重複計數。 */
 function reportRows(value: unknown): OsvFinding[] {
   const document = record(value);
@@ -154,6 +193,8 @@ function reportRows(value: unknown): OsvFinding[] {
         ];
 
         const cvss = score(group.max_severity);
+        const published = vulnerabilityDate(matching, 'published');
+        const modified = vulnerabilityDate(matching, 'modified');
 
         rows.push({
           severity: rating(cvss).severity,
@@ -164,6 +205,8 @@ function reportRows(value: unknown): OsvFinding[] {
           name: pkg.name,
           version: pkg.version,
           fixed: fixedVersions(matching, pkg.name, pkg.ecosystem, pkg.version),
+          ...(published ? { published } : {}),
+          ...(modified ? { modified } : {}),
         });
       }
     }
@@ -205,8 +248,8 @@ export function createOsvReport(
     '',
     counts,
     '',
-    '| 風險等級 | CVSS | CVE | OSV URL | Ecosystem | Package | Version | Fixed Version | Source |',
-    '| --- | --- | --- | --- | --- | --- | --- | --- | --- |',
+    '| 風險等級 | CVSS | CVE | OSV URL | Ecosystem | Package | Version | Fixed Version | Source | 發佈日期 | 最後修改 |',
+    '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
   ];
 
   for (const row of rows) {
@@ -222,7 +265,7 @@ export function createOsvReport(
       .join('<br>');
 
     lines.push(
-      `| ${level.icon} **${level.label} ${level.name}** | ${row.score?.toFixed(1) ?? '未知'} | ${cves} | ${links} | ${cell(row.ecosystem)} | ${cell(row.name)} | ${cell(row.version)} | ${row.fixed.length ? row.fixed.map(cell).join('<br>') : '未提供'} | ${cell(options.source)} |`,
+      `| ${level.icon} **${level.label} ${level.name}** | ${row.score?.toFixed(1) ?? '未知'} | ${cves} | ${links} | ${cell(row.ecosystem)} | ${cell(row.name)} | ${cell(row.version)} | ${row.fixed.length ? row.fixed.map(cell).join('<br>') : '未提供'} | ${cell(options.source)} | ${row.published ?? '未提供'} | ${row.modified ?? '未提供'} |`,
     );
   }
 

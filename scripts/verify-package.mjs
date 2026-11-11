@@ -54,6 +54,11 @@ try {
     assert.deepEqual(Object.keys(manifest.execution).sort(), ['Node20_1', 'Node24']);
     const frontend = manifest.inputs.find(input => input.name === 'environment');
     assert.equal(frontend.defaultValue, 'javascript');
+    for (const name of ['artifactName', 'sbomFileName']) {
+      const input = manifest.inputs.find(input => input.name === name);
+      assert.equal(Object.hasOwn(input, 'defaultValue'), false);
+      assert.match(input.helpMarkDown, /未填時使用/);
+    }
     assert.match(frontend.options.javascript, /JavaScript.*TypeScript.*Angular.*Vue/);
     assert.deepEqual(Object.keys(frontend.options), ['javascript', 'dotnet', 'netframework', 'combined']);
     assert.deepEqual(manifest.visibility, ['Build']); assert.equal(manifest.minimumAgentVersion, '3.238.0');

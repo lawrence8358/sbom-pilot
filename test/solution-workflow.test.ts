@@ -55,13 +55,13 @@ test('solution input restores exactly once and scopes scanner to graph members e
 
 test('artifact defaults and custom names flow through the output path and publisher', () => fixture(async root => {
   for (const extra of [{}, { artifactName:'CycloneSBOM',sbomFileName:'PrimeX.cdx.json' }]) {
-    let generated='';let published='';
+    const generated: string[]=[];let published='';
     await runWorkflow(config(root,extra),join(root,'temp'),{
       log:()=>{},prepare:async()=>({node:'node',npmCli:'npm',cdxgenCli:'cdxgen',nodeVersion:'24.22.2',cdxgenVersion:'13.6.0',env:{}}),installer:{install:async()=>{}},
-      generate:async request=>{generated=request.outputPath;await writeFile(generated,JSON.stringify({bomFormat:'CycloneDX',specVersion:'1.6',version:1,components:[]}));},
+      generate:async request=>{generated.push(request.outputPath);await writeFile(request.outputPath,JSON.stringify({bomFormat:'CycloneDX',specVersion:'1.6',version:1,components:[]}));},
       publish:async (...values: unknown[])=>{published=String(values[1]);},
     });
-    assert.equal(generated,join(root,'temp','sbom',extra.sbomFileName??'sbom.cdx.json'));
+    assert.deepEqual(generated,[join(root,'temp','sbom',extra.sbomFileName??'sbom.cdx.json'),join(root,'temp','sbom',extra.sbomFileName?'PrimeX.cdx-dev.json':'sbom.cdx-dev.json')]);
     assert.equal(published,extra.artifactName??'SBOM');
   }
 }));

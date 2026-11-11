@@ -18,6 +18,18 @@ import {
 
 export const DEFAULT_EXCLUDES =
   '**/_Design{,Front}/**,**/bin/**,**/obj/**,**/node_modules/**,**/dist/**';
+export const dtSbomVariantValues = ['full', 'product'] as const;
+export type DtSbomVariant = (typeof dtSbomVariantValues)[number];
+
+/** 驗證 DT 要上傳的 SBOM 類型，預設完整 SBOM。 */
+export function validateDtSbomVariant(value: unknown = 'full'): DtSbomVariant {
+  if (typeof value !== 'string' || !dtSbomVariantValues.some((option) => option === value)) {
+    throw new Error('參數 dtSbomVariant 必須是 full 或 product。');
+  }
+
+  return value as DtSbomVariant;
+}
+
 export interface TaskConfig {
   environment: string;
   projectPath: string;
@@ -34,6 +46,7 @@ export interface TaskConfig {
   fetchLicense: boolean;
   noCache: boolean;
   uploadToDt: boolean;
+  dtSbomVariant?: DtSbomVariant;
   dt?: DtConfig;
   npmCredentials?: NpmCredential[];
   nugetCredentials?: NuGetCredential[];
@@ -143,6 +156,9 @@ export function readTaskConfig(read: InputReader): TaskConfig {
     fetchLicense: boolean('fetchLicense', true),
     noCache: boolean('noCache', true),
     uploadToDt,
+    dtSbomVariant: uploadToDt
+      ? validateDtSbomVariant(read('dtSbomVariant')?.trim() || 'full')
+      : 'full',
     dt: uploadToDt
       ? validateDtConfig({
           apiUrl: text('dtApiUrl', DEFAULT_DT_URL),
@@ -186,6 +202,7 @@ export async function validateConfig(config: TaskConfig): Promise<TaskConfig> {
   if (typeof runOsv !== 'boolean') throw new Error('參數 runOsv 必須是布林值。');
   const osvVersion = runOsv ? validateOsvVersion(config.osvVersion ?? 'latest') : undefined;
   const osvFailOn = runOsv ? validateOsvFailOn(config.osvFailOn) : undefined;
+  const dtSbomVariant = config.uploadToDt ? validateDtSbomVariant(config.dtSbomVariant) : 'full';
 
   const artifactName = config.artifactName ?? 'SBOM';
   const sbomFileName = config.sbomFileName ?? 'sbom.cdx.json';
@@ -250,6 +267,7 @@ export async function validateConfig(config: TaskConfig): Promise<TaskConfig> {
     runOsv,
     osvVersion,
     osvFailOn,
+    dtSbomVariant,
     dt: config.uploadToDt ? validateDtConfig(config.dt) : undefined,
     nugetCredentials:
       config.nugetCredentials === undefined

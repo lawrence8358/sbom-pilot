@@ -9,6 +9,7 @@ export interface ScanRequest {
   config: TaskConfig;
   tools: ToolContext;
   outputPath: string;
+  requiredOnly?: boolean;
 }
 export type SbomGenerator = (request: ScanRequest, run: ProcessRunner) => Promise<void>;
 
@@ -25,7 +26,7 @@ export function scanExcludes(request: ScanRequest): string[] {
   );
 }
 
-/** 組合一次遞迴 required-only 掃描參數，固定規格並禁止 cdxgen 再次安裝依賴。 */
+/** 組合產品或完整 SBOM 的遞迴掃描參數，固定規格並禁止 cdxgen 再次安裝依賴。 */
 export function scanArguments(request: ScanRequest): string[] {
   const types =
     request.config.environment === 'combined'
@@ -37,7 +38,7 @@ export function scanArguments(request: ScanRequest): string[] {
     request.config.projectPath,
     '-r',
     ...types.flatMap((type) => ['-t', type]),
-    '--required-only',
+    ...(request.requiredOnly === false ? [] : ['--required-only']),
     ...(types.includes('js') ? ['--no-babel'] : []),
     '--spec-version',
     request.config.specVersion,
