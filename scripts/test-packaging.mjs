@@ -6,16 +6,16 @@ import { spawnSync } from 'node:child_process';
 import JSZip from 'jszip';
 import { hash, PACKAGING_SOURCE_ROOTS } from './packaging-state.mjs';
 
-test('0.3.3 release versions and public documentation stay aligned with the packaged extension', async () => {
+test('0.3.4 release versions and public documentation stay aligned with the packaged extension', async () => {
   const pkg = JSON.parse(await readFile('package.json', 'utf8'));
   const lock = JSON.parse(await readFile('package-lock.json', 'utf8'));
   const extension = JSON.parse(await readFile('vss-extension.json', 'utf8'));
   const task = JSON.parse(await readFile('src/task.json', 'utf8'));
-  assert.equal(pkg.version, '0.3.3');
+  assert.equal(pkg.version, '0.3.4');
   assert.equal(lock.version, pkg.version);
   assert.equal(lock.packages[''].version, pkg.version);
   assert.equal(extension.version, pkg.version);
-  assert.deepEqual(task.version, { Major: 0, Minor: 3, Patch: 3 });
+  assert.deepEqual(task.version, { Major: 0, Minor: 3, Patch: 4 });
 
   const [readme, devReadme, releaseNotes] = await Promise.all([
     readFile('README.md', 'utf8'),
@@ -28,11 +28,14 @@ test('0.3.3 release versions and public documentation stay aligned with the pack
   const hostNotes = await readFile('.scratch/full-sbom/release-notes-0.3.3.md', 'utf8');
   assert.match(hostNotes, /onBuildChanged/);
   assert.match(hostNotes, /0\.3\.3/);
+  const uiNotes = await readFile('.scratch/full-sbom/release-notes-0.3.4.md', 'utf8');
+  assert.match(uiNotes, /設計稿/);
+  assert.match(uiNotes, /0\.3\.4/);
   for (const text of [readme, releaseNotes]) {
     assert.match(text, /完整 SBOM/);
     assert.match(text, /產品 SBOM/);
   }
-  assert.match(devReadme, /0\.3\.3/);
+  assert.match(devReadme, /0\.3\.4/);
   assert.match(releaseNotes, /開發套件弱點.*失敗門檻/);
   assert.match(releaseNotes, /僅警告/);
   assert.match(releaseNotes, /sbom\.cdx-full\.json/);
@@ -98,7 +101,7 @@ test('Marketplace CLI creates private/public bundles and rejects stale, mismatch
   const privateBytes = await readFile(privatePath);
   const privateZip = await JSZip.loadAsync(privateBytes);
   const task = JSON.parse(await privateZip.file('dist/task.json').async('string'));
-  assert.deepEqual(task.version, { Major: 0, Minor: 3, Patch: 3 });
+  assert.deepEqual(task.version, { Major: 0, Minor: 3, Patch: 4 });
   assert.match(await privateZip.file('extension.vsixmanifest').async('string'), new RegExp(`Version="${version}"`));
   for (const name of ['artifactName', 'sbomFileName']) {
     const input = task.inputs.find(input => input.name === name);
