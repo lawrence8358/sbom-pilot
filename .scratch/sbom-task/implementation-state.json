@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "integrationBranch": "feature/osv-fail-threshold",
+  "integrationBranch": "main",
   "reviewBase": "e3a5bf6ed57b74c519d0d64285f2929d0195688b",
   "noRemoteWrites": false,
   "handoffDocument": ".scratch/sbom-task/HANDOFF.md",
@@ -46,7 +46,7 @@
   ],
   "notesDirectory": "../.sbom-pilot-notes",
   "recheckHead": "3c69674fed70adaf3a14255343bf7de57e97dc91",
-  "localImplementationStatus": "0.3.0-osv-fail-threshold-integrated-on-feature-branch-not-merged-to-main",
+  "localImplementationStatus": "0.3.0-osv-fail-threshold-merged-main-github-pushed-marketplace-manual",
   "currentCheckpoint": ".scratch/sbom-task/checkpoints/28.md",
   "cleanupStatus": "current-15-16-worktrees-removed; five protected old residual directories retained",
   "cleanupReport": ".scratch/sbom-task/reviews/current-worktree-cleanup.md",
