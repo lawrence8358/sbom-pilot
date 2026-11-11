@@ -2,13 +2,49 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import findingsFixture from './fixtures/osv-findings.json';
-import { createOsvReport } from '../src/osv-report';
+import { createOsvReport, developmentExtraFindings } from '../src/osv-report';
 
 const options = { version: '2.7.1', source: 'sbom.cdx.json', findings: true };
 const pkg = (groups: unknown[], vulnerabilities: unknown[] = [], name = 'fixture') => ({
   package: { name, version: '9.0.4', ecosystem: 'NuGet' }, groups, vulnerabilities,
 });
 const doc = (...packages: unknown[]) => ({ results: [{ packages }] });
+
+test('development extras compare ecosystem, package, version and unordered OSV ID sets without mutating reports', () => {
+  const product = createOsvReport(doc(pkg([{ ids: ['OSV-a', 'GHSA-a'], max_severity: '7' }])), options).findingList;
+  const full = [
+    { ...product[0], ids: ['GHSA-a', 'OSV-a'], published: '2026-01-01', score: 9 },
+    { ...product[0], version: '9.0.5' },
+    { ...product[0], ids: ['OSV-b'] },
+    { ...product[0], ecosystem: 'npm' },
+    { ...product[0], name: 'other' },
+  ];
+  const snapshot = structuredClone({ product, full });
+  assert.deepEqual(developmentExtraFindings(product, full), full.slice(1));
+  assert.deepEqual(developmentExtraFindings([], full), full);
+  assert.deepEqual(developmentExtraFindings(product, []), []);
+  assert.deepEqual({ product, full }, snapshot);
+});
+
+test('matching vulnerability dates use earliest published and latest modified UTC dates, with explicit missing cells', () => {
+  const report = createOsvReport(doc(pkg([
+    { ids: ['GHSA-date', 'OSV-date'], max_severity: '7.5' },
+    { ids: ['GHSA-missing'], max_severity: '4' },
+  ], [
+    { id: 'GHSA-date', published: '2026-03-02T00:30:00+08:00', modified: '2026-03-05T23:30:00-05:00' },
+    { id: 'OSV-date', published: '2026-03-01T23:00:00Z', modified: '2026-03-06T03:00:00Z' },
+    { id: 'GHSA-date', published: 'invalid', modified: null },
+    { id: 'unrelated', published: '2000-01-01T00:00:00Z', modified: '2099-01-01T00:00:00Z' },
+  ])), options);
+  assert.deepEqual(report.findingList[0], {
+    severity: 'high', ids: ['GHSA-date', 'OSV-date'], cves: [], score: 7.5,
+    ecosystem: 'NuGet', name: 'fixture', version: '9.0.4', fixed: [],
+    published: '2026-03-01', modified: '2026-03-06',
+  });
+  assert.match(report.markdown, /\| 發佈日期 \| 最後修改 \|/);
+  assert.match(report.markdown, /\| 2026-03-01 \| 2026-03-06 \|/);
+  assert.match(report.markdown.split('\n').find(line => line.includes('[GHSA-missing]'))!, /\| 未提供 \| 未提供 \|$/);
+});
 
 test('report returns the grouped finding with package, risk, aliases and matching fixes', () => {
   const value = doc(pkg([{ ids: ['GHSA-fixture', 'CVE-2026-12345'], max_severity: '7.5' }], [{
@@ -88,7 +124,7 @@ test('external names cannot create HTML, links, extra table rows or Azure comman
   assert.ok(!markdown.includes('[evil]('));
   assert.ok(!markdown.includes('##vso['));
   const row = markdown.split('\n').find(line => line.startsWith('| 🟠'))!;
-  assert.equal(row.split('|').length, 11);
+  assert.equal(row.split('|').length, 13);
 });
 
 test('clean scan is explicit while malformed/partial JSON cannot masquerade as clean', () => {

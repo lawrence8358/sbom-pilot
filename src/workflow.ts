@@ -12,9 +12,10 @@ import { generateSbom, scanExcludes, type SbomGenerator } from './scan';
 import { validateSbom, type SbomValidator, type ValidatedSbom } from './validation';
 import { runProcess, type ProcessRunner } from './process';
 import { uploadToDependencyTrack } from './dt/upload';
-import { scanOsv, type OsvScanner, type OsvReport } from './osv';
+import { createOsvScanner, type OsvScanner, type OsvReport } from './osv';
 import { partitionOsvFindings, osvThresholdMessage } from './osv-threshold';
 import { logOsvIssues } from './osv-issues';
+import { developmentExtraFindings } from './osv-report';
 
 export type ArtifactPublisher = (sbom: ValidatedSbom, artifactName: string) => Promise<void>;
 export type SbomUploader = (sbom: ValidatedSbom) => Promise<void>;
@@ -104,7 +105,7 @@ async function installDependencies(
   });
 }
 
-/** 共用一次還原產生並驗證兩份 SBOM；依產品 OSV 門檻阻擋 DT，發佈成品後彙整錯誤。 */
+/** 共用一次還原產生並驗證兩份 SBOM；依完整 OSV 門檻阻擋 DT，發佈成品後彙整錯誤。 */
 export async function runWorkflow(
   input: TaskConfig,
   tempDirectory: string,
@@ -190,40 +191,56 @@ export async function runWorkflow(
 
   // OSV／門檻／DT 各自保留錯誤，仍嘗試發佈有效 SBOM 及已完成的報告。
   const errors: unknown[] = [];
-  let report: OsvReport | undefined;
+  const reports: (OsvReport | undefined)[] = [];
   let dtBlocked = false;
 
   if (config.runOsv) {
     const threshold = config.osvFailOn!;
 
-    try {
-      report = await stage('OSV 弱點掃描', () =>
-        (services.scanOsv ?? scanOsv)(
-          {
-            sbom,
-            version: config.osvVersion!,
-            tempDirectory,
-            cacheDirectory: process.env.AGENT_TOOLSDIRECTORY || join(tempDirectory, 'tools-cache'),
-            env: tools.env,
-          },
-          run,
-          services.log,
-        ),
-      );
+    /** 同次工作流程的兩份 SBOM 共用一次工具取得，測試可注入掃描服務。 */
+    const scan = services.scanOsv ?? createOsvScanner();
+
+    for (const [index, validated] of sboms.entries()) {
+      const variant = index === 0 ? 'product' : 'full';
+      const label = index === 0 ? '產品 SBOM' : '完整 SBOM';
+      try {
+        reports[index] = await stage(`OSV 弱點掃描（${label}）`, () =>
+          scan(
+            {
+              sbom: validated,
+              variant,
+              version: config.osvVersion!,
+              tempDirectory,
+              cacheDirectory:
+                process.env.AGENT_TOOLSDIRECTORY || join(tempDirectory, 'tools-cache'),
+              env: tools.env,
+            },
+            run,
+            services.log,
+          ),
+        );
+      } catch (error) {
+        errors.push(error);
+        if (threshold !== 'warnOnly') {
+          dtBlocked = true;
+          if (config.uploadToDt)
+            services.log(`${label} OSV 弱點掃描失敗且門檻非「僅警告」；已略過 DT 上傳。`);
+        }
+      }
+    }
+    const report = reports[1];
+    if (report) {
       const groups = partitionOsvFindings(report.findingList, threshold);
       const { exceeded } = groups;
-      logOsvIssues(groups, services.log);
+      const devExtra = reports[0]
+        ? developmentExtraFindings(reports[0].findingList, report.findingList)
+        : [];
+      logOsvIssues(groups, services.log, devExtra);
       if (exceeded.length) {
         dtBlocked = true;
         const message = osvThresholdMessage(exceeded, threshold, Boolean(config.uploadToDt));
         services.log(message);
         errors.push(new Error(message));
-      }
-    } catch (error) {
-      errors.push(error);
-      if (threshold !== 'warnOnly') {
-        dtBlocked = true;
-        if (config.uploadToDt) services.log('OSV 弱點掃描失敗且門檻非「僅警告」；已略過 DT 上傳。');
       }
     }
   } else {
@@ -255,22 +272,26 @@ export async function runWorkflow(
     }
   }
 
-  if (report) {
+  for (const report of reports) {
+    if (!report) continue;
     services.log('##[section]開始發佈 OSV 弱點報告（Azure Pipelines）');
     try {
       await stage('OSV 成品發佈', async () => {
         if (!services.publishReport) throw new Error('缺少 OSV 報告成品發佈介面。');
-        await services.publishReport(report!, config.artifactName!);
+        await services.publishReport(report, config.artifactName!);
       });
     } catch (error) {
       errors.push(error);
     }
+  }
 
+  const productReport = reports[0];
+  if (productReport) {
     services.log('##[section]開始發佈 OSV 報告至 CI 摘要');
     try {
       await stage('OSV 摘要發佈', async () => {
         if (!services.publishSummary) throw new Error('缺少 OSV 報告摘要發佈介面。');
-        await services.publishSummary(report!);
+        await services.publishSummary(productReport);
       });
     } catch (error) {
       errors.push(error);

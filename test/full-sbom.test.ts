@@ -65,7 +65,7 @@ test('artifact inputs show no editor defaults while missing and blank inputs ret
 });
 
 for (const [product, full] of [['sbom.cdx.json', 'sbom.cdx-dev.json'], ['PrimeX.json', 'PrimeX-dev.json'], ['PrimeX.JSON', 'PrimeX-dev.json'], ['A.json.JSON', 'A.json-dev.json']]) {
-  test(`filename ${product} publishes ${full} while OSV and DT retain the product SBOM`, () => fixture(async root => {
+  test(`filename ${product} publishes ${full} while OSV scans both SBOMs`, () => fixture(async root => {
     const input = readTaskConfig(name => ({ projectPath: root, sbomFileName: product, artifactName: 'Custom', uploadToDt: 'true', dtApiUrl: 'https://dt.invalid', dtProjectUuid: 'd40ce445-3566-49d5-bd8d-2601d73cf0d4', dtApiKey: 'fixture' })[name]);
     const published: string[][] = [], scanned: string[] = [], uploaded: string[] = [];
     const result = await runWorkflow(input, root, {
@@ -78,7 +78,7 @@ for (const [product, full] of [['sbom.cdx.json', 'sbom.cdx-dev.json'], ['PrimeX.
     });
     assert.equal(basename(result.path), product);
     assert.deepEqual(published, [[product, 'Custom'], [full, 'Custom']]);
-    assert.deepEqual(scanned, [product]);
+    assert.deepEqual(scanned, [product, full]);
     assert.deepEqual(uploaded, [product]);
   }));
 }

@@ -4,12 +4,39 @@ import { createHash } from 'node:crypto';
 import { mkdtemp, readFile, writeFile, rm, rename, copyFile, readdir, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, basename } from 'node:path';
-import { acquireOsvTool, osvAsset, osvChecksum, resolveOsvVersion, scanOsv, validateOsvVersion, type OsvDependencies, type OsvRequest } from '../src/osv';
+import { createOsvScanner, acquireOsvTool, osvAsset, osvChecksum, resolveOsvVersion, scanOsv, validateOsvVersion, type OsvDependencies, type OsvRequest } from '../src/osv';
 import { runProcess, type ProcessRunner } from '../src/process';
 import { readTaskConfig, validateConfig } from '../src/config';
 import { runWorkflow, type WorkflowServices } from '../src/workflow';
 import type { HttpResponse } from '../src/network/http';
 import findingsFixture from './fixtures/osv-findings.json';
+
+test('one workflow scanner resolves latest and downloads once for two scans using the same verified executable', () => fixture(async root => {
+  const downloads: string[] = [], executables: string[] = [];
+  let resolves = 0, checks = 0;
+  const asset = osvAsset(process.platform, process.arch);
+  const scan = createOsvScanner({
+    request: async () => { resolves++; return response('https://github.com/google/osv-scanner/releases/tag/v2.7.1'); },
+    download: async (url: string) => { downloads.push(url); return url.endsWith('SHA256SUMS') ? Buffer.from(`${hash}  ${asset}`) : bytes; },
+  });
+  const req = { ...request(root), version: 'latest' };
+  await writeFile(req.sbom.path, '{}');
+  const run: ProcessRunner = async command => {
+    if (command.args.includes('--version') || command.args.includes('--help')) { checks++; return runner(command); }
+    executables.push(command.executable);
+    const output = command.args.find(arg => arg.startsWith('--output-file='))!.slice('--output-file='.length);
+    await writeFile(output, '{"results":[]}');
+    return { stdout: '', stderr: '', exitCode: 0 };
+  };
+  for (const variant of ['product', 'full'] as const) {
+    assert.equal((await scan({ ...req, variant }, run, () => {})).version, '2.7.1');
+  }
+  assert.equal(resolves, 1);
+  assert.equal(downloads.length, 2, '只下載一份 binary 與一份 checksum');
+  assert.equal(checks, 2, '只驗證一次版本與必要旗標');
+  assert.equal(executables.length, 2);
+  assert.equal(executables[0], executables[1]);
+}));
 
 async function fixture(action: (root: string) => Promise<void>) {
   const root = await mkdtemp(join(tmpdir(), 'sbom-osv-'));
@@ -24,6 +51,30 @@ const request = (root: string): OsvRequest => ({
   tempDirectory: root, cacheDirectory: join(root, 'cache'), env: {},
 });
 const response = (location: string): HttpResponse => ({ statusCode: 302, headers: { location }, body: Buffer.alloc(0) });
+
+test('product and full scans preserve separate UTF-8 Markdown reports with fixed artifact filenames', () => fixture(async root => {
+  const req = request(root);
+  const asset = osvAsset(process.platform, process.arch);
+  await writeFile(req.sbom.path, '{}');
+  await acquireOsvTool(req, runner, () => {}, { download: async url => url.endsWith('SHA256SUMS') ? Buffer.from(`${hash}  ${asset}`) : bytes });
+  const reports = [];
+  for (const variant of ['product', 'full'] as const) {
+    const report = await scanOsv({ ...req, ...{ variant } }, async command => {
+      if (command.args.includes('--version') || command.args.includes('--help')) return runner(command);
+      const output = command.args.find(arg => arg.startsWith('--output-file='))!.slice('--output-file='.length);
+      await writeFile(output, JSON.stringify({ results: [{ packages: [{
+        package: { name: variant === 'product' ? '產品套件' : '開發套件', version: '1', ecosystem: 'npm' },
+        groups: [{ ids: [`OSV-${variant}`], max_severity: '7' }],
+      }] }] }));
+      return { stdout: '', stderr: '', exitCode: 1 };
+    }, () => {});
+    reports.push(report);
+  }
+  assert.deepEqual(reports.map(report => basename(report.path)), ['OSV弱點報告-產品.md', 'OSV弱點報告-完整.md']);
+  assert.match(await readFile(reports[0].path, 'utf8'), /產品套件/);
+  assert.doesNotMatch(await readFile(reports[0].path, 'utf8'), /開發套件/);
+  assert.match(await readFile(reports[1].path, 'utf8'), /開發套件/);
+}));
 
 test('OSV inputs default on/latest, skip hidden version when off, and precede DT with help', async () => {
   const values = readTaskConfig(name => name === 'projectPath' ? 'root' : undefined);
@@ -261,7 +312,7 @@ test('single custom-named SBOM produces Markdown for no findings and findings, n
     if (exitCode > 1) await assert.rejects(scanOsv(req, run, line => logs.push(line)), /未正常完成/);
     else {
       const report = await scanOsv(req, run, line => logs.push(line));
-      assert.equal(basename(report.path), 'sbom.osv.md');
+      assert.equal(basename(report.path), 'OSV弱點報告-產品.md');
       assert.equal(report.findings, exitCode === 1);
       assert.deepEqual(report.findingList, exitCode === 1 ? [{
         severity: 'critical', ids: ['GHSA-fixture'], cves: ['CVE-2026-12345'], score: 9.1,
@@ -314,13 +365,13 @@ test('workflow publishes both SBOMs and the OSV report to custom artifact and pr
   const services: WorkflowServices = {
     log: () => {}, prepare: async () => ({ node: 'node', npmCli: 'npm', cdxgenCli: 'cdxgen', nodeVersion: '24.22.2', cdxgenVersion: '13.6.0', env: {} }),
     installer: { install: async () => {} }, generate: async () => {}, validate: async path => ({ path, componentCount: 1 }),
-    scanOsv: async req => { events.push('scan'); assert.equal(basename(req.sbom.path), 'arbitrary.json'); return { path: join(root, 'sbom.osv.md'), version: '2.7.1', findings: true, findingList: [{ severity: 'high', ids: ['OSV-1'], cves: [], ecosystem: 'npm', name: 'package', version: '1.0.0', fixed: [] }] }; },
+    scanOsv: async req => { events.push('scan'); assert.equal(basename(req.sbom.path), req.variant === 'product' ? 'arbitrary.json' : 'arbitrary-dev.json'); return { path: join(root, 'sbom.osv.md'), version: '2.7.1', findings: true, findingList: [{ severity: 'high', ids: ['OSV-1'], cves: [], ecosystem: 'npm', name: 'package', version: '1.0.0', fixed: [] }] }; },
     publish: async (sbom, name) => { events.push('sbom'); assert.equal(name, 'Custom'); assert.ok(['arbitrary.json', 'arbitrary-dev.json'].includes(basename(sbom.path))); },
     publishReport: async (report, name) => { events.push('report'); assert.equal(name, 'Custom'); assert.equal(basename(report.path), 'sbom.osv.md'); },
     publishSummary: async report => { events.push('summary'); assert.equal(basename(report.path), 'sbom.osv.md'); },
   };
   await runWorkflow(cfg, join(root, 'temp'), services);
-  assert.deepEqual(events, ['scan', 'sbom', 'sbom', 'report', 'summary']);
+  assert.deepEqual(events, ['scan', 'scan', 'sbom', 'sbom', 'report', 'report', 'summary']);
   events.length = 0;
   await runWorkflow({ ...cfg, runOsv: false }, join(root, 'temp'), services);
   assert.deepEqual(events, ['sbom', 'sbom']);
@@ -330,10 +381,10 @@ test('workflow publishes both SBOMs and the OSV report to custom artifact and pr
     ...services, scanOsv: async () => { events.push('scan'); throw new Error('scanner broken'); },
     upload: async () => { events.push('dt'); throw new Error('DT broken'); },
   }), error => error instanceof Error && /scanner broken/.test(error.message) && /DT broken/.test(error.message));
-  assert.deepEqual(events, ['scan', 'dt', 'sbom', 'sbom']);
+  assert.deepEqual(events, ['scan', 'scan', 'dt', 'sbom', 'sbom']);
   events.length = 0;
   await assert.rejects(runWorkflow(cfg, join(root, 'temp'), { ...services, publish: async () => { events.push('sbom'); throw new Error('publication broken'); } }), /publication broken/);
-  assert.deepEqual(events, ['scan', 'sbom', 'sbom', 'report', 'summary']);
+  assert.deepEqual(events, ['scan', 'scan', 'sbom', 'sbom', 'report', 'report', 'summary']);
   await assert.rejects(runWorkflow(cfg, join(root, 'temp'), { ...services, publishReport: async () => { throw new Error('report upload broken'); } }), /OSV 成品發佈.*report upload broken/);
   assert.equal(events.at(-1), 'summary', 'summary must still be attempted after artifact error');
   await assert.rejects(runWorkflow(cfg, join(root, 'temp'), { ...services, publishSummary: async () => { throw new Error('summary upload broken'); } }), /OSV 摘要發佈.*summary upload broken/);

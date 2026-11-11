@@ -27,6 +27,7 @@ export interface OsvReport {
 }
 export interface OsvRequest {
   sbom: ValidatedSbom;
+  variant?: 'product' | 'full';
   version: string;
   tempDirectory: string;
   cacheDirectory: string;
@@ -305,17 +306,41 @@ export async function acquireOsvTool(
   }
 }
 
+/** 建立本次工作流程共用的掃描介面，成功或失敗的工具取得結果均只解析一次。 */
+export function createOsvScanner(dependencies: OsvDependencies = {}): OsvScanner {
+  let tool: Promise<OsvTool> | undefined;
+
+  return async (request, run, log) => {
+    if (!tool) {
+      log('##[section]開始準備 OSV Scanner（版本與工具快取）');
+      tool = acquireOsvTool(request, run, log, dependencies);
+    }
+
+    return scanWithTool(request, await tool, run, log);
+  };
+}
+
+/** 保留單份掃描入口，獨立呼叫時建立自己的工具取得範圍。 */
+export const scanOsv: OsvScanner = (request, run, log) => createOsvScanner()(request, run, log);
+
 /** 只掃描本次有效 SBOM 的標準檔名複本；區分弱點與技術失敗，檢查 Markdown 產物。 */
-export const scanOsv: OsvScanner = async (request, run, log) => {
-  log('##[section]開始準備 OSV Scanner（版本與工具快取）');
-  const tool = await acquireOsvTool(request, run, log);
-  const inputRoot = join(request.tempDirectory, 'osv-input');
+async function scanWithTool(
+  request: OsvRequest,
+  tool: OsvTool,
+  run: ProcessRunner,
+  log: (message: string) => void,
+): Promise<OsvReport> {
+  const variant = request.variant ?? 'product';
+  const inputRoot = join(request.tempDirectory, 'osv-input', variant);
   const outputRoot = join(request.tempDirectory, 'osv-report');
   await mkdir(inputRoot, { recursive: true });
   await mkdir(outputRoot, { recursive: true });
   const input = join(inputRoot, 'sbom.cdx.json');
-  const path = join(outputRoot, 'sbom.osv.md');
-  const jsonPath = join(outputRoot, 'osv.raw.json');
+  const path = join(
+    outputRoot,
+    variant === 'product' ? 'OSV弱點報告-產品.md' : 'OSV弱點報告-完整.md',
+  );
+  const jsonPath = join(outputRoot, `${variant}.osv.raw.json`);
   await copyFile(request.sbom.path, input);
   await rm(path, { force: true });
   await rm(jsonPath, { force: true });
@@ -351,9 +376,9 @@ export const scanOsv: OsvScanner = async (request, run, log) => {
   } catch {
     throw new Error('OSV JSON 無法產生完整的 Markdown 報告，請確認掃描器版本及輸出格式。');
   }
-  await writeFile(path, report.markdown);
+  await writeFile(path, report.markdown, 'utf8');
 
   if (!findings) log('OSV 掃描完成，未發現已知弱點。');
 
   return { path, version: tool.version, findings, findingList: report.findingList };
-};
+}
