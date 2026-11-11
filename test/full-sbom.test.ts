@@ -65,7 +65,7 @@ test('artifact inputs show no editor defaults while missing and blank inputs ret
 });
 
 for (const [product, full] of [['sbom.cdx.json', 'sbom.cdx-dev.json'], ['PrimeX.json', 'PrimeX-dev.json'], ['PrimeX.JSON', 'PrimeX-dev.json'], ['A.json.JSON', 'A.json-dev.json']]) {
-  test(`filename ${product} publishes ${full} while OSV and DT retain the product SBOM`, () => fixture(async root => {
+  test(`filename ${product} publishes ${full} while DT defaults to the full SBOM`, () => fixture(async root => {
     const input = readTaskConfig(name => ({ projectPath: root, sbomFileName: product, artifactName: 'Custom', uploadToDt: 'true', dtApiUrl: 'https://dt.invalid', dtProjectUuid: 'd40ce445-3566-49d5-bd8d-2601d73cf0d4', dtApiKey: 'fixture' })[name]);
     const published: string[][] = [], scanned: string[] = [], uploaded: string[] = [];
     const result = await runWorkflow(input, root, {
@@ -79,9 +79,30 @@ for (const [product, full] of [['sbom.cdx.json', 'sbom.cdx-dev.json'], ['PrimeX.
     assert.equal(basename(result.path), product);
     assert.deepEqual(published, [[product, 'Custom'], [full, 'Custom']]);
     assert.deepEqual(scanned, [product]);
-    assert.deepEqual(uploaded, [product]);
+    assert.deepEqual(uploaded, [full]);
   }));
 }
+
+test('DT can explicitly upload the product SBOM and its variant input is visible only when DT is enabled', async () => fixture(async root => {
+  const input = readTaskConfig(name => ({ projectPath: root, runOsv: 'false', uploadToDt: 'true', dtSbomVariant: 'product', dtApiUrl: 'https://dt.invalid', dtProjectUuid: 'd40ce445-3566-49d5-bd8d-2601d73cf0d4', dtApiKey: 'fixture' })[name]);
+  const uploaded: string[] = [];
+  const logs: string[] = [];
+  await runWorkflow(input, root, {
+    log: message => logs.push(message), prepare: async () => tools, installer: { install: async () => {} },
+    generate: async request => { await writeFile(request.outputPath, JSON.stringify({ bomFormat: 'CycloneDX', specVersion: '1.6', components: [] })); },
+    upload: async sbom => { uploaded.push(basename(sbom.path)); }, publish: async () => {},
+  });
+  assert.deepEqual(uploaded, ['sbom.cdx.json']);
+  assert.ok(logs.includes('DT 上傳版本：產品 SBOM（sbom.cdx.json）。'));
+  const manifest = JSON.parse(await readFile('src/task.json', 'utf8'));
+  const variant = manifest.inputs.find((input: { name: string }) => input.name === 'dtSbomVariant');
+  assert.ok(variant);
+  assert.deepEqual(variant.options, { full: '完整 SBOM（含開發套件）', product: '產品 SBOM' });
+  assert.equal(variant.label, 'DT 上傳版本');
+  assert.equal(variant.defaultValue, 'full');
+  assert.equal(variant.visibleRule, 'uploadToDt = true');
+  assert.throws(() => readTaskConfig(name => ({ projectPath: 'root', uploadToDt: 'true', dtSbomVariant: 'invalid', dtApiUrl: 'https://dt.invalid', dtProjectUuid: 'd40ce445-3566-49d5-bd8d-2601d73cf0d4', dtApiKey: 'fixture' })[name]), /dtSbomVariant/);
+}));
 
 for (const variant of ['product', 'full']) for (const failure of ['generation', 'validation']) {
   test(`${variant} SBOM ${failure} failure fails the task before OSV, DT or artifact publication`, () => fixture(async root => {

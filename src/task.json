@@ -131,6 +131,19 @@
       "helpMarkDown": "啟用後上傳到指定既有 DT 專案；API 接受即完成，不等待背景匯入或弱點分析。"
     },
     {
+      "name": "dtSbomVariant",
+      "type": "pickList",
+      "label": "DT 上傳版本",
+      "required": true,
+      "defaultValue": "full",
+      "options": {
+        "full": "完整 SBOM（含開發套件）",
+        "product": "產品 SBOM"
+      },
+      "visibleRule": "uploadToDt = true",
+      "helpMarkDown": "選擇上傳到 DT 專案的 SBOM，每次只上傳一份。預設完整 SBOM（含開發套件），讓 DT 也追蹤開發套件弱點；選產品 SBOM 則只上傳交付產品實際部署的內容。"
+    },
+    {
       "name": "dtApiUrl",
       "type": "string",
       "label": "DT API URL",

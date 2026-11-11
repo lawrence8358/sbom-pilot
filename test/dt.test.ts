@@ -133,7 +133,7 @@ test('workflow attempts artifact publication after DT error and returns failure;
   let uploaded = 0, published = 0;
   const logs: string[] = [];
   const services = { log: (message: string) => { logs.push(message); }, prepare: async () => tools, installer: { install: async () => {} }, generate: async () => {}, validate: async () => sbom,
-    upload: async (actual: typeof sbom) => { uploaded++; assert.equal(logs.at(-1), '##[section]開始上傳 SBOM 至 Dependency-Track（DT）'); assert.equal(actual.path, sbom.path); throw new Error('DT rejected'); },
+    upload: async (actual: typeof sbom) => { uploaded++; assert.equal(logs.at(-2), '##[section]開始上傳 SBOM 至 Dependency-Track（DT）'); assert.match(logs.at(-1) ?? '', /^DT 上傳版本：/); assert.equal(actual.path, sbom.path); throw new Error('DT rejected'); },
     publish: async (actual: typeof sbom) => { published++; assert.equal(logs.at(-1), '##[section]開始發佈 SBOM 成品（Azure Pipelines）'); assert.equal(await readFile(actual.path, 'utf8'), validContents); },
   };
   await assert.rejects(runWorkflow(input, join(root, 'run'), services), /DT 上傳.*DT rejected/);

@@ -1,5 +1,5 @@
 import { commandRedactor, diagnosticJson, withCommandLogging } from './command-log';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { mkdir } from 'node:fs/promises';
 import { validateConfig, type TaskConfig } from './config';
 import { prepareTools, type ToolPreparer, type ToolContext } from './tools';
@@ -232,11 +232,15 @@ export async function runWorkflow(
 
   if (config.uploadToDt && !dtBlocked) {
     services.log('##[section]開始上傳 SBOM 至 Dependency-Track（DT）');
+    const dtSbom = config.dtSbomVariant === 'product' ? sboms[0] : sboms[1];
+    services.log(
+      `DT 上傳版本：${config.dtSbomVariant === 'product' ? '產品 SBOM' : '完整 SBOM'}（${basename(dtSbom.path)}）。`,
+    );
     try {
       await stage('DT 上傳', () =>
         services.upload
-          ? services.upload(sbom)
-          : uploadToDependencyTrack(sbom, config.dt!, services.log),
+          ? services.upload(dtSbom)
+          : uploadToDependencyTrack(dtSbom, config.dt!, services.log),
       );
     } catch (error) {
       errors.push(error);
