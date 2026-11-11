@@ -4,6 +4,7 @@ import { BuildServiceIds, type IBuildPageDataService } from 'azure-devops-extens
 import { CommonServiceIds, type IProjectPageService } from 'azure-devops-extension-api/Common';
 import { AttachmentBuildClient } from './build-client';
 import { loadOsvTab, type OsvTabServices } from './load';
+import { applyHostTheme } from './theme';
 
 interface HostBuild {
   id?: number;
@@ -34,6 +35,7 @@ function hostServices(): OsvTabServices {
     async initialize() {
       await SDK.init({ loaded: false, applyTheme: true });
       await SDK.ready();
+      applyHostTheme(document);
       const build = (await configuredBuild()) ?? (await pageDataBuild());
       const project =
         build?.project?.id ||

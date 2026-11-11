@@ -54,7 +54,7 @@ test('tab reads this build attachment through the Build client and decodes UTF-8
     ['專案', 35, timeline, record, type, name],
     'loaded',
   ]);
-  assert.match(root.textContent!, /OSV 弱點報告.*未達到.*高/);
+  assert.match(root.textContent!, /OSV 弱點報告.*未超過失敗門檻.*高/);
   assert.match(root.textContent!, /一、產品 SBOM 弱點/);
   assert.match(root.textContent!, /二、開發套件額外弱點/);
   assert.doesNotMatch(root.textContent!, /�/);
@@ -106,7 +106,7 @@ test('missing attachments, permissions, malformed data and wrong-build links sho
     );
     assert.equal(root.querySelector('img'), null);
     assert.equal(root.querySelector('table'), null);
-    assert.doesNotMatch(root.textContent!, /secret response|未達到/);
+    assert.doesNotMatch(root.textContent!, /secret response|未達到|未超過失敗門檻/);
     if (scenario === 'wrong-build' || scenario === 'context') assert.equal(downloads, 0);
   }
 });
@@ -137,5 +137,5 @@ test('multiple task attachments remain visible even when one report cannot be de
   });
   assert.equal(root.querySelectorAll('article').length, 2);
   assert.equal(root.querySelectorAll('[role="alert"]').length, 1);
-  assert.match(root.textContent!, /未達到.*高/);
+  assert.match(root.textContent!, /未超過失敗門檻.*高/);
 });

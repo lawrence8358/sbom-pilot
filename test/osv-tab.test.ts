@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
 import { renderOsvReport } from '../src/osv-tab/render';
 import type { OsvTabReport } from '../src/shared/osv-tab-contract';
+import { applyHostTheme } from '../src/osv-tab/theme';
 
 const report: OsvTabReport = {
   schemaVersion: 1,
@@ -49,18 +50,22 @@ test('tab renders the contract verdict, UTC+8 time and two eight-column finding 
   const document = new JSDOM('<main></main>').window.document;
   const root = document.querySelector('main')!;
   renderOsvReport(root, report);
-  assert.match(root.textContent!, /已達到或超過.*高/);
+  assert.match(root.textContent!, /超過失敗門檻.*高/);
   assert.match(root.textContent!, /已略過 DT 上傳/);
   assert.match(root.textContent!, /2026-11-12 01:02:03.*UTC\+8/);
   assert.match(root.textContent!, /OSV Scanner.*2\.7\.1/);
   assert.deepEqual(
     [...root.querySelectorAll('h2')].map((node) => node.textContent),
-    ['一、產品 SBOM 弱點（顯示 1 ／ 1 筆）', '二、開發套件額外弱點（顯示 1 ／ 1 筆）'],
+    ['一、產品 SBOM 弱點', '二、開發套件額外弱點'],
   );
-  const tables = root.querySelectorAll('section table');
+  const tables = root.querySelectorAll('.osv-section table');
   assert.equal(tables.length, 2);
   assert.deepEqual(
-    [...tables[0].querySelectorAll('th')].map((node) => node.textContent),
+    [...tables[0].querySelectorAll('th')].map((node) =>
+      node.childNodes[0].nodeType === 3
+        ? node.textContent
+        : node.querySelector('button')!.firstChild!.textContent,
+    ),
     ['等級', 'CVSS', '套件', '目前版本', '建議升級', '弱點編號', '發佈日期', '最後修改'],
   );
   const cells = tables[0].querySelectorAll('tbody td');
@@ -80,7 +85,8 @@ test('tab renders the contract verdict, UTC+8 time and two eight-column finding 
   assert.equal(cells[6].textContent, '2026-01-02');
   assert.equal(cells[7].textContent, '2026-11-10');
   const devCells = tables[1].querySelectorAll('tbody td');
-  for (const index of [1, 4, 6, 7]) assert.equal(devCells[index].textContent, '未提供');
+  assert.equal(devCells[1].textContent, '—');
+  for (const index of [4, 6, 7]) assert.equal(devCells[index].textContent, '未提供');
   assert.match(devCells[5].textContent!, /（無 CVE，僅 GHSA）/);
   assert.equal(devCells[5].querySelector('a')!.href, 'https://osv.dev/vulnerability/GHSA-dev');
 });
@@ -101,16 +107,16 @@ test('overview counts affected package versions once and sums all six severity l
   assert.ok(table);
   assert.deepEqual(
     [...table.querySelectorAll('thead th')].map((n) => n.textContent),
-    ['範圍', '受影響套件', '弱點數', '危急', '高', '中', '低', '無', '未知'],
+    ['範圍', 'SBOM', '受影響套件', '弱點', '危急', '高', '中', '低', '無', '未知'],
   );
   assert.deepEqual(
     [...table.querySelectorAll('tbody tr')].map((row) =>
       [...row.children].map((n) => n.textContent),
     ),
     [
-      ['產品 SBOM', '1', '2', '1', '1', '0', '0', '0', '0'],
-      ['開發套件額外', '4', '4', '0', '0', '1', '1', '1', '1'],
-      ['完整合計', '4', '6', '1', '1', '1', '1', '1', '1'],
+      ['產品', '產品.cdx.json', '1', '2', '1', '1', '0', '0', '0', '0'],
+      ['開發套件額外', '產品.cdx-full.json', '4', '4', '0', '0', '1', '1', '1', '1'],
+      ['完整合計', '', '4', '6', '1', '1', '1', '1', '1', '1'],
     ],
   );
   assert.equal(table.querySelectorAll('td.zero-count').length, 6);
@@ -126,26 +132,26 @@ test('severity buttons toggle multiple levels, restore all and keep the overview
   const buttons = [...filters.querySelectorAll('button')];
   assert.deepEqual(
     buttons.map((n) => n.textContent),
-    ['全部顯示', '危急（0）', '高（1）', '中（0）', '低（0）', '無（0）', '未知（1）'],
+    ['危急 0', '高 1', '中 0', '低 0', '無 0', '未知 1', '全部顯示'],
   );
-  const high = buttons[2];
-  const unknown = buttons[6];
+  const high = buttons[1];
+  const unknown = buttons[5];
   assert.equal(high.getAttribute('aria-pressed'), 'true');
   high.click();
   assert.equal(high.getAttribute('aria-pressed'), 'false');
-  assert.match(root.querySelector('section h2')!.textContent!, /顯示 0 ／ 1 筆/);
-  assert.match(root.querySelector('section')!.textContent!, /目前篩選條件下沒有弱點。/);
-  assert.equal(root.querySelectorAll('section tbody tr').length, 1);
+  assert.match(root.querySelector('.osv-section .shown-count')!.textContent!, /顯示 0 ／ 1 筆/);
+  assert.match(root.querySelector('.osv-section')!.textContent!, /目前篩選條件下沒有弱點。/);
+  assert.equal(root.querySelectorAll('.osv-section tbody tr').length, 1);
   unknown.click();
-  assert.equal(root.querySelectorAll('section tbody tr').length, 0);
+  assert.equal(root.querySelectorAll('.osv-section tbody tr').length, 0);
   high.click();
-  assert.equal(root.querySelectorAll('section tbody tr').length, 1);
-  assert.match(root.querySelectorAll('section')[1].textContent!, /顯示 0 ／ 1 筆/);
-  buttons[0].click();
-  assert.equal(root.querySelectorAll('section tbody tr').length, 2);
-  assert.ok(buttons.slice(1).every((n) => n.getAttribute('aria-pressed') === 'true'));
+  assert.equal(root.querySelectorAll('.osv-section tbody tr').length, 1);
+  assert.match(root.querySelectorAll('.osv-section')[1].textContent!, /顯示 0 ／ 1 筆/);
+  buttons[6].click();
+  assert.equal(root.querySelectorAll('.osv-section tbody tr').length, 2);
+  assert.ok(buttons.slice(0, 6).every((n) => n.getAttribute('aria-pressed') === 'true'));
   assert.equal(root.querySelector('table[aria-label="弱點總覽"]')!.textContent, overview);
-  assert.ok(filters.compareDocumentPosition(root.querySelector('section')!) & 4);
+  assert.ok(filters.compareDocumentPosition(root.querySelector('.osv-section')!) & 4);
 });
 
 test('each section sorts by CVSS, severity, package and UTC dates with missing values last', () => {
@@ -196,11 +202,15 @@ test('each section sorts by CVSS, severity, package and UTC dates with missing v
   ];
   const original = structuredClone(value);
   renderOsvReport(root, value);
-  const section = root.querySelector('section')!;
+  const section = root.querySelector('.osv-section')!;
   const names = () =>
     [...section.querySelectorAll('tbody tr')].map((row) => row.children[2].firstChild!.textContent);
   assert.deepEqual(names(), ['Beta', 'Echo', 'Alpha', 'Charlie', 'Delta']);
-  assert.equal(section.querySelector('th[aria-sort="descending"]')!.textContent, 'CVSS');
+  assert.equal(
+    section.querySelector('th[aria-sort="descending"]')!.querySelector('button')!.firstChild!
+      .textContent,
+    'CVSS',
+  );
   for (const [label, first, second] of [
     [
       'CVSS',
@@ -229,7 +239,7 @@ test('each section sorts by CVSS, severity, package and UTC dates with missing v
     ],
   ] as const) {
     const button = [...section.querySelectorAll<HTMLButtonElement>('th button')].find(
-      (n) => n.textContent === label,
+      (n) => n.firstChild!.textContent === label,
     )!;
     assert.ok(button, label);
     assert.equal(button.getAttribute('type'), 'button');
@@ -248,13 +258,16 @@ test('each section sorts by CVSS, severity, package and UTC dates with missing v
     assert.notEqual(button.parentElement!.getAttribute('aria-sort'), direction);
   }
   assert.equal(
-    root.querySelectorAll('section')[1].querySelector('th[aria-sort="descending"]')!.textContent,
+    root
+      .querySelectorAll('.osv-section')[1]
+      .querySelector('th[aria-sort="descending"]')!
+      .querySelector('button')!.firstChild!.textContent,
     'CVSS',
   );
   const filters = [...root.querySelectorAll<HTMLButtonElement>('.severity-filters button')];
-  filters.find((n) => n.textContent === '高（1）')!.click();
+  filters.find((n) => n.textContent === '高 1')!.click();
   assert.deepEqual(names(), ['Alpha', 'Echo', 'Delta', 'Charlie']);
-  filters[0].click();
+  filters[6].click();
   assert.deepEqual(names(), ['Alpha', 'Beta', 'Echo', 'Delta', 'Charlie']);
   assert.deepEqual(value, original);
 });
@@ -265,15 +278,15 @@ test('empty, disabled and failed sections show distinct messages and never imply
   value.product.findings = [];
   value.developmentExtra.findings = [];
   renderOsvReport(root, value);
-  assert.equal(root.querySelectorAll('section').length, 2);
-  assert.match(root.querySelectorAll('section')[0].textContent!, /產品 SBOM 未發現已知弱點。/);
-  assert.match(root.querySelectorAll('section')[1].textContent!, /開發套件無額外弱點。/);
+  assert.equal(root.querySelectorAll('.osv-section').length, 2);
+  assert.match(root.querySelectorAll('.osv-section')[0].textContent!, /產品 SBOM 未發現已知弱點。/);
+  assert.match(root.querySelectorAll('.osv-section')[1].textContent!, /開發套件無額外弱點。/);
   assert.doesNotMatch(root.textContent!, /目前篩選條件下/);
   for (const status of ['disabled', 'failed'] as const) {
     value.product = { status, findings: [] };
     value.developmentExtra = { status, findings: [] };
     renderOsvReport(root, value);
-    for (const section of root.querySelectorAll('section')) {
+    for (const section of root.querySelectorAll('.osv-section')) {
       assert.match(
         section.textContent!,
         status === 'disabled' ? /本次未執行 OSV 弱點掃描/ : /OSV 弱點掃描失敗，詳見建置日誌/,
@@ -281,18 +294,21 @@ test('empty, disabled and failed sections show distinct messages and never imply
       assert.equal(section.querySelector('table'), null);
       assert.doesNotMatch(section.textContent!, /顯示 0|未發現|無額外/);
     }
-    assert.equal(root.querySelectorAll('table[aria-label="弱點總覽"] td').length, 24);
+    assert.equal(root.querySelectorAll('table[aria-label="弱點總覽"] td.num').length, 24);
     assert.ok(
-      [...root.querySelectorAll('table[aria-label="弱點總覽"] td')].every(
+      [...root.querySelectorAll('table[aria-label="弱點總覽"] td.num')].every(
         (n) => n.textContent === '未完成',
       ),
     );
   }
   value.product = report.product;
   renderOsvReport(root, value);
-  assert.match(root.querySelector('section')!.textContent!, /產品套件📦/);
-  assert.match(root.querySelectorAll('section')[1].textContent!, /OSV 弱點掃描失敗，詳見建置日誌/);
-  assert.doesNotMatch(root.querySelector('.verdict')!.textContent!, /未達到/);
+  assert.match(root.querySelector('.osv-section')!.textContent!, /產品套件📦/);
+  assert.match(
+    root.querySelectorAll('.osv-section')[1].textContent!,
+    /OSV 弱點掃描失敗，詳見建置日誌/,
+  );
+  assert.doesNotMatch(root.querySelector('.verdict')!.textContent!, /未達到|未超過失敗門檻/);
 });
 
 test('untrusted report text stays literal and links stay on the two HTTPS authorities', () => {
@@ -300,6 +316,7 @@ test('untrusted report text stays literal and links stay on the two HTTPS author
   const hostile = '<img src=x onerror="alert(1)"><script>alert(1)</script>📦';
   const value = structuredClone(report);
   value.scannerVersion = hostile;
+  value.sboms = { product: hostile, full: hostile };
   value.product.findings[0] = {
     ...value.product.findings[0],
     name: hostile,
@@ -312,7 +329,7 @@ test('untrusted report text stays literal and links stay on the two HTTPS author
   renderOsvReport(root, value);
   assert.equal(root.querySelectorAll('img, script, iframe, [onerror]').length, 0);
   assert.ok(root.textContent!.includes(hostile));
-  for (const link of root.querySelectorAll('a')) {
+  for (const link of root.querySelectorAll<HTMLAnchorElement>('.osv-section a')) {
     assert.ok(['https://osv.dev', 'https://www.cve.org'].includes(new URL(link.href).origin));
     assert.equal(link.rel, 'noopener noreferrer');
   }
@@ -348,7 +365,7 @@ test('disabled and failed scans do not claim to pass, while warnOnly and passing
   value.exceeded = false;
   value.dtSkipped = false;
   renderOsvReport(root, value);
-  assert.match(root.querySelector('.verdict')!.textContent!, /未達到.*高/);
+  assert.match(root.querySelector('.verdict')!.textContent!, /未超過失敗門檻.*高/);
   value.threshold = 'warnOnly';
   renderOsvReport(root, value);
   assert.match(root.querySelector('.verdict')!.textContent!, /僅警告/);
@@ -356,12 +373,12 @@ test('disabled and failed scans do not claim to pass, while warnOnly and passing
   value.developmentExtra = { status: 'disabled', findings: [] };
   renderOsvReport(root, value);
   assert.match(root.textContent!, /本次未執行 OSV 弱點掃描/);
-  assert.doesNotMatch(root.textContent!, /未達到/);
+  assert.doesNotMatch(root.textContent!, /未達到|未超過失敗門檻/);
   value.product = report.product;
   value.developmentExtra = { status: 'failed', findings: [] };
   renderOsvReport(root, value);
   assert.match(root.textContent!, /掃描失敗.*無法判定/);
-  assert.doesNotMatch(root.textContent!, /未達到/);
+  assert.doesNotMatch(root.textContent!, /未達到|未超過失敗門檻/);
   assert.equal(root.querySelectorAll('h2').length, 2);
 });
 
@@ -373,7 +390,103 @@ test('product scan failure preserves the exceeded full SBOM verdict', () => {
     developmentExtra: { status: 'failed', findings: [] },
   });
   const verdict = root.querySelector('.verdict')!.textContent!;
-  assert.match(verdict, /超過失敗門檻『高』/);
+  assert.match(verdict, /超過失敗門檻「高」/);
   assert.match(verdict, /產品 SBOM 掃描失敗/);
   assert.doesNotMatch(verdict, /無法判定完整結果/);
+});
+
+test('design structure includes the card, icons, metadata, dots, section context and trusted footer', () => {
+  const root = new JSDOM('<main></main>').window.document.querySelector('main')!;
+  renderOsvReport(root, report);
+  const card = root.querySelector('.osv-card')!;
+  assert.equal(card.parentElement, root);
+  assert.equal(root.querySelector('nav'), null);
+  assert.equal(card.querySelector('.title-row h1')!.textContent, 'OSV 弱點報告');
+  assert.equal(card.querySelector('.title-row svg')!.getAttribute('aria-hidden'), 'true');
+  assert.equal(
+    card.querySelector('.title-row path')!.getAttribute('d'),
+    'M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z',
+  );
+  assert.match(card.querySelector('.verdict-pill.is-fail')!.textContent!, /超過失敗門檻「高」/);
+  assert.equal(card.querySelector('.is-fail path')!.getAttribute('d'), 'M6 6l12 12M18 6L6 18');
+  assert.equal(card.querySelectorAll('.metadata > span').length, 2);
+  assert.deepEqual(
+    [...card.querySelectorAll('.osv-overview thead .severity-dot')].map((n) => n.className),
+    ['critical', 'high', 'medium', 'low', 'none', 'unknown'].map(
+      (s) => `severity-dot severity-${s}`,
+    ),
+  );
+  assert.equal(card.querySelectorAll('.osv-overview td.zero-count').length, 14);
+  assert.deepEqual(
+    [...card.querySelectorAll('.section-heading code')].map((n) => n.textContent),
+    ['產品.cdx.json', '產品.cdx-full.json'],
+  );
+  assert.deepEqual(
+    [...card.querySelectorAll('.shown-count')].map((n) => n.textContent),
+    ['顯示 1 ／ 1 筆', '顯示 1 ／ 1 筆'],
+  );
+  assert.deepEqual(
+    [...card.querySelectorAll('.section-note')].map((n) => n.textContent),
+    [
+      '部署到正式環境的套件，請優先處理。',
+      '只出現在完整 SBOM（含開發套件）、產品 SBOM 未列的項目；影響建置與開發工具鏈，不隨產品部署。',
+    ],
+  );
+  assert.equal(card.querySelector('.no-cve')!.textContent, '（無 CVE，僅 GHSA）');
+  const table = card.querySelector('.osv-section .osv-table')!;
+  assert.deepEqual(
+    [...table.querySelectorAll('.sort-arrow')].map((n) => n.textContent),
+    ['↕', '▼', '↕', '↕', '↕'],
+  );
+  const scoreSort = table.querySelector<HTMLButtonElement>('th.num button')!;
+  scoreSort.click();
+  assert.equal(scoreSort.querySelector('.sort-arrow')!.textContent, '▲');
+  assert.equal(scoreSort.parentElement!.getAttribute('aria-sort'), 'ascending');
+  const footer = card.querySelector('.report-footer')!;
+  assert.match(footer.textContent!, /OSV弱點報告-產品.md、OSV弱點報告-完整.md/);
+  assert.match(footer.textContent!, /published／modified（UTC 日期）/);
+  assert.deepEqual(
+    [...footer.querySelectorAll('a')].map((n) => [n.textContent, n.href, n.rel]),
+    [
+      ['OSV Scanner', 'https://google.github.io/osv-scanner/output/', 'noopener noreferrer'],
+      [
+        'FIRST CVSS',
+        'https://www.first.org/cvss/v3.1/specification-document#Qualitative-Severity-Rating-Scale',
+        'noopener noreferrer',
+      ],
+    ],
+  );
+  renderOsvReport(root, { ...report, exceeded: false });
+  assert.match(root.querySelector('.verdict-pill.is-pass')!.textContent!, /未超過失敗門檻「高」/);
+  assert.equal(root.querySelector('.is-pass svg')!.getAttribute('aria-hidden'), 'true');
+});
+
+test('theme follows host background brightness before the system preference', () => {
+  const dom = new JSDOM('<body></body>');
+  const document = dom.window.document;
+  const root = document.documentElement;
+  Object.defineProperty(dom.window, 'matchMedia', {
+    configurable: true,
+    value: () => ({ matches: true }),
+  });
+  for (const [color, expected] of [
+    ['#1b1a19', 'dark'],
+    ['#fff', 'light'],
+    ['rgb(37, 36, 35)', 'dark'],
+    ['rgba(248, 248, 248, 1)', 'light'],
+  ]) {
+    root.style.setProperty('--background-color', color);
+    applyHostTheme(document);
+    assert.equal(root.dataset.theme, expected);
+  }
+  root.style.removeProperty('--background-color');
+  document.body.style.backgroundColor = 'rgb(255, 255, 255)';
+  applyHostTheme(document);
+  assert.equal(root.dataset.theme, 'light');
+  document.body.style.backgroundColor = 'transparent';
+  applyHostTheme(document);
+  assert.equal(root.dataset.theme, 'dark');
+  Object.defineProperty(dom.window, 'matchMedia', { value: undefined });
+  applyHostTheme(document);
+  assert.equal(root.dataset.theme, 'light');
 });

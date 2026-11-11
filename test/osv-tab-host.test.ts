@@ -54,6 +54,7 @@ test('browser entry initializes host themes and reads attachments with Server-co
       },
       async init(options: unknown) {
         calls.push(options);
+        dom.window.document.documentElement.style.setProperty('--background-color', '#252423');
       },
       async getService(id: string) {
         if (id === 'ms.vss-build-web.build-page-data-service')
@@ -104,6 +105,7 @@ test('browser entry initializes host themes and reads attachments with Server-co
     [{ loaded: false, applyTheme: true }],
   );
   assert.equal(requests.length, 2);
+  assert.equal(dom.window.document.documentElement.dataset.theme, 'dark');
   assert.equal(
     requests[0].url,
     'https://server.test/tfs/collection/project-id/_apis/build/builds/35/attachments/sbom-pilot.osv-report',

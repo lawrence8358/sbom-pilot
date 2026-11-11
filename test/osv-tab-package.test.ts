@@ -38,7 +38,8 @@ test('tab HTML uses UTF-8, local assets and host theme variables with table focu
   );
   const css = readFileSync('src/osv-tab/styles.css', 'utf8');
   assert.match(css, /var\(--background-color,\s*[^)]+\)/);
-  assert.match(css, /var\(--text-primary-color,\s*[^)]+\)/);
+  assert.match(css, /color:\s*var\(--text\)/);
+  assert.match(css, /:root\[data-theme='dark'\]/);
   assert.match(css, /tbody tr:hover/);
   assert.match(css, /:focus-visible/);
   assert.match(css, /border-collapse:\s*collapse/);
