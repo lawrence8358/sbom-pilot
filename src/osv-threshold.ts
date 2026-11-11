@@ -1,23 +1,26 @@
-import type { OsvFinding, OsvSeverity } from './osv-report';
+import { osvSeverityOrder, osvSeverityLabels, type OsvFinding } from './osv-report';
 
-export type OsvFailOn = 'critical' | 'high' | 'medium' | 'low' | 'unknown' | 'warnOnly';
-const severities: OsvSeverity[] = ['critical', 'high', 'medium', 'low', 'none', 'unknown'];
+export const osvFailOnValues = [
+  'critical',
+  'high',
+  'medium',
+  'low',
+  'unknown',
+  'warnOnly',
+] as const;
+export type OsvFailOn = (typeof osvFailOnValues)[number];
+export interface OsvFindingGroups {
+  exceeded: readonly OsvFinding[];
+  below: readonly OsvFinding[];
+}
 const labels = {
-  critical: '危急',
-  high: '高',
-  medium: '中',
-  low: '低',
-  none: '無',
-  unknown: '未知',
+  ...osvSeverityLabels,
   warnOnly: '僅警告',
 };
 
 /** 嚴格驗證 OSV 失敗門檻，只對未提供的設定採用未知預設。 */
 export function validateOsvFailOn(value: unknown = 'unknown'): OsvFailOn {
-  if (
-    typeof value !== 'string' ||
-    !['critical', 'high', 'medium', 'low', 'unknown', 'warnOnly'].includes(value)
-  ) {
+  if (typeof value !== 'string' || !osvFailOnValues.some((option) => option === value)) {
     throw new Error(
       'OSV 失敗門檻參數 osvFailOn 必須是 critical、high、medium、low、unknown 或 warnOnly。',
     );
@@ -30,14 +33,14 @@ export function validateOsvFailOn(value: unknown = 'unknown'): OsvFailOn {
 export function partitionOsvFindings(
   findings: readonly OsvFinding[],
   threshold: OsvFailOn,
-): { exceeded: OsvFinding[]; below: OsvFinding[] } {
+): OsvFindingGroups {
   const exceeded: OsvFinding[] = [],
     below: OsvFinding[] = [];
 
   for (const finding of findings) {
     if (
       threshold !== 'warnOnly' &&
-      severities.indexOf(finding.severity) <= severities.indexOf(threshold)
+      osvSeverityOrder.indexOf(finding.severity) <= osvSeverityOrder.indexOf(threshold)
     ) {
       exceeded.push(finding);
     } else {
@@ -54,7 +57,7 @@ export function osvThresholdMessage(
   threshold: OsvFailOn,
   dtSkipped: boolean,
 ): string {
-  const counts = severities
+  const counts = osvSeverityOrder
     .map((severity) => {
       const count = exceeded.filter((finding) => finding.severity === severity).length;
       return count ? `${labels[severity]} ${count}` : '';

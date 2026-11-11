@@ -135,7 +135,7 @@ export function readTaskConfig(read: InputReader): TaskConfig {
     sbomFileName: read('sbomFileName')?.trim() || 'sbom.cdx.json',
     runOsv,
     osvVersion: runOsv ? read('osvVersion')?.trim() || 'latest' : undefined,
-    osvFailOn: runOsv ? validateOsvFailOn(read('osvFailOn')?.trim()) : undefined,
+    osvFailOn: runOsv ? validateOsvFailOn(read('osvFailOn')?.trim() || 'unknown') : undefined,
     nodeVersion: text('nodeVersion', '24.x'),
     cdxgenVersion: read('cdxgenVersion')?.trim() || CDXGEN_VERSION,
     specVersion: text('specVersion', '1.6'),

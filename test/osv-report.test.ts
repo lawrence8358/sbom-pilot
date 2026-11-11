@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import findingsFixture from './fixtures/osv-findings.json';
-import { createOsvReport, renderOsvReport } from '../src/osv-report';
+import { createOsvReport } from '../src/osv-report';
 
 const options = { version: '2.7.1', source: 'sbom.cdx.json', findings: true };
 const pkg = (groups: unknown[], vulnerabilities: unknown[] = [], name = 'fixture') => ({
@@ -22,7 +22,6 @@ test('report returns the grouped finding with package, risk, aliases and matchin
     severity: 'high', ids: ['GHSA-fixture', 'CVE-2026-12345'], cves: ['CVE-2026-12345'],
     score: 7.5, ecosystem: 'NuGet', name: 'fixture', version: '9.0.4', fixed: ['9.0.21'],
   }]);
-  assert.equal(report.markdown, renderOsvReport(value, options));
 });
 
 test('finding list matches every unchanged Markdown row at severity boundaries including zero and unknown', () => {
@@ -42,12 +41,12 @@ test('finding list matches every unchanged Markdown row at severity boundaries i
 });
 
 test('report shows CVE aliases and qualitative severity in descending order, merging alias duplicates', () => {
-  const markdown = renderOsvReport(doc(pkg([
+  const markdown = createOsvReport(doc(pkg([
     { ids: ['GHSA-medium'], max_severity: '5.9' },
     { ids: ['GHSA-high', 'CVE-2026-12345'], aliases: ['CVE-2026-12345', 'CVE-2026-12346'], max_severity: '7.5' },
     { ids: ['GHSA-critical'], max_severity: '9.8' },
     { ids: ['GHSA-unknown'], max_severity: '' },
-  ], [{ id: 'GHSA-high', aliases: ['CVE-2026-12347', 'CVE-2026-12345'] }])), options);
+  ], [{ id: 'GHSA-high', aliases: ['CVE-2026-12347', 'CVE-2026-12345'] }])), options).markdown;
   assert.ok(markdown.indexOf('[GHSA-critical]') < markdown.indexOf('[GHSA-high]'));
   assert.ok(markdown.indexOf('[GHSA-high]') < markdown.indexOf('[GHSA-medium]'));
   assert.ok(markdown.indexOf('[GHSA-medium]') < markdown.indexOf('[GHSA-unknown]'));
@@ -61,7 +60,7 @@ test('report shows CVE aliases and qualitative severity in descending order, mer
 
 test('report applies severity boundaries including zero and preserves missing/invalid scores as unknown', () => {
   const scores = ['10', '9.0', '8.9', '7', '6.9', '4', '3.9', '0.1', '0', '', '-1', '11', 'high'];
-  const markdown = renderOsvReport(doc(pkg(scores.map((max_severity, index) => ({ ids: [`ID-${index}`], max_severity })))), options);
+  const markdown = createOsvReport(doc(pkg(scores.map((max_severity, index) => ({ ids: [`ID-${index}`], max_severity })))), options).markdown;
   for (const summary of ['危急 Critical：2', '高 High：2', '中 Medium：2', '低 Low：2', '無 None：1', '未知 Unknown：4']) {
     assert.ok(markdown.includes(summary), summary);
   }
@@ -75,15 +74,15 @@ test('fixes match the affected package and its current NuGet branch', () => {
     ] }] },
     { package: { name: 'other', ecosystem: 'NuGet' }, ranges: [{ events: [{ fixed: '999.0.0' }] }] },
   ];
-  const markdown = renderOsvReport(doc(pkg([{ ids: ['GHSA-fixture'], max_severity: '7.5' }], [{ id: 'GHSA-fixture', affected }])), options);
+  const markdown = createOsvReport(doc(pkg([{ ids: ['GHSA-fixture'], max_severity: '7.5' }], [{ id: 'GHSA-fixture', affected }])), options).markdown;
   assert.ok(markdown.includes('9.0.21'));
   assert.ok(!markdown.includes('10.0.13'));
   assert.ok(!markdown.includes('999.0.0'));
 });
 
 test('external names cannot create HTML, links, extra table rows or Azure commands in report', () => {
-  const markdown = renderOsvReport(doc(pkg([{ ids: ['GHSA-test'], max_severity: '7.5' }], [], '<img src=x onerror=alert(1)>|[evil](https://evil.test)\n##vso[task.complete]')),
-    { ...options, source: '<script>|[source]' });
+  const markdown = createOsvReport(doc(pkg([{ ids: ['GHSA-test'], max_severity: '7.5' }], [], '<img src=x onerror=alert(1)>|[evil](https://evil.test)\n##vso[task.complete]')),
+    { ...options, source: '<script>|[source]' }).markdown;
   assert.ok(!markdown.includes('<img'));
   assert.ok(!markdown.includes('<script>'));
   assert.ok(!markdown.includes('[evil]('));
@@ -93,9 +92,9 @@ test('external names cannot create HTML, links, extra table rows or Azure comman
 });
 
 test('clean scan is explicit while malformed/partial JSON cannot masquerade as clean', () => {
-  assert.match(renderOsvReport({ results: [] }, { ...options, findings: false }), /未發現已知弱點/);
+  assert.match(createOsvReport({ results: [] }, { ...options, findings: false }).markdown, /未發現已知弱點/);
   for (const value of [null, {}, { results: {} }, doc(pkg([], [{ id: 'GHSA-missing-group' }])), doc(pkg([{ max_severity: '9' }]))]) {
-    assert.throws(() => renderOsvReport(value, options), /JSON/);
+    assert.throws(() => createOsvReport(value, options).markdown, /JSON/);
   }
-  assert.throws(() => renderOsvReport({ results: [] }, options), /有弱點/);
+  assert.throws(() => createOsvReport({ results: [] }, options).markdown, /有弱點/);
 });

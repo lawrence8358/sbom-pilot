@@ -25,9 +25,11 @@ npm run package:dev 建立本機測試 VSIX；npm run test:final -- --cases=npm,
 | 檔案 | 責任 |
 | --- | --- |
 | src/task.json、config.ts、azure-inputs.ts | 公開欄位、解析、驗證與秘密讀取 |
-| src/index.ts、workflow.ts | Azure adapter、依序執行各階段、DT 失敗仍發佈有效成品 |
+| src/index.ts、workflow.ts | Azure adapter、依序執行各階段、OSV 失敗門檻可阻擋 DT、DT 失敗仍發佈有效成品 |
 | src/tools.ts、node-cache.ts | Node 校驗與快取、隔離 cdxgen 安裝 |
 | src/osv.ts、osv-report.ts | 官方 Latest 解析、校驗與版本快取、單次 JSON 掃描、風險分級／CVE Markdown 報告 |
+| src/osv-threshold.ts、osv-issues.ts | OSV 失敗門檻驗證與弱點分組、逐筆 Errors／Warnings issue 及數量上限 |
+| src/logging-command.ts | 共用 Agent logging command 資料跳脫與 issue 指令建立 |
 | src/install/、dotnet/ | 嚴格安裝、還原圖、SDK／MSBuild、來源認證 |
 | src/scan.ts、validation.ts | 單次掃描與隨附 CycloneDX Schema 驗證 |
 | src/dt/、network/、process.ts | DT REST、Proxy／CA、程序與錯誤隔離 |

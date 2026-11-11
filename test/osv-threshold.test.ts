@@ -5,7 +5,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runWorkflow, type WorkflowServices } from '../src/workflow';
-import type { OsvFinding, OsvSeverity } from '../src/osv-report';
+import { createOsvReport, type OsvFinding, type OsvSeverity } from '../src/osv-report';
 import type { OsvFailOn } from '../src/osv-threshold';
 import { commandFromString } from 'azure-pipelines-task-lib/taskcommand';
 
@@ -37,23 +37,29 @@ function dtConfig(root: string) {
   return readTaskConfig(name => ({ projectPath: root, uploadToDt: 'true', dtApiUrl: 'https://dt.invalid', dtProjectUuid: 'd40ce445-3566-49d5-bd8d-2601d73cf0d4', dtApiKey: 'fixture' })[name]);
 }
 
-test('OSV 失敗門檻預設未知，接受六個固定值並拒絕其他輸入', () => {
+test('OSV threshold defaults to unknown, accepts six fixed values and rejects invalid inputs', () => {
   assert.equal(readTaskConfig(name => name === 'projectPath' ? 'root' : undefined).osvFailOn, 'unknown');
   for (const value of ['critical', 'high', 'medium', 'low', 'unknown', 'warnOnly']) {
     assert.equal(readTaskConfig(name => ({ projectPath: 'root', osvFailOn: value })[name]).osvFailOn, value);
   }
-  for (const value of ['', ' ', 'none', 'HIGH', 'warning', 'invalid']) {
+  for (const value of ['none', 'HIGH', 'warning', 'invalid']) {
     assert.throws(() => readTaskConfig(name => ({ projectPath: 'root', osvFailOn: value })[name]), /OSV 失敗門檻.*osvFailOn/);
   }
 });
 
-test('預設門檻阻擋 DT、保留三項發佈，並在錯誤及 log 說明超標數量', () => workflowFixture(async (root, services, events, logs) => {
+test('empty YAML OSV threshold inputs default to unknown', () => {
+  for (const value of ['', ' ', '\t']) {
+    assert.equal(readTaskConfig(name => ({ projectPath: 'root', osvFailOn: value })[name]).osvFailOn, 'unknown');
+  }
+});
+
+test('default threshold blocks DT, preserves all publications and reports exceeded counts', () => workflowFixture(async (root, services, events, logs) => {
   await assert.rejects(runWorkflow(dtConfig(root), join(root, 'temp'), services), /OSV 弱點達到失敗門檻『未知』：高 1；已略過 DT 上傳。/);
   assert.deepEqual(events, ['scan', 'sbom', 'report', 'summary']);
   assert.ok(logs.some(message => /失敗門檻『未知』：高 1；已略過 DT 上傳。/.test(message)));
 }));
 
-test('workflow 將達門檻弱點輸出為包含修復資訊的 error issue', () => workflowFixture(async (root, services, events, logs) => {
+test('workflow emits error issues with remediation details for findings at the threshold', () => workflowFixture(async (root, services, events, logs) => {
   await assert.rejects(runWorkflow({ ...dtConfig(root), osvFailOn: 'high' }, join(root, 'temp'), {
     ...services,
     scanOsv: async () => ({ path: join(root, 'sbom.osv.md'), version: '2.7.1', findings: true, findingList: [{
@@ -66,8 +72,11 @@ test('workflow 將達門檻弱點輸出為包含修復資訊的 error issue', ()
   ]);
 }));
 
-test('僅警告模式的 issue 依六級風險排序，並明示缺少的 CVE 與修復版本', () => workflowFixture(async (root, services, events, logs) => {
-  const findingList = ['unknown', 'none', 'low', 'medium', 'high', 'critical'].map(value => finding(value as OsvSeverity));
+test('warning-only issues preserve descending report severity and show missing CVE and fixes', () => workflowFixture(async (root, services, events, logs) => {
+  const { findingList } = createOsvReport({ results: [{ packages: [{
+    package: { name: 'package', version: '1.0.0', ecosystem: 'npm' },
+    groups: ['', '0', '1', '4', '7', '9'].map(max_severity => ({ ids: ['OSV-1'], max_severity })),
+  }] }] }, { version: '2.7.1', source: 'sbom.cdx.json', findings: true });
   const snapshot = structuredClone(findingList);
   await runWorkflow({ ...dtConfig(root), osvFailOn: 'warnOnly' }, join(root, 'temp'), {
     ...services, scanOsv: async () => ({ path: join(root, 'sbom.osv.md'), version: '2.7.1', findings: true, findingList }),
@@ -82,12 +91,12 @@ test('僅警告模式的 issue 依六級風險排序，並明示缺少的 CVE �
   assert.deepEqual(events, ['dt', 'sbom', 'report', 'summary']);
 }));
 
-test('error 與 warning 各保留風險最高的 50 筆，分別補上正確溢出摘要且不裁切報告', () => workflowFixture(async (root, services, events, logs) => {
+test('errors and warnings each retain the 50 highest risks with overflow summaries and a complete report', () => workflowFixture(async (root, services, events, logs) => {
   const findingList = [
-    ...Array.from({ length: 51 }, (_, index) => ({ ...finding('high'), ids: [`HIGH-${index}`] })),
-    ...Array.from({ length: 52 }, (_, index) => ({ ...finding('unknown'), ids: [`UNKNOWN-${index}`] })),
     { ...finding('critical'), ids: ['CRITICAL'] },
+    ...Array.from({ length: 51 }, (_, index) => ({ ...finding('high'), ids: [`HIGH-${index}`] })),
     { ...finding('medium'), ids: ['MEDIUM'] },
+    ...Array.from({ length: 52 }, (_, index) => ({ ...finding('unknown'), ids: [`UNKNOWN-${index}`] })),
   ];
   await assert.rejects(runWorkflow({ ...dtConfig(root), osvFailOn: 'high' }, join(root, 'temp'), {
     ...services,
@@ -110,7 +119,7 @@ test('error 與 warning 各保留風險最高的 50 筆，分別補上正確溢�
   assert.deepEqual(events, ['sbom', 'report', 'summary']);
 }));
 
-test('外部欄位的換行、百分比與命令分隔字元保持在單一 issue 訊息內', () => workflowFixture(async (root, services, events, logs) => {
+test('external newlines, percent signs and command delimiters remain within one issue message', () => workflowFixture(async (root, services, events, logs) => {
   const external = "a;]\r\n##vso[task.complete result=Succeeded;]%0A%AZP25";
   await runWorkflow({ ...dtConfig(root), osvFailOn: 'warnOnly' }, join(root, 'temp'), {
     ...services,
@@ -130,7 +139,7 @@ test('外部欄位的換行、百分比與命令分隔字元保持在單一 issu
   assert.equal(parsed.message, `OSV：套件 '${external}' ${external}（${external}）具有已知的 低 嚴重性弱點 ${external}、OSV-2（${external}、CVE-2026-12345），修復版本 ${external}、2.0.0，https://osv.dev/a%3B%5D%0D%0A%23%23vso%5Btask.complete%20result%3DSucceeded%3B%5D%250A%25AZP25、https://osv.dev/OSV-2`);
 }));
 
-test('每類恰好 50 筆時不輸出溢出摘要', () => workflowFixture(async (root, services, events, logs) => {
+test('exactly 50 findings per type produce no overflow summary', () => workflowFixture(async (root, services, events, logs) => {
   await assert.rejects(runWorkflow({ ...dtConfig(root), osvFailOn: 'high' }, join(root, 'temp'), {
     ...services, scanOsv: async () => ({ path: join(root, 'sbom.osv.md'), version: '2.7.1', findings: true,
       findingList: [...Array.from({ length: 50 }, () => finding('high')), ...Array.from({ length: 50 }, () => finding('low'))],
@@ -142,7 +151,7 @@ test('每類恰好 50 筆時不輸出溢出摘要', () => workflowFixture(async 
   assert.ok(issues.every(line => !line.includes('另有')));
 }));
 
-test('OSV 技術失敗時阻擋 DT、保留有效 SBOM 並說明略過原因', () => workflowFixture(async (root, services, events, logs) => {
+test('OSV technical failure blocks DT, preserves the valid SBOM and logs the skip reason', () => workflowFixture(async (root, services, events, logs) => {
   await assert.rejects(runWorkflow(dtConfig(root), join(root, 'temp'), {
     ...services, scanOsv: async () => { events.push('scan'); throw new Error('scanner broken'); },
   }), /OSV 弱點掃描.*scanner broken/);
@@ -162,7 +171,7 @@ const thresholdCases: [OsvFailOn, OsvSeverity[]][] = [
 ];
 for (const [threshold, blockedSeverities] of thresholdCases) {
   for (const severity of ['critical', 'high', 'medium', 'low', 'none', 'unknown'] as const) {
-    test(`OSV 門檻 ${threshold} 遇到 ${severity} 時依風險邊界決定 DT 與工作結果`, () => workflowFixture(async (root, services, events, logs) => {
+    test(`OSV threshold ${threshold} handles ${severity} at the specified risk boundary`, () => workflowFixture(async (root, services, events, logs) => {
       const cfg = { ...dtConfig(root), osvFailOn: threshold };
       const completion = runWorkflow(cfg, join(root, 'temp'), {
         ...services, scanOsv: async () => { events.push('scan'); return { path: join(root, 'sbom.osv.md'), version: '2.7.1', findings: true, findingList: [finding(severity)] }; },
@@ -181,7 +190,7 @@ for (const [threshold, blockedSeverities] of thresholdCases) {
   }
 }
 
-test('僅計算超標弱點並依危急到低風險彙整，與三項發佈錯誤全部回報', () => workflowFixture(async (root, services, events) => {
+test('only exceeded findings are counted in descending risk order alongside all publication failures', () => workflowFixture(async (root, services, events) => {
   const cfg = { ...dtConfig(root), osvFailOn: 'high' as const };
   await assert.rejects(runWorkflow(cfg, join(root, 'temp'), {
     ...services,
@@ -197,7 +206,7 @@ test('僅計算超標弱點並依危急到低風險彙整，與三項發佈錯�
   assert.deepEqual(events, ['scan', 'sbom', 'report', 'summary']);
 }));
 
-test('未知門檻的錯誤數量包含無與未知，DT 未啟用仍因超標失敗且不宣稱略過 DT', () => workflowFixture(async (root, services, events, logs) => {
+test('unknown threshold counts zero and unknown scores without claiming disabled DT was skipped', () => workflowFixture(async (root, services, events, logs) => {
   await assert.rejects(runWorkflow({ ...dtConfig(root), uploadToDt: false }, join(root, 'temp'), {
     ...services, scanOsv: async () => { events.push('scan'); return { path: join(root, 'sbom.osv.md'), version: '2.7.1', findings: true, findingList: [finding('unknown'), finding('none')] }; },
   }), /OSV 弱點達到失敗門檻『未知』：無 1、未知 1。$/);
@@ -205,7 +214,7 @@ test('未知門檻的錯誤數量包含無與未知，DT 未啟用仍因超標�
   assert.ok(!logs.some(message => message.includes('已略過 DT 上傳')));
 }));
 
-test('僅警告模式下 OSV 技術失敗仍上傳 DT，並保留 DT 與 SBOM 錯誤', () => workflowFixture(async (root, services, events, logs) => {
+test('warning-only mode attempts DT after OSV failure and preserves DT and SBOM errors', () => workflowFixture(async (root, services, events, logs) => {
   await assert.rejects(runWorkflow({ ...dtConfig(root), osvFailOn: 'warnOnly' }, join(root, 'temp'), {
     ...services,
     scanOsv: async () => { events.push('scan'); throw new Error('scanner broken'); },
@@ -221,13 +230,13 @@ test('僅警告模式下 OSV 技術失敗仍上傳 DT，並保留 DT 與 SBOM �
   assert.ok(!logs.some(message => message.startsWith('##vso[task.logissue ')));
 }));
 
-test('未啟用 OSV 時忽略非法門檻並照常上傳 DT 及發佈 SBOM', () => workflowFixture(async (root, services, events, logs) => {
+test('disabled OSV ignores invalid thresholds and still uploads DT and publishes SBOM', () => workflowFixture(async (root, services, events, logs) => {
   await runWorkflow(Object.assign({}, dtConfig(root), { runOsv: false, osvFailOn: 'bad' }), join(root, 'temp'), services);
   assert.deepEqual(events, ['dt', 'sbom']);
   assert.ok(!logs.some(message => message.startsWith('##vso[task.logissue ')));
 }));
 
-test('沒有弱點時未知門檻正常完成，DT 與三項發佈照常執行', () => workflowFixture(async (root, services, events, logs) => {
+test('unknown threshold succeeds without findings and retains DT and all publications', () => workflowFixture(async (root, services, events, logs) => {
   await runWorkflow(dtConfig(root), join(root, 'temp'), {
     ...services, scanOsv: async () => { events.push('scan'); return { path: join(root, 'sbom.osv.md'), version: '2.7.1', findings: false, findingList: [] }; },
   });
@@ -235,7 +244,7 @@ test('沒有弱點時未知門檻正常完成，DT 與三項發佈照常執行',
   assert.ok(!logs.some(message => message.startsWith('##vso[task.logissue ')));
 }));
 
-test('Task 公開 OSV 失敗門檻選單、預設、顯示條件及 CVSS 邊界說明', async () => {
+test('task exposes the OSV threshold options, default, visibility and CVSS boundaries', async () => {
   const manifest = JSON.parse(await readFile('src/task.json', 'utf8'));
   const input = manifest.inputs.find((item: { name: string }) => item.name === 'osvFailOn');
   assert.ok(input, '缺少 osvFailOn 輸入');
@@ -249,7 +258,7 @@ test('Task 公開 OSV 失敗門檻選單、預設、顯示條件及 CVSS 邊界�
   assert.doesNotMatch(manifest.inputs.find((item: { name: string }) => item.name === 'runOsv').helpMarkDown, /發現弱點只警告/);
 });
 
-test('OSV 失敗門檻在工作流程驗證時套用預設並拒絕非法值，停用 OSV 時不讀取門檻', async () => {
+test('workflow validation defaults and validates the threshold while disabled OSV ignores it', async () => {
   const cfg = readTaskConfig(name => name === 'projectPath' ? process.cwd() : undefined);
   assert.equal((await validateConfig({ ...cfg, osvFailOn: undefined })).osvFailOn, 'unknown');
   await assert.rejects(validateConfig(Object.assign({}, cfg, { osvFailOn: 'bad' })), /OSV 失敗門檻.*osvFailOn/);

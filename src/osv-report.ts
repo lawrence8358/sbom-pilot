@@ -1,7 +1,6 @@
 import { valid, gte, lt } from 'semver';
 
 type RecordValue = Record<string, unknown>;
-export type OsvSeverity = 'critical' | 'high' | 'medium' | 'low' | 'none' | 'unknown';
 export interface OsvFinding {
   severity: OsvSeverity;
   ids: string[];
@@ -13,13 +12,18 @@ export interface OsvFinding {
   fixed: string[];
 }
 const ratings = [
-  { severity: 'critical', name: '危急 Critical', icon: '🔴', minimum: 9 },
-  { severity: 'high', name: '高 High', icon: '🟠', minimum: 7 },
-  { severity: 'medium', name: '中 Medium', icon: '🟡', minimum: 4 },
-  { severity: 'low', name: '低 Low', icon: '🔵', minimum: 0.1 },
-  { severity: 'none', name: '無 None', icon: '⚪', minimum: 0 },
-  { severity: 'unknown', name: '未知 Unknown', icon: '⚪', minimum: -1 },
+  { severity: 'critical', label: '危急', name: 'Critical', icon: '🔴', minimum: 9 },
+  { severity: 'high', label: '高', name: 'High', icon: '🟠', minimum: 7 },
+  { severity: 'medium', label: '中', name: 'Medium', icon: '🟡', minimum: 4 },
+  { severity: 'low', label: '低', name: 'Low', icon: '🔵', minimum: 0.1 },
+  { severity: 'none', label: '無', name: 'None', icon: '⚪', minimum: 0 },
+  { severity: 'unknown', label: '未知', name: 'Unknown', icon: '⚪', minimum: -1 },
 ] as const;
+export type OsvSeverity = (typeof ratings)[number]['severity'];
+export const osvSeverityOrder: readonly OsvSeverity[] = ratings.map((item) => item.severity);
+export const osvSeverityLabels = Object.fromEntries(
+  ratings.map((item) => [item.severity, item.label]),
+) as Record<OsvSeverity, string>;
 
 /** 驗證 JSON 物件形狀，避免上游不相容資料被視為無弱點。 */
 function record(value: unknown): RecordValue {
@@ -187,7 +191,7 @@ export function createOsvReport(
   const counts = ratings
     .map(
       (item) =>
-        `${item.icon} **${item.name}：${rows.filter((row) => rating(row.score) === item).length}**`,
+        `${item.icon} **${item.label} ${item.name}：${rows.filter((row) => rating(row.score) === item).length}**`,
     )
     .join(' ｜ ');
   const lines = [
@@ -218,7 +222,7 @@ export function createOsvReport(
       .join('<br>');
 
     lines.push(
-      `| ${level.icon} **${level.name}** | ${row.score?.toFixed(1) ?? '未知'} | ${cves} | ${links} | ${cell(row.ecosystem)} | ${cell(row.name)} | ${cell(row.version)} | ${row.fixed.length ? row.fixed.map(cell).join('<br>') : '未提供'} | ${cell(options.source)} |`,
+      `| ${level.icon} **${level.label} ${level.name}** | ${row.score?.toFixed(1) ?? '未知'} | ${cves} | ${links} | ${cell(row.ecosystem)} | ${cell(row.name)} | ${cell(row.version)} | ${row.fixed.length ? row.fixed.map(cell).join('<br>') : '未提供'} | ${cell(options.source)} |`,
     );
   }
 
@@ -231,12 +235,4 @@ export function createOsvReport(
   );
 
   return { markdown: lines.join('\n'), findingList: rows };
-}
-
-/** 保留既有 JSON 轉 Markdown 介面與報告內容。 */
-export function renderOsvReport(
-  value: unknown,
-  options: { version: string; source: string; findings: boolean },
-): string {
-  return createOsvReport(value, options).markdown;
 }

@@ -1,3 +1,5 @@
+import { escapeLoggingCommandData } from './logging-command';
+
 // 本模組必須先於 task-lib 匯入：SDK 初始化會將非空 INPUT_* 移入 vault。
 // 秘密只保留於記憶體，不能用會記錄原值的 getInput 讀取。
 export const dtApiKeyInput = process.env.INPUT_DTAPIKEY;
@@ -72,8 +74,6 @@ for (const address of [
 }
 for (const value of new Set(networkMasks)) {
   if (value) {
-    process.stdout.write(
-      `##vso[task.setsecret]${value.replace(/%/g, '%AZP25').replace(/\r/g, '%0D').replace(/\n/g, '%0A')}\n`,
-    );
+    process.stdout.write(`##vso[task.setsecret]${escapeLoggingCommandData(value)}\n`);
   }
 }

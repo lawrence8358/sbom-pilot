@@ -72,7 +72,7 @@ SBOM Pilot 已預設執行 OSV 弱點掃描，但發現弱點時只在 log 印�
 - **Issue 輸出**：在 workflow 的 OSV 階段之後，透過既有 log 串流輸出 `##vso[task.logissue type=error|warning]` 指令，不新增 issue 服務介面。每種類型最多 50 則，超出時補一則同類型摘要。訊息中的外部字串需處理換行與 `;`、`]` 等會破壞 logging command 的字元。移除原本的 `##[warning]` 單行 log。
 - **DT 阻擋**：workflow 中 DT 上傳的前置條件改為「未超過門檻，且（OSV 成功或門檻為僅警告或未啟用 OSV）」。略過時 log 寫出原因。
 - **發佈順序不變**：OSV 掃描 → DT 上傳（可能略過）→ SBOM 成品 → OSV 弱點報告成品 → CI 摘要。超過門檻不影響後三者。
-- **錯誤彙整**：超過門檻產生一個錯誤加入既有的錯誤清單，訊息格式：「OSV 弱點達到失敗門檻『高』：危急 1、高 3；已略過 DT 上傳。」與其他錯誤一起在最後拋出，Task 結果 Failed。
+- **錯誤彙整**：超過門檻產生一個錯誤加入既有的錯誤清單，訊息格式：「OSV 弱點達到失敗門檻『高』：危急 1、高 3；已略過 DT 上傳。」未啟用 DT 時，訊息不含「；已略過 DT 上傳」。與其他錯誤一起在最後拋出，Task 結果 Failed。
 - **未達門檻**：只有 warning issue 時 workflow 正常完成，Task 結果 Succeeded。
 - **CI 摘要區塊標題**：不變（使用者決定不處理）。
 - **版本**：Task 與擴充升為 0.3.0；README、README-Dev（如適用）、task.json 說明、release notes 標示行為變更與還原方式。

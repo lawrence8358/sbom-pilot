@@ -177,6 +177,8 @@ export async function runWorkflow(
   let dtBlocked = false;
 
   if (config.runOsv) {
+    const threshold = config.osvFailOn!;
+
     try {
       report = await stage('OSV 弱點掃描', () =>
         (services.scanOsv ?? scanOsv)(
@@ -191,22 +193,18 @@ export async function runWorkflow(
           services.log,
         ),
       );
-      const groups = partitionOsvFindings(report.findingList, config.osvFailOn!);
+      const groups = partitionOsvFindings(report.findingList, threshold);
       const { exceeded } = groups;
       logOsvIssues(groups, services.log);
       if (exceeded.length) {
         dtBlocked = true;
-        const message = osvThresholdMessage(
-          exceeded,
-          config.osvFailOn!,
-          Boolean(config.uploadToDt),
-        );
+        const message = osvThresholdMessage(exceeded, threshold, Boolean(config.uploadToDt));
         services.log(message);
         errors.push(new Error(message));
       }
     } catch (error) {
       errors.push(error);
-      if (config.osvFailOn !== 'warnOnly') {
+      if (threshold !== 'warnOnly') {
         dtBlocked = true;
         if (config.uploadToDt) services.log('OSV 弱點掃描失敗且門檻非「僅警告」；已略過 DT 上傳。');
       }
