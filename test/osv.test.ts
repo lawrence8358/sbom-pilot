@@ -186,12 +186,12 @@ test('process runner accepts only explicitly allowed finding exit and still reje
 });
 
 test('workflow publishes both files to custom artifact and preserves OSV, DT and artifact failures', () => fixture(async root => {
-  const cfg = readTaskConfig(name => ({ projectPath: root, artifactName: 'Custom', sbomFileName: 'arbitrary.json' })[name]);
+  const cfg = readTaskConfig(name => ({ projectPath: root, artifactName: 'Custom', sbomFileName: 'arbitrary.json', osvFailOn: 'warnOnly' })[name]);
   const events: string[] = [];
   const services: WorkflowServices = {
     log: () => {}, prepare: async () => ({ node: 'node', npmCli: 'npm', cdxgenCli: 'cdxgen', nodeVersion: '24.22.2', cdxgenVersion: '13.6.0', env: {} }),
     installer: { install: async () => {} }, generate: async () => {}, validate: async path => ({ path, componentCount: 1 }),
-    scanOsv: async req => { events.push('scan'); assert.equal(basename(req.sbom.path), 'arbitrary.json'); return { path: join(root, 'sbom.osv.md'), version: '2.7.1', findings: true, findingList: [] }; },
+    scanOsv: async req => { events.push('scan'); assert.equal(basename(req.sbom.path), 'arbitrary.json'); return { path: join(root, 'sbom.osv.md'), version: '2.7.1', findings: true, findingList: [{ severity: 'high', ids: ['OSV-1'], cves: [], ecosystem: 'npm', name: 'package', version: '1.0.0', fixed: [] }] }; },
     publish: async (sbom, name) => { events.push('sbom'); assert.equal(name, 'Custom'); assert.equal(basename(sbom.path), 'arbitrary.json'); },
     publishReport: async (report, name) => { events.push('report'); assert.equal(name, 'Custom'); assert.equal(basename(report.path), 'sbom.osv.md'); },
     publishSummary: async report => { events.push('summary'); assert.equal(basename(report.path), 'sbom.osv.md'); },

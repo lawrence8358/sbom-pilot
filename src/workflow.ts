@@ -13,6 +13,7 @@ import { validateSbom, type SbomValidator, type ValidatedSbom } from './validati
 import { runProcess, type ProcessRunner } from './process';
 import { uploadToDependencyTrack } from './dt/upload';
 import { scanOsv, type OsvScanner, type OsvReport } from './osv';
+import { partitionOsvFindings, osvThresholdMessage } from './osv-threshold';
 
 export type ArtifactPublisher = (sbom: ValidatedSbom, artifactName: string) => Promise<void>;
 export type SbomUploader = (sbom: ValidatedSbom) => Promise<void>;
@@ -102,7 +103,7 @@ async function installDependencies(
   });
 }
 
-/** 依序準備、還原、單次掃描及驗證；DT 失敗先保留錯誤，發佈有效成品後再讓 Task 失敗。 */
+/** 依序準備、還原、單次掃描及驗證；依 OSV 門檻阻擋 DT，發佈有效成品後彙整錯誤。 */
 export async function runWorkflow(
   input: TaskConfig,
   tempDirectory: string,
@@ -169,9 +170,10 @@ export async function runWorkflow(
 
   services.log(`CycloneDX ${config.specVersion} 驗證通過；組件數：${sbom.componentCount}。`);
 
-  // OSV／DT 各自保留錯誤，仍嘗試發佈有效 SBOM 及已完成的報告。
+  // OSV／門檻／DT 各自保留錯誤，仍嘗試發佈有效 SBOM 及已完成的報告。
   const errors: unknown[] = [];
   let report: OsvReport | undefined;
+  let dtBlocked = false;
 
   if (config.runOsv) {
     try {
@@ -188,14 +190,29 @@ export async function runWorkflow(
           services.log,
         ),
       );
+      const { exceeded } = partitionOsvFindings(report.findingList, config.osvFailOn!);
+      if (exceeded.length) {
+        dtBlocked = true;
+        const message = osvThresholdMessage(
+          exceeded,
+          config.osvFailOn!,
+          Boolean(config.uploadToDt),
+        );
+        services.log(message);
+        errors.push(new Error(message));
+      }
     } catch (error) {
       errors.push(error);
+      if (config.osvFailOn !== 'warnOnly') {
+        dtBlocked = true;
+        if (config.uploadToDt) services.log('OSV 弱點掃描失敗且門檻非「僅警告」；已略過 DT 上傳。');
+      }
     }
   } else {
     services.log('OSV 弱點掃描未啟用，略過工具準備與掃描。');
   }
 
-  if (config.uploadToDt) {
+  if (config.uploadToDt && !dtBlocked) {
     services.log('##[section]開始上傳 SBOM 至 Dependency-Track（DT）');
     try {
       await stage('DT 上傳', () =>
@@ -206,11 +223,11 @@ export async function runWorkflow(
     } catch (error) {
       errors.push(error);
     }
-  } else {
+  } else if (!config.uploadToDt) {
     services.log('DT 上傳未啟用，略過此階段。');
   }
 
-  // 成品請求結束後才傳遞先前 DT 錯誤，不能吞掉任一失敗。
+  // 成品請求結束後才傳遞先前 OSV／門檻／DT 錯誤，不能吞掉任一失敗。
   services.log('##[section]開始發佈 SBOM 成品（Azure Pipelines）');
   try {
     await stage('成品發佈', () => services.publish(sbom, config.artifactName!));

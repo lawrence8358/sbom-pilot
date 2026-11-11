@@ -3,6 +3,7 @@ import { dirname } from 'node:path';
 import { CDXGEN_VERSION, SUPPORTED_SPEC_VERSIONS, validateToolOptions } from './tool-options';
 import { DEFAULT_DT_URL, validateDtConfig, type DtConfig } from './dt/config';
 import { validateOsvVersion } from './osv';
+import { validateOsvFailOn, type OsvFailOn } from './osv-threshold';
 import {
   parseNpmCredentials,
   validateNpmCredentials,
@@ -25,6 +26,7 @@ export interface TaskConfig {
   sbomFileName?: string;
   runOsv?: boolean;
   osvVersion?: string;
+  osvFailOn?: OsvFailOn;
   nodeVersion: string;
   cdxgenVersion: string;
   specVersion: string;
@@ -90,7 +92,7 @@ export function parseExcludes(value: string): string[] {
 }
 export type InputReader = (name: string) => string | undefined;
 
-/** 將 Classic／YAML 文字輸入轉成共用設定，套用預設並只在啟用時讀取 DT 欄位。 */
+/** 將 Classic／YAML 文字輸入轉成共用設定，套用預設並只在啟用時讀取 OSV 與 DT 欄位。 */
 export function readTaskConfig(read: InputReader): TaskConfig {
   /** 讀取必要文字並拒絕空白或 NUL，僅對未提供的值採用預設。 */
   const text = (name: string, fallback?: string): string => {
@@ -133,6 +135,7 @@ export function readTaskConfig(read: InputReader): TaskConfig {
     sbomFileName: read('sbomFileName')?.trim() || 'sbom.cdx.json',
     runOsv,
     osvVersion: runOsv ? read('osvVersion')?.trim() || 'latest' : undefined,
+    osvFailOn: runOsv ? validateOsvFailOn(read('osvFailOn')?.trim()) : undefined,
     nodeVersion: text('nodeVersion', '24.x'),
     cdxgenVersion: read('cdxgenVersion')?.trim() || CDXGEN_VERSION,
     specVersion: text('specVersion', '1.6'),
@@ -182,6 +185,7 @@ export async function validateConfig(config: TaskConfig): Promise<TaskConfig> {
   const runOsv = config.runOsv ?? true;
   if (typeof runOsv !== 'boolean') throw new Error('參數 runOsv 必須是布林值。');
   const osvVersion = runOsv ? validateOsvVersion(config.osvVersion ?? 'latest') : undefined;
+  const osvFailOn = runOsv ? validateOsvFailOn(config.osvFailOn) : undefined;
 
   const artifactName = config.artifactName ?? 'SBOM';
   const sbomFileName = config.sbomFileName ?? 'sbom.cdx.json';
@@ -245,6 +249,7 @@ export async function validateConfig(config: TaskConfig): Promise<TaskConfig> {
     sbomFileName,
     runOsv,
     osvVersion,
+    osvFailOn,
     dt: config.uploadToDt ? validateDtConfig(config.dt) : undefined,
     nugetCredentials:
       config.nugetCredentials === undefined
