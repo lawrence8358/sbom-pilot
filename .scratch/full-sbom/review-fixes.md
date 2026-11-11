@@ -1,6 +1,6 @@
 # 完整 SBOM code review 修正清單（feature/full-sbom，基準 55b7046）
 
-不改：完整 SBOM 檔名 `-dev.json`（使用者決定）；scripts/build.mjs 的封裝身分注入；src/osv-tab/load.ts 的附件連結驗證。
+不改：完整 SBOM 檔名 `-full.json`（使用者決定）；scripts/build.mjs 的封裝身分注入；src/osv-tab/load.ts 的附件連結驗證。
 
 ## Standards
 1. src/workflow.ts：以帶 variant（DtSbomVariant 'product'|'full'）與中文 label 的描述物件取代 `sboms[0]/[1]`、`reports[0]/[1]` 與 `index === 0 ?` 分支；DT 依 variant 取用。

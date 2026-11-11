@@ -61,7 +61,7 @@ test('artifact defaults and custom names flow through the output path and publis
       generate:async request=>{generated.push(request.outputPath);await writeFile(request.outputPath,JSON.stringify({bomFormat:'CycloneDX',specVersion:'1.6',version:1,components:[]}));},
       publish:async (...values: unknown[])=>{published=String(values[1]);},
     });
-    assert.deepEqual(generated,[join(root,'temp','sbom',extra.sbomFileName??'sbom.cdx.json'),join(root,'temp','sbom',extra.sbomFileName?'PrimeX.cdx-dev.json':'sbom.cdx-dev.json')]);
+    assert.deepEqual(generated,[join(root,'temp','sbom',extra.sbomFileName??'sbom.cdx.json'),join(root,'temp','sbom',extra.sbomFileName?'PrimeX.cdx-full.json':'sbom.cdx-full.json')]);
     assert.equal(published,extra.artifactName??'SBOM');
   }
 }));

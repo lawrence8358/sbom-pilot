@@ -49,7 +49,7 @@ test('workflow scans both validated SBOMs and publishes both reports to one arti
     publishReport: async (report, artifact) => { published.push(`${artifact}/${report.path}`); },
     publishTabReport: async report => { summaries.push(report.product.status); },
   });
-  assert.deepEqual(scans, [join(root, 'temp', 'sbom', 'PrimeX.JSON'), join(root, 'temp', 'sbom', 'PrimeX-dev.json')]);
+  assert.deepEqual(scans, [join(root, 'temp', 'sbom', 'PrimeX.JSON'), join(root, 'temp', 'sbom', 'PrimeX-full.json')]);
   assert.deepEqual(published, ['Custom/OSV弱點報告-產品.md', 'Custom/OSV弱點報告-完整.md']);
   assert.deepEqual(summaries, ['completed']);
 }));

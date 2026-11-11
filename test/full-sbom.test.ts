@@ -41,13 +41,13 @@ test('one dependency installation produces, validates and publishes product and 
   assert.equal(product.args[product.args.indexOf('--install-deps') + 1], 'false');
   assert.deepEqual(full.env, product.env);
   assert.equal(full.cwd, product.cwd);
-  assert.deepEqual(publications, [['sbom.cdx.json', 'SBOM', '0'], ['sbom.cdx-dev.json', 'SBOM', '1']]);
+  assert.deepEqual(publications, [['sbom.cdx.json', 'SBOM', '0'], ['sbom.cdx-full.json', 'SBOM', '1']]);
   assert.equal(basename(result.path), 'sbom.cdx.json');
   for (const [name, count] of [['產品 SBOM', '0'], ['完整 SBOM', '1']]) assert.ok(logs.some(line => line.includes(name) && line.includes(`組件數：${count}`)));
   const settings = JSON.parse(logs.find(line => line.startsWith('掃描設定：'))!.slice('掃描設定：'.length));
   assert.deepEqual(settings.outputs, [
     { variant: 'product', label: '產品 SBOM', outputPath: join(root, 'sbom', 'sbom.cdx.json'), requiredOnly: true, artifact: 'SBOM/sbom.cdx.json' },
-    { variant: 'full', label: '完整 SBOM', outputPath: join(root, 'sbom', 'sbom.cdx-dev.json'), requiredOnly: false, artifact: 'SBOM/sbom.cdx-dev.json' },
+    { variant: 'full', label: '完整 SBOM', outputPath: join(root, 'sbom', 'sbom.cdx-full.json'), requiredOnly: false, artifact: 'SBOM/sbom.cdx-full.json' },
   ]);
 }));
 
@@ -64,7 +64,7 @@ test('artifact inputs show no editor defaults while missing and blank inputs ret
   }
 });
 
-for (const [product, full] of [['sbom.cdx.json', 'sbom.cdx-dev.json'], ['PrimeX.json', 'PrimeX-dev.json'], ['PrimeX.JSON', 'PrimeX-dev.json'], ['A.json.JSON', 'A.json-dev.json']]) {
+for (const [product, full] of [['sbom.cdx.json', 'sbom.cdx-full.json'], ['PrimeX.json', 'PrimeX-full.json'], ['PrimeX.JSON', 'PrimeX-full.json'], ['A.json.JSON', 'A.json-full.json']]) {
   test(`filename ${product} publishes ${full}, OSV scans both and DT defaults to the full SBOM`, () => fixture(async root => {
     const input = readTaskConfig(name => ({ projectPath: root, sbomFileName: product, artifactName: 'Custom', uploadToDt: 'true', dtApiUrl: 'https://dt.invalid', dtProjectUuid: 'd40ce445-3566-49d5-bd8d-2601d73cf0d4', dtApiKey: 'fixture' })[name]);
     const published: string[][] = [], scanned: string[] = [], uploaded: string[] = [];
@@ -111,7 +111,7 @@ for (const variant of ['product', 'full']) for (const failure of ['generation', 
     await assert.rejects(runWorkflow(input, root, {
       log: () => {}, publishTabReport: async () => {}, prepare: async () => tools, installer: { install: async () => {} },
       generate: async request => {
-        const selected = basename(request.outputPath) === (variant === 'product' ? 'sbom.cdx.json' : 'sbom.cdx-dev.json');
+        const selected = basename(request.outputPath) === (variant === 'product' ? 'sbom.cdx.json' : 'sbom.cdx-full.json');
         if (selected && failure === 'generation') throw new Error('generator broken');
         await writeFile(request.outputPath, selected && failure === 'validation' ? '{"bomFormat":"invalid"}' : JSON.stringify({ bomFormat: 'CycloneDX', specVersion: '1.6', components: [] }));
       },
@@ -128,6 +128,6 @@ test('each SBOM publication is attempted and both publication errors are preserv
     log: () => {}, publishTabReport: async () => {}, prepare: async () => tools, installer: { install: async () => {} }, generate: async () => {},
     validate: async path => ({ path, componentCount: 0 }),
     publish: async sbom => { published.push(basename(sbom.path)); throw new Error(`failed ${basename(sbom.path)}`); },
-  }), /failed sbom.cdx.json.*failed sbom.cdx-dev.json/);
-  assert.deepEqual(published, ['sbom.cdx.json', 'sbom.cdx-dev.json']);
+  }), /failed sbom.cdx.json.*failed sbom.cdx-full.json/);
+  assert.deepEqual(published, ['sbom.cdx.json', 'sbom.cdx-full.json']);
 }));

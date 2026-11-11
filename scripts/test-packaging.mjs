@@ -29,7 +29,7 @@ test('0.3.1 release versions and public documentation stay aligned with the pack
   assert.match(devReadme, /0\.3\.1/);
   assert.match(releaseNotes, /開發套件弱點.*失敗門檻/);
   assert.match(releaseNotes, /僅警告/);
-  assert.match(releaseNotes, /sbom\.cdx-dev\.json/);
+  assert.match(releaseNotes, /sbom\.cdx-full\.json/);
   assert.match(releaseNotes, /OSV弱點報告-產品\.md/);
   assert.match(releaseNotes, /OSV弱點報告-完整\.md/);
   assert.match(releaseNotes, /還原.*產品 SBOM/);
@@ -38,7 +38,7 @@ test('0.3.1 release versions and public documentation stay aligned with the pack
   assert.match(releaseNotes, /組織管理員.*更新.*重新同意/);
   assert.match(readme, /OSV 弱點報告/);
   assert.doesNotMatch(readme, /Extensions（擴充功能）/);
-  assert.match(readme, /sbom\.cdx-dev\.json/);
+  assert.match(readme, /sbom\.cdx-full\.json/);
   assert.match(readme, /OSV弱點報告-產品\.md/);
   assert.match(readme, /OSV弱點報告-完整\.md/);
   assert.match(releaseNotes, /vso\.build/);

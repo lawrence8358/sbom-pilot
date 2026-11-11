@@ -227,7 +227,7 @@ export async function validateConfig(
     throw new Error('SBOM 檔名必須以 .json 結尾；輸出格式為 CycloneDX JSON。');
   }
 
-  const fullSbomFileName = sbomFileName.replace(/\.json$/i, '-dev.json');
+  const fullSbomFileName = sbomFileName.replace(/\.json$/i, '-full.json');
   if (fullSbomFileName === sbomFileName) {
     throw new Error('完整 SBOM 與產品 SBOM 檔名不可相同。');
   }

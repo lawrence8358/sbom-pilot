@@ -365,8 +365,8 @@ test('workflow publishes both SBOMs and the OSV report to custom artifact and pr
   const services: WorkflowServices = {
     log: () => {}, prepare: async () => ({ node: 'node', npmCli: 'npm', cdxgenCli: 'cdxgen', nodeVersion: '24.22.2', cdxgenVersion: '13.6.0', env: {} }),
     installer: { install: async () => {} }, generate: async () => {}, validate: async path => ({ path, componentCount: 1 }),
-    scanOsv: async req => { events.push('scan'); assert.equal(basename(req.sbom.path), req.variant === 'product' ? 'arbitrary.json' : 'arbitrary-dev.json'); return { path: join(root, 'sbom.osv.md'), version: '2.7.1', findings: true, findingList: [{ severity: 'high', ids: ['OSV-1'], cves: [], ecosystem: 'npm', name: 'package', version: '1.0.0', fixed: [] }] }; },
-    publish: async (sbom, name) => { events.push('sbom'); assert.equal(name, 'Custom'); assert.ok(['arbitrary.json', 'arbitrary-dev.json'].includes(basename(sbom.path))); },
+    scanOsv: async req => { events.push('scan'); assert.equal(basename(req.sbom.path), req.variant === 'product' ? 'arbitrary.json' : 'arbitrary-full.json'); return { path: join(root, 'sbom.osv.md'), version: '2.7.1', findings: true, findingList: [{ severity: 'high', ids: ['OSV-1'], cves: [], ecosystem: 'npm', name: 'package', version: '1.0.0', fixed: [] }] }; },
+    publish: async (sbom, name) => { events.push('sbom'); assert.equal(name, 'Custom'); assert.ok(['arbitrary.json', 'arbitrary-full.json'].includes(basename(sbom.path))); },
     publishReport: async (report, name) => { events.push('report'); assert.equal(name, 'Custom'); assert.equal(basename(report.path), 'sbom.osv.md'); },
     publishTabReport: async report => { events.push('attachment'); assert.equal(report.schemaVersion, 1); },
   };

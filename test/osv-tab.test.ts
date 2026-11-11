@@ -11,7 +11,7 @@ const report: OsvTabReport = {
   threshold: 'high',
   exceeded: true,
   dtSkipped: true,
-  sboms: { product: '產品.cdx.json', full: '產品.cdx-dev.json' },
+  sboms: { product: '產品.cdx.json', full: '產品.cdx-full.json' },
   product: {
     status: 'completed',
     findings: [

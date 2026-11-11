@@ -22,7 +22,7 @@ const report = {
   threshold: 'high',
   exceeded: false,
   dtSkipped: false,
-  sboms: { product: 'sbom.cdx.json', full: 'sbom.cdx-dev.json' },
+  sboms: { product: 'sbom.cdx.json', full: 'sbom.cdx-full.json' },
   product: { status: 'completed', findings: [] },
   developmentExtra: { status: 'completed', findings: [] },
 };

@@ -39,10 +39,10 @@ test('workflow publishes one contract attachment with full threshold verdict and
   assert.match(report.generatedAt, /(?:Z|[+-]\d\d:\d\d)$/);
   assert.deepEqual({ ...report, generatedAt: 'time' }, {
     schemaVersion: 1, generatedAt: 'time', scannerVersion: '2.7.1', threshold: 'high', exceeded: true, dtSkipped: true,
-    sboms: { product: 'PrimeX.JSON', full: 'PrimeX-dev.json' },
+    sboms: { product: 'PrimeX.JSON', full: 'PrimeX-full.json' },
     product: { status: 'completed', findings: [product] }, developmentExtra: { status: 'completed', findings: [dev] },
   });
-  assert.deepEqual(artifacts, ['PrimeX.JSON', 'PrimeX-dev.json', 'product.md', 'full.md']);
+  assert.deepEqual(artifacts, ['PrimeX.JSON', 'PrimeX-full.json', 'product.md', 'full.md']);
   assert.deepEqual(summaries, []);
 }));
 
@@ -98,7 +98,7 @@ test('attachment failure is aggregated with scan and artifact failures after all
     assert.match(error.message, /OSV 頁籤附件發佈.*attachment broken/);
     return true;
   });
-  assert.deepEqual(artifacts, ['sbom.cdx.json', 'sbom.cdx-dev.json', 'product.md', 'full.md']);
+  assert.deepEqual(artifacts, ['sbom.cdx.json', 'sbom.cdx-full.json', 'product.md', 'full.md']);
 }));
 
 test('disabled OSV still attaches disabled sections without scanning or publishing Markdown', () => fixture(async (root, services, attachments, artifacts, summaries) => {
@@ -112,6 +112,6 @@ test('disabled OSV still attaches disabled sections without scanning or publishi
   assert.equal(attachments[0].scannerVersion, undefined);
   assert.equal(attachments[0].exceeded, false);
   assert.equal(attachments[0].dtSkipped, false);
-  assert.deepEqual(artifacts, ['sbom.cdx.json', 'sbom.cdx-dev.json']);
+  assert.deepEqual(artifacts, ['sbom.cdx.json', 'sbom.cdx-full.json']);
   assert.deepEqual(summaries, []);
 }));

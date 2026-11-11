@@ -1,6 +1,6 @@
 # .NET Core 前後端合併
 
-`environment: combined` 把共同根目錄內的前端與 SDK-style .NET Core 後端視為一個交付產品。共用一次依賴還原，以 cdxgen 遞迴掃描兩次，皆指定 `-t dotnet -t js --install-deps false`；產品 SBOM 加上 `--required-only`，完整 SBOM 不加。兩份皆經官方 CycloneDX 1.6 Schema 驗證並發佈，預設為 `SBOM/sbom.cdx.json` 與 `SBOM/sbom.cdx-dev.json`。預設啟用 OSV，分別掃描兩份 SBOM，將 `OSV弱點報告-產品.md`、`OSV弱點報告-完整.md` 放到相同 Build Artifact，並於建置結果的「OSV 弱點報告」頁籤呈現。取消 `runOsv` 可略過掃描，頁籤顯示未執行。可用 `artifactName`／`sbomFileName` 修改成品名稱及產品 SBOM 檔名，完整 SBOM 檔名會在最後的 `.json` 前加 `-dev`。OSV 失敗門檻只以完整 SBOM 判定；DT 預設上傳完整 SBOM，可由「DT 上傳版本」改為產品 SBOM，每次只傳送選定的一份至一個既有 DT 專案 UUID。
+`environment: combined` 把共同根目錄內的前端與 SDK-style .NET Core 後端視為一個交付產品。共用一次依賴還原，以 cdxgen 遞迴掃描兩次，皆指定 `-t dotnet -t js --install-deps false`；產品 SBOM 加上 `--required-only`，完整 SBOM 不加。兩份皆經官方 CycloneDX 1.6 Schema 驗證並發佈，預設為 `SBOM/sbom.cdx.json` 與 `SBOM/sbom.cdx-full.json`。預設啟用 OSV，分別掃描兩份 SBOM，將 `OSV弱點報告-產品.md`、`OSV弱點報告-完整.md` 放到相同 Build Artifact，並於建置結果的「OSV 弱點報告」頁籤呈現。取消 `runOsv` 可略過掃描，頁籤顯示未執行。可用 `artifactName`／`sbomFileName` 修改成品名稱及產品 SBOM 檔名，完整 SBOM 檔名會在最後的 `.json` 前加 `-full`。OSV 失敗門檻只以完整 SBOM 判定；DT 預設上傳完整 SBOM，可由「DT 上傳版本」改為產品 SBOM，每次只傳送選定的一份至一個既有 DT 專案 UUID。
 
 ## 根目錄與依賴還原
 

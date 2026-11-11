@@ -3,7 +3,7 @@
 ### 新增
 
 - Build 結果新增「OSV 弱點報告」頁籤，可在 Pipeline 執行結果中查看 OSV 弱點摘要與產品／開發套件分類。
-- Build Artifact 新增完整 SBOM `sbom.cdx-dev.json`，以及兩份中文檔名 OSV 報告：`OSV弱點報告-產品.md`、`OSV弱點報告-完整.md`。
+- Build Artifact 新增完整 SBOM `sbom.cdx-full.json`，以及兩份中文檔名 OSV 報告：`OSV弱點報告-產品.md`、`OSV弱點報告-完整.md`。
 - 擴充套件新增 `vso.build` 權限，供報告頁籤讀取建置附件。組織管理員需更新擴充套件，並重新同意授權。
 
 ### 行為變更

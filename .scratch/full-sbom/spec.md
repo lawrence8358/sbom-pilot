@@ -18,7 +18,7 @@ SBOM Pilot 以 cdxgen `--required-only` 產生 SBOM，排除開發套件，原�
 
 - 每次執行在同一次依賴安裝後，以 cdxgen 產生兩份 SBOM：
   - **產品 SBOM**：沿用原參數，檔名為 `sbomFileName`。
-  - **完整 SBOM**：同樣參數但不加 `--required-only`，檔名在最後的 `.json` 前加 `-dev`。
+  - **完整 SBOM**：同樣參數但不加 `--required-only`，檔名在最後的 `.json` 前加 `-full`。
   兩份都驗證並發佈到同一個 Build Artifact。
 - 兩份 SBOM 都執行 OSV 掃描，兩份 OSV 弱點報告都發佈到成品：`OSV弱點報告-產品.md`、`OSV弱點報告-完整.md`。
 - OSV 失敗門檻只以完整 SBOM 的 OSV 結果判定（見 ADR 0003）。
@@ -32,7 +32,7 @@ SBOM Pilot 以 cdxgen `--required-only` 產生 SBOM，排除開發套件，原�
 1. As a pipeline 維護者, I want 每次執行都同時產生產品 SBOM 與完整 SBOM, so that 我既有交付內容的軟體組成清單，也能看到開發套件的弱點。
 2. As a pipeline 維護者, I want 完整 SBOM 與產品 SBOM 共用同一次依賴安裝, so that 掃兩次只增加 cdxgen 掃描時間，不重複還原依賴。
 3. As a pipeline 維護者, I want 產品 SBOM 的檔名就是 `sbomFileName`, so that 既有下游流程讀取的檔名不變。
-4. As a pipeline 維護者, I want 完整 SBOM 的檔名是在 `sbomFileName` 最後的 `.json` 前加 `-dev`（`sbom.cdx.json` → `sbom.cdx-dev.json`、`PrimeX.json` → `PrimeX-dev.json`）, so that 兩份檔名可以預期且並排顯示。
+4. As a pipeline 維護者, I want 完整 SBOM 的檔名是在 `sbomFileName` 最後的 `.json` 前加 `-full`（`sbom.cdx.json` → `sbom.cdx-full.json`、`PrimeX.json` → `PrimeX-full.json`）, so that 兩份檔名可以預期且並排顯示。
 5. As a pipeline 維護者, I want 兩份 SBOM 都通過 CycloneDX 驗證，任一份產生或驗證失敗 Task 就失敗, so that 不會發佈不完整的組成清單。
 6. As a pipeline 維護者, I want 兩份 SBOM 都發佈到同一個 Build Artifact, so that 下載一次就取得兩份。
 7. As a pipeline 維護者, I want Task 編輯器中的「成品名稱」「SBOM 檔名」不再帶預設值，未填時執行仍使用 `SBOM`、`sbom.cdx.json`, so that 欄位顯示的就是我自己的設定，且既有管線不受影響。
@@ -77,7 +77,7 @@ SBOM Pilot 以 cdxgen `--required-only` 產生 SBOM，排除開發套件，原�
   - `artifactName`、`sbomFileName` 移除 `defaultValue`；`config.ts` 的執行時保底不變，說明文字改寫成「未填時使用 …」。
   - 新增 pickList（例如 `dtSbomVariant`），選項值 `full`／`product`，中文標籤「完整 SBOM（含開發套件）」「產品 SBOM」，預設 `full`，`visibleRule: uploadToDt = true`。只在啟用 DT 時讀取與驗證，不合法值明確失敗。
   - `runOsv` 說明文字改寫：兩份報告的成品檔名、結果頁籤，並刪除 Extensions 的描述。
-- **檔名推導**：完整 SBOM 檔名 = 把 `sbomFileName` 結尾的 `.json`（不分大小寫）換成 `-dev.json`。既有 `.json` 結尾驗證不變。推導後若與產品 SBOM 檔名相同（理論上不會發生）則明確失敗。
+- **檔名推導**：完整 SBOM 檔名 = 把 `sbomFileName` 結尾的 `.json`（不分大小寫）換成 `-full.json`。既有 `.json` 結尾驗證不變。推導後若與產品 SBOM 檔名相同（理論上不會發生）則明確失敗。
 - **掃描**：依賴安裝只做一次；以同一組參數各呼叫一次 cdxgen 產生器，差別只在是否加 `--required-only`，輸出到同一暫存資料夾。掃描設定日誌改成列出兩份輸出與各自的 `requiredOnly`。cdxgen 能力檢查（`--required-only` 必須存在）不變。
 - **驗證**：兩份分別以既有 validator 驗證，日誌各自寫出組件數。
 - **OSV**：

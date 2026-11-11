@@ -41,7 +41,7 @@ JavaScript／TypeScript（例如 Vue、Angular）只需改成：
 
 Classic Build：在 Agent job 選 **Add task → SBOM Pilot**，設定「開發環境」與「專案路徑」，儲存並執行。欄位與 YAML 相同。
 
-成功後在 Build 結果的成品頁選 **SBOM**，下載產品 SBOM **sbom.cdx.json**、完整 SBOM **sbom.cdx-dev.json**，以及 **OSV弱點報告-產品.md**、**OSV弱點報告-完整.md**。Build 結果另有「OSV 弱點報告」頁籤可查看掃描結果。Task 顯示「已排入佇列」代表已要求 Agent 上傳，請以工作結果及成品頁確認上傳完成。既有 Pipeline 明確設定的 sbomFileName 仍會保留，下載腳本請依實際設定調整。
+成功後在 Build 結果的成品頁選 **SBOM**，下載產品 SBOM **sbom.cdx.json**、完整 SBOM **sbom.cdx-full.json**，以及 **OSV弱點報告-產品.md**、**OSV弱點報告-完整.md**。Build 結果另有「OSV 弱點報告」頁籤可查看掃描結果。Task 顯示「已排入佇列」代表已要求 Agent 上傳，請以工作結果及成品頁確認上傳完成。既有 Pipeline 明確設定的 sbomFileName 仍會保留，下載腳本請依實際設定調整。
 
 ## 選擇開發環境與路徑
 
