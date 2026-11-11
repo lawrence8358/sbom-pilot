@@ -1,0 +1,105 @@
+{
+  "results": [
+    {
+      "packages": [
+        {
+          "package": {
+            "name": "fixture",
+            "version": "9.0.4",
+            "ecosystem": "NuGet"
+          },
+          "groups": [
+            {
+              "ids": [
+                "GHSA-0"
+              ]
+            },
+            {
+              "ids": [
+                "GHSA-1"
+              ],
+              "max_severity": "0"
+            },
+            {
+              "ids": [
+                "GHSA-2"
+              ],
+              "max_severity": "0.1"
+            },
+            {
+              "ids": [
+                "GHSA-3"
+              ],
+              "max_severity": "3.9"
+            },
+            {
+              "ids": [
+                "GHSA-4"
+              ],
+              "max_severity": "4"
+            },
+            {
+              "ids": [
+                "GHSA-5"
+              ],
+              "max_severity": "6.9"
+            },
+            {
+              "ids": [
+                "GHSA-6"
+              ],
+              "max_severity": "7"
+            },
+            {
+              "ids": [
+                "GHSA-7"
+              ],
+              "max_severity": "8.9"
+            },
+            {
+              "ids": [
+                "GHSA-8"
+              ],
+              "max_severity": "9"
+            },
+            {
+              "ids": [
+                "GHSA-9"
+              ],
+              "max_severity": "10"
+            }
+          ],
+          "vulnerabilities": [
+            {
+              "id": "GHSA-8",
+              "aliases": [
+                "CVE-2026-12345"
+              ],
+              "affected": [
+                {
+                  "package": {
+                    "name": "fixture",
+                    "ecosystem": "NuGet"
+                  },
+                  "ranges": [
+                    {
+                      "type": "ECOSYSTEM",
+                      "events": [
+                        {
+                          "introduced": "9.0.0"
+                        },
+                        {
+                          "fixed": "9.0.21"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

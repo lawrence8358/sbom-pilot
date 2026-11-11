@@ -9,6 +9,7 @@ import { runProcess, type ProcessRunner } from '../src/process';
 import { readTaskConfig, validateConfig } from '../src/config';
 import { runWorkflow, type WorkflowServices } from '../src/workflow';
 import type { HttpResponse } from '../src/network/http';
+import findingsFixture from './fixtures/osv-findings.json';
 
 async function fixture(action: (root: string) => Promise<void>) {
   const root = await mkdtemp(join(tmpdir(), 'sbom-osv-'));
@@ -139,12 +140,43 @@ test('single custom-named SBOM produces Markdown for no findings and findings, n
       const report = await scanOsv(req, run, line => logs.push(line));
       assert.equal(basename(report.path), 'sbom.osv.md');
       assert.equal(report.findings, exitCode === 1);
+      assert.deepEqual(report.findingList, exitCode === 1 ? [{
+        severity: 'critical', ids: ['GHSA-fixture'], cves: ['CVE-2026-12345'], score: 9.1,
+        ecosystem: 'npm', name: 'fixture', version: '1.0.0', fixed: [],
+      }] : []);
       const markdown = await readFile(report.path, 'utf8');
       if (exitCode === 1) { assert.match(markdown, /危急 Critical/); assert.match(markdown, /CVE-2026-12345/); }
       assert.equal(logs.some(line => line.startsWith('##[warning]')), exitCode === 1);
     }
   }
   await assert.rejects(scanOsv(req, runner, () => {}), /ENOENT|Markdown/);
+}));
+
+test('scan exposes the complete sorted fixture list alongside the unchanged Markdown artifact and warning', () => fixture(async root => {
+  const req = request(root);
+  const asset = osvAsset(process.platform, process.arch);
+  await writeFile(req.sbom.path, '{}');
+  await acquireOsvTool(req, runner, () => {}, { download: async url => url.endsWith('SHA256SUMS') ? Buffer.from(`${hash}  ${asset}`) : bytes });
+  const logs: string[] = [];
+  const report = await scanOsv(req, async command => {
+    if (command.args.includes('--version') || command.args.includes('--help')) return runner(command);
+    const output = command.args.find(arg => arg.startsWith('--output-file='))!.slice('--output-file='.length);
+    await writeFile(output, JSON.stringify(findingsFixture));
+    return { stdout: '', stderr: '', exitCode: 1 };
+  }, line => logs.push(line));
+  assert.deepEqual(report.findingList.map(row => [row.ids[0], row.severity]), [
+    ['GHSA-9', 'critical'], ['GHSA-8', 'critical'], ['GHSA-7', 'high'], ['GHSA-6', 'high'],
+    ['GHSA-5', 'medium'], ['GHSA-4', 'medium'], ['GHSA-3', 'low'], ['GHSA-2', 'low'],
+    ['GHSA-1', 'none'], ['GHSA-0', 'unknown'],
+  ]);
+  assert.deepEqual(report.findingList[1], {
+    severity: 'critical', ids: ['GHSA-8'], cves: ['CVE-2026-12345'], score: 9,
+    ecosystem: 'NuGet', name: 'fixture', version: '9.0.4', fixed: ['9.0.21'],
+  });
+  assert.equal(await readFile(report.path, 'utf8'), await readFile('test/fixtures/osv-findings.md', 'utf8'));
+  assert.equal(report.version, '2.7.1');
+  assert.equal(report.findings, true);
+  assert.equal(logs.at(-1), '##[warning]OSV 發現已知弱點，請查看成品中的 sbom.osv.md。');
 }));
 
 test('process runner accepts only explicitly allowed finding exit and still rejects actual errors', async () => {
@@ -159,7 +191,7 @@ test('workflow publishes both files to custom artifact and preserves OSV, DT and
   const services: WorkflowServices = {
     log: () => {}, prepare: async () => ({ node: 'node', npmCli: 'npm', cdxgenCli: 'cdxgen', nodeVersion: '24.22.2', cdxgenVersion: '13.6.0', env: {} }),
     installer: { install: async () => {} }, generate: async () => {}, validate: async path => ({ path, componentCount: 1 }),
-    scanOsv: async req => { events.push('scan'); assert.equal(basename(req.sbom.path), 'arbitrary.json'); return { path: join(root, 'sbom.osv.md'), version: '2.7.1', findings: true }; },
+    scanOsv: async req => { events.push('scan'); assert.equal(basename(req.sbom.path), 'arbitrary.json'); return { path: join(root, 'sbom.osv.md'), version: '2.7.1', findings: true, findingList: [] }; },
     publish: async (sbom, name) => { events.push('sbom'); assert.equal(name, 'Custom'); assert.equal(basename(sbom.path), 'arbitrary.json'); },
     publishReport: async (report, name) => { events.push('report'); assert.equal(name, 'Custom'); assert.equal(basename(report.path), 'sbom.osv.md'); },
     publishSummary: async report => { events.push('summary'); assert.equal(basename(report.path), 'sbom.osv.md'); },

@@ -15,13 +15,14 @@ import { valid, prerelease, major } from 'semver';
 import { downloadBytes, sendHttpRequest } from './network/http';
 import type { ProcessRunner } from './process';
 import type { ValidatedSbom } from './validation';
-import { renderOsvReport } from './osv-report';
+import { createOsvReport, type OsvFinding } from './osv-report';
 
 const repository = 'https://github.com/google/osv-scanner';
 export interface OsvReport {
   path: string;
   version: string;
   findings: boolean;
+  findingList: OsvFinding[];
 }
 export interface OsvRequest {
   sbom: ValidatedSbom;
@@ -286,10 +287,10 @@ export const scanOsv: OsvScanner = async (request, run, log) => {
     throw new Error('OSV 未產生有效的 JSON 掃描結果。');
   }
   const findings = result.exitCode === 1;
-  let contents: string;
+  let report: ReturnType<typeof createOsvReport>;
 
   try {
-    contents = renderOsvReport(JSON.parse(await readFile(jsonPath, 'utf8')), {
+    report = createOsvReport(JSON.parse(await readFile(jsonPath, 'utf8')), {
       version: tool.version,
       source: basename(request.sbom.path),
       findings,
@@ -297,7 +298,7 @@ export const scanOsv: OsvScanner = async (request, run, log) => {
   } catch {
     throw new Error('OSV JSON 無法產生完整的 Markdown 報告，請確認掃描器版本及輸出格式。');
   }
-  await writeFile(path, contents);
+  await writeFile(path, report.markdown);
 
   log(
     findings
@@ -305,5 +306,5 @@ export const scanOsv: OsvScanner = async (request, run, log) => {
       : 'OSV 掃描完成，未發現已知弱點。',
   );
 
-  return { path, version: tool.version, findings };
+  return { path, version: tool.version, findings, findingList: report.findingList };
 };

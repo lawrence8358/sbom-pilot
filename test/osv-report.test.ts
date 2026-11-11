@@ -1,12 +1,45 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { renderOsvReport } from '../src/osv-report';
+import { readFileSync } from 'node:fs';
+import findingsFixture from './fixtures/osv-findings.json';
+import { createOsvReport, renderOsvReport } from '../src/osv-report';
 
 const options = { version: '2.7.1', source: 'sbom.cdx.json', findings: true };
 const pkg = (groups: unknown[], vulnerabilities: unknown[] = [], name = 'fixture') => ({
   package: { name, version: '9.0.4', ecosystem: 'NuGet' }, groups, vulnerabilities,
 });
 const doc = (...packages: unknown[]) => ({ results: [{ packages }] });
+
+test('report returns the grouped finding with package, risk, aliases and matching fixes', () => {
+  const value = doc(pkg([{ ids: ['GHSA-fixture', 'CVE-2026-12345'], max_severity: '7.5' }], [{
+    id: 'GHSA-fixture', aliases: ['CVE-2026-12345'], affected: [{
+      package: { name: 'fixture', ecosystem: 'NuGet' },
+      ranges: [{ type: 'ECOSYSTEM', events: [{ introduced: '9.0.0' }, { fixed: '9.0.21' }] }],
+    }],
+  }]));
+  const report = createOsvReport(value, options);
+  assert.deepEqual(report.findingList, [{
+    severity: 'high', ids: ['GHSA-fixture', 'CVE-2026-12345'], cves: ['CVE-2026-12345'],
+    score: 7.5, ecosystem: 'NuGet', name: 'fixture', version: '9.0.4', fixed: ['9.0.21'],
+  }]);
+  assert.equal(report.markdown, renderOsvReport(value, options));
+});
+
+test('finding list matches every unchanged Markdown row at severity boundaries including zero and unknown', () => {
+  const report = createOsvReport(findingsFixture, { ...options, source: 'custom.json' });
+  assert.equal(report.markdown, readFileSync('test/fixtures/osv-findings.md', 'utf8'));
+  assert.deepEqual(report.findingList.map(row => [row.ids[0], row.severity]), [
+    ['GHSA-9', 'critical'], ['GHSA-8', 'critical'], ['GHSA-7', 'high'], ['GHSA-6', 'high'],
+    ['GHSA-5', 'medium'], ['GHSA-4', 'medium'], ['GHSA-3', 'low'], ['GHSA-2', 'low'],
+    ['GHSA-1', 'none'], ['GHSA-0', 'unknown'],
+  ]);
+  const rows = report.markdown.split('\n').filter(line => /^\| [🔴🟠🟡🔵⚪]/u.test(line));
+  assert.equal(rows.length, report.findingList.length);
+  for (const [index, finding] of report.findingList.entries()) {
+    assert.ok(rows[index].includes(`[${finding.ids[0]}]`));
+    assert.ok(rows[index].includes(`| ${finding.ecosystem} | ${finding.name} | ${finding.version} |`));
+  }
+});
 
 test('report shows CVE aliases and qualitative severity in descending order, merging alias duplicates', () => {
   const markdown = renderOsvReport(doc(pkg([

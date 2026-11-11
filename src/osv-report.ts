@@ -1,7 +1,9 @@
 import { valid, gte, lt } from 'semver';
 
 type RecordValue = Record<string, unknown>;
-interface ReportRow {
+export type OsvSeverity = 'critical' | 'high' | 'medium' | 'low' | 'none' | 'unknown';
+export interface OsvFinding {
+  severity: OsvSeverity;
   ids: string[];
   cves: string[];
   score?: number;
@@ -11,13 +13,13 @@ interface ReportRow {
   fixed: string[];
 }
 const ratings = [
-  { name: '危急 Critical', icon: '🔴', minimum: 9 },
-  { name: '高 High', icon: '🟠', minimum: 7 },
-  { name: '中 Medium', icon: '🟡', minimum: 4 },
-  { name: '低 Low', icon: '🔵', minimum: 0.1 },
-  { name: '無 None', icon: '⚪', minimum: 0 },
-  { name: '未知 Unknown', icon: '⚪', minimum: -1 },
-];
+  { severity: 'critical', name: '危急 Critical', icon: '🔴', minimum: 9 },
+  { severity: 'high', name: '高 High', icon: '🟠', minimum: 7 },
+  { severity: 'medium', name: '中 Medium', icon: '🟡', minimum: 4 },
+  { severity: 'low', name: '低 Low', icon: '🔵', minimum: 0.1 },
+  { severity: 'none', name: '無 None', icon: '⚪', minimum: 0 },
+  { severity: 'unknown', name: '未知 Unknown', icon: '⚪', minimum: -1 },
+] as const;
 
 /** 驗證 JSON 物件形狀，避免上游不相容資料被視為無弱點。 */
 function record(value: unknown): RecordValue {
@@ -114,11 +116,11 @@ function fixedVersions(
 }
 
 /** 將 OSV 別名群組轉為每個套件／版本一列，避免 GHSA 與 CVE 重複計數。 */
-function reportRows(value: unknown): ReportRow[] {
+function reportRows(value: unknown): OsvFinding[] {
   const document = record(value);
   if (!Array.isArray(document.results))
     throw new Error('OSV JSON 缺少 results，不能產生弱點報告。');
-  const rows: ReportRow[] = [];
+  const rows: OsvFinding[] = [];
 
   for (const result of records(document.results)) {
     for (const entry of records(result.packages)) {
@@ -147,10 +149,13 @@ function reportRows(value: unknown): ReportRow[] {
           ...matching.flatMap((item) => strings(item.aliases)),
         ];
 
+        const cvss = score(group.max_severity);
+
         rows.push({
+          severity: rating(cvss).severity,
           ids,
           cves: [...new Set(aliases.filter((id) => /^CVE-\d{4}-\d{4,}$/.test(id)))].sort(),
-          score: score(group.max_severity),
+          score: cvss,
           ecosystem: pkg.ecosystem,
           name: pkg.name,
           version: pkg.version,
@@ -168,11 +173,11 @@ function reportRows(value: unknown): ReportRow[] {
   );
 }
 
-/** 由單次掃描 JSON 產生含風險摘要、逐列嚴重程度與 CVE 的 Markdown 成品。 */
-export function renderOsvReport(
+/** 由同一次解析與排序產生逐筆弱點清單及 Markdown 成品。 */
+export function createOsvReport(
   value: unknown,
   options: { version: string; source: string; findings: boolean },
-): string {
+): { markdown: string; findingList: OsvFinding[] } {
   const rows = reportRows(value);
   if (options.findings && !rows.length)
     throw new Error('OSV 回報有弱點，但 JSON 未包含可呈現的弱點項目。');
@@ -225,5 +230,13 @@ export function renderOsvReport(
     '',
   );
 
-  return lines.join('\n');
+  return { markdown: lines.join('\n'), findingList: rows };
+}
+
+/** 保留既有 JSON 轉 Markdown 介面與報告內容。 */
+export function renderOsvReport(
+  value: unknown,
+  options: { version: string; source: string; findings: boolean },
+): string {
+  return createOsvReport(value, options).markdown;
 }
