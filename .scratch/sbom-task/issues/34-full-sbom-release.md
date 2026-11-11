@@ -2,7 +2,7 @@
 
 Type: task
 Status: ready-for-agent
-Blocked by: 30, 33
+Blocked by: 30, 32, 33
 
 ## 規格
 

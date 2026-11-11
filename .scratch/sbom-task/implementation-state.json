@@ -1,12 +1,13 @@
 {
   "version": 1,
-  "integrationBranch": "main",
+  "integrationBranch": "feature/full-sbom",
   "reviewBase": "e3a5bf6ed57b74c519d0d64285f2929d0195688b",
   "noRemoteWrites": false,
   "handoffDocument": ".scratch/sbom-task/HANDOFF.md",
   "dispatchPolicy": {
-    "maxConcurrentSubagents": 1,
-    "requireVerifiedIntegrationBeforeNextTicket": true
+    "maxConcurrentSubagents": 3,
+    "requireVerifiedIntegrationBeforeNextTicket": false,
+    "codexPrimaryQuotaPauseAtPercent": 70
   },
   "integratedTickets": [
     "01",
@@ -36,7 +37,14 @@
     "27",
     "28"
   ],
-  "activeWorktrees": [],
+  "activeWorktrees": [
+    {
+      "ticket": "29",
+      "branch": "ticket/29-full-sbom",
+      "path": "../sbom-pilot-wt/29",
+      "implementer": "codex gpt-6.1-sol medium"
+    }
+  ],
   "reviewStatus": "01-16-independent-review-closed; 17-self-checked-and-package-verified; 18-self-checked-and-live-azure-verified; 19-self-checked-and-live-azure-default-custom-verified; 20-independent-standards-spec-reviewed-and-live-azure-verified; 21-independent-standards-spec-reviewed-integrated-github-pushed; 24-27-independent-standards-spec-reviewed-fixes-integrated",
   "reviewHead": "fbdbd91",
   "externalValidation": [
@@ -47,7 +55,7 @@
   "notesDirectory": "../.sbom-pilot-notes",
   "recheckHead": "3c69674fed70adaf3a14255343bf7de57e97dc91",
   "localImplementationStatus": "0.3.0-osv-fail-threshold-merged-main-github-pushed-marketplace-manual",
-  "currentCheckpoint": ".scratch/sbom-task/checkpoints/28.md",
+  "currentCheckpoint": ".scratch/sbom-task/checkpoints/29.md",
   "cleanupStatus": "current-15-16-worktrees-removed; five protected old residual directories retained",
   "cleanupReport": ".scratch/sbom-task/reviews/current-worktree-cleanup.md",
   "releaseIdentity": {
@@ -82,5 +90,28 @@
     "report": ".scratch/sbom-task/reviews/21-osv-scanner.md",
     "remoteStatus": "GitHub origin/main pushed and SHA verified; Marketplace remains manual.",
     "commit": "38f289f"
+  },
+  "fullSbomDispatch": {
+    "spec": ".scratch/full-sbom/spec.md",
+    "tickets": [
+      "29",
+      "30",
+      "31",
+      "32",
+      "33",
+      "34",
+      "35"
+    ],
+    "models": {
+      "29": "gpt-6.1-sol/medium",
+      "30": "gpt-6-luna/medium",
+      "31": "gpt-6.1-sol/high",
+      "32": "gpt-6.1-sol/medium",
+      "33": "gpt-6.1-sol/medium",
+      "34": "gpt-6-luna/medium",
+      "35": "gpt-6-astra/high"
+    },
+    "dispatchDir": "../.sbom-pilot-notes/full-sbom/dispatch",
+    "reviewBase": "55b7046"
   }
 }
