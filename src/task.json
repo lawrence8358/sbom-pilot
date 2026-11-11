@@ -79,16 +79,14 @@
       "type": "string",
       "label": "成品名稱",
       "required": false,
-      "defaultValue": "SBOM",
-      "helpMarkDown": "Azure Build Artifact 名稱，例如 CycloneSBOM。未設定或清空時使用 SBOM；不可包含路徑或控制字元。"
+      "helpMarkDown": "Azure Build Artifact 名稱，例如 CycloneSBOM。未填時使用 SBOM；不可包含路徑或控制字元。"
     },
     {
       "name": "sbomFileName",
       "type": "string",
       "label": "SBOM 檔名",
       "required": false,
-      "defaultValue": "sbom.cdx.json",
-      "helpMarkDown": "CycloneDX JSON 檔名，例如 PrimeX.cdx.json。未設定或清空時使用 sbom.cdx.json；只填檔名，不含資料夾。與成品名稱組合後可為 CycloneSBOM/PrimeX.cdx.json。"
+      "helpMarkDown": "產品 SBOM 的 CycloneDX JSON 檔名，例如 PrimeX.cdx.json。未填時使用 sbom.cdx.json；只填檔名，不含資料夾。完整 SBOM 在最後的 .json 前加 -dev，兩份發佈到同一個成品。"
     },
     {
       "name": "runOsv",

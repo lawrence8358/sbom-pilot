@@ -55,7 +55,7 @@ test('empty YAML OSV threshold inputs default to unknown', () => {
 
 test('default threshold blocks DT, preserves all publications and reports exceeded counts', () => workflowFixture(async (root, services, events, logs) => {
   await assert.rejects(runWorkflow(dtConfig(root), join(root, 'temp'), services), /OSV 弱點達到失敗門檻『未知』：高 1；已略過 DT 上傳。/);
-  assert.deepEqual(events, ['scan', 'sbom', 'report', 'summary']);
+  assert.deepEqual(events, ['scan', 'sbom', 'sbom', 'report', 'summary']);
   assert.ok(logs.some(message => /失敗門檻『未知』：高 1；已略過 DT 上傳。/.test(message)));
 }));
 
@@ -88,7 +88,7 @@ test('warning-only issues preserve descending report severity and show missing C
     assert.match(line, /OSV-1（未提供），修復版本 未提供，https:\/\/osv.dev\/OSV-1$/);
   }
   assert.deepEqual(findingList, snapshot, 'issue 排序不能修改報告清單');
-  assert.deepEqual(events, ['dt', 'sbom', 'report', 'summary']);
+  assert.deepEqual(events, ['dt', 'sbom', 'sbom', 'report', 'summary']);
 }));
 
 test('errors and warnings each retain the 50 highest risks with overflow summaries and a complete report', () => workflowFixture(async (root, services, events, logs) => {
@@ -116,7 +116,7 @@ test('errors and warnings each retain the 50 highest risks with overflow summari
   assert.match(warnings[49], /UNKNOWN-48（/);
   assert.equal(warnings[50], '##vso[task.logissue type=warning;]另有 3 筆，詳見 OSV 弱點報告');
   assert.deepEqual(issues, [...errors, ...warnings]);
-  assert.deepEqual(events, ['sbom', 'report', 'summary']);
+  assert.deepEqual(events, ['sbom', 'sbom', 'report', 'summary']);
 }));
 
 test('external newlines, percent signs and command delimiters remain within one issue message', () => workflowFixture(async (root, services, events, logs) => {
@@ -155,7 +155,7 @@ test('OSV technical failure blocks DT, preserves the valid SBOM and logs the ski
   await assert.rejects(runWorkflow(dtConfig(root), join(root, 'temp'), {
     ...services, scanOsv: async () => { events.push('scan'); throw new Error('scanner broken'); },
   }), /OSV 弱點掃描.*scanner broken/);
-  assert.deepEqual(events, ['scan', 'sbom']);
+  assert.deepEqual(events, ['scan', 'sbom', 'sbom']);
   assert.ok(logs.some(message => /OSV.*失敗.*已略過 DT 上傳/.test(message)));
   assert.ok(!logs.some(message => message.startsWith('##vso[task.logissue ')));
 }));
@@ -178,10 +178,10 @@ for (const [threshold, blockedSeverities] of thresholdCases) {
       });
       if (blockedSeverities.includes(severity)) {
         await assert.rejects(completion, /OSV 弱點達到失敗門檻.*已略過 DT 上傳/);
-        assert.deepEqual(events, ['scan', 'sbom', 'report', 'summary']);
+        assert.deepEqual(events, ['scan', 'sbom', 'sbom', 'report', 'summary']);
       } else {
         assert.equal((await completion).componentCount, 1);
-        assert.deepEqual(events, ['scan', 'dt', 'sbom', 'report', 'summary']);
+        assert.deepEqual(events, ['scan', 'dt', 'sbom', 'sbom', 'report', 'summary']);
       }
       const issues = logs.filter(line => line.startsWith('##vso[task.logissue '));
       assert.equal(issues.length, 1);
@@ -200,17 +200,17 @@ test('only exceeded findings are counted in descending risk order alongside all 
     publishSummary: async () => { events.push('summary'); throw new Error('summary broken'); },
   }), error => {
     assert.ok(error instanceof Error);
-    assert.equal(error.message, 'OSV 弱點達到失敗門檻『高』：危急 1、高 3；已略過 DT 上傳。；[成品發佈] SBOM broken；[OSV 成品發佈] report broken；[OSV 摘要發佈] summary broken');
+    assert.equal(error.message, 'OSV 弱點達到失敗門檻『高』：危急 1、高 3；已略過 DT 上傳。；[成品發佈] SBOM broken；[成品發佈] SBOM broken；[OSV 成品發佈] report broken；[OSV 摘要發佈] summary broken');
     return true;
   });
-  assert.deepEqual(events, ['scan', 'sbom', 'report', 'summary']);
+  assert.deepEqual(events, ['scan', 'sbom', 'sbom', 'report', 'summary']);
 }));
 
 test('unknown threshold counts zero and unknown scores without claiming disabled DT was skipped', () => workflowFixture(async (root, services, events, logs) => {
   await assert.rejects(runWorkflow({ ...dtConfig(root), uploadToDt: false }, join(root, 'temp'), {
     ...services, scanOsv: async () => { events.push('scan'); return { path: join(root, 'sbom.osv.md'), version: '2.7.1', findings: true, findingList: [finding('unknown'), finding('none')] }; },
   }), /OSV 弱點達到失敗門檻『未知』：無 1、未知 1。$/);
-  assert.deepEqual(events, ['scan', 'sbom', 'report', 'summary']);
+  assert.deepEqual(events, ['scan', 'sbom', 'sbom', 'report', 'summary']);
   assert.ok(!logs.some(message => message.includes('已略過 DT 上傳')));
 }));
 
@@ -222,17 +222,17 @@ test('warning-only mode attempts DT after OSV failure and preserves DT and SBOM 
     publish: async () => { events.push('sbom'); throw new Error('SBOM broken'); },
   }), error => {
     assert.ok(error instanceof Error);
-    assert.equal(error.message, '[OSV 弱點掃描] scanner broken；[DT 上傳] DT broken；[成品發佈] SBOM broken');
+    assert.equal(error.message, '[OSV 弱點掃描] scanner broken；[DT 上傳] DT broken；[成品發佈] SBOM broken；[成品發佈] SBOM broken');
     return true;
   });
-  assert.deepEqual(events, ['scan', 'dt', 'sbom']);
+  assert.deepEqual(events, ['scan', 'dt', 'sbom', 'sbom']);
   assert.ok(!logs.some(message => message.includes('已略過 DT 上傳')));
   assert.ok(!logs.some(message => message.startsWith('##vso[task.logissue ')));
 }));
 
 test('disabled OSV ignores invalid thresholds and still uploads DT and publishes SBOM', () => workflowFixture(async (root, services, events, logs) => {
   await runWorkflow(Object.assign({}, dtConfig(root), { runOsv: false, osvFailOn: 'bad' }), join(root, 'temp'), services);
-  assert.deepEqual(events, ['dt', 'sbom']);
+  assert.deepEqual(events, ['dt', 'sbom', 'sbom']);
   assert.ok(!logs.some(message => message.startsWith('##vso[task.logissue ')));
 }));
 
@@ -240,7 +240,7 @@ test('unknown threshold succeeds without findings and retains DT and all publica
   await runWorkflow(dtConfig(root), join(root, 'temp'), {
     ...services, scanOsv: async () => { events.push('scan'); return { path: join(root, 'sbom.osv.md'), version: '2.7.1', findings: false, findingList: [] }; },
   });
-  assert.deepEqual(events, ['scan', 'dt', 'sbom', 'report', 'summary']);
+  assert.deepEqual(events, ['scan', 'dt', 'sbom', 'sbom', 'report', 'summary']);
   assert.ok(!logs.some(message => message.startsWith('##vso[task.logissue ')));
 }));
 

@@ -41,7 +41,7 @@ test('OSV inputs default on/latest, skip hidden version when off, and precede DT
   assert.ok(index('runOsv') < index('uploadToDt'));
   for (const name of ['runOsv', 'osvVersion']) assert.ok(manifest.inputs[index(name)].helpMarkDown.length > 50);
   assert.equal(manifest.inputs[index('runOsv')].defaultValue, 'true');
-  assert.equal(manifest.inputs[index('sbomFileName')].defaultValue, values.sbomFileName);
+  assert.equal(Object.hasOwn(manifest.inputs[index('sbomFileName')], 'defaultValue'), false);
 });
 
 test('latest resolves once to a stable official tag; explicit versions avoid resolution', async () => {
@@ -308,32 +308,32 @@ test('process runner accepts only explicitly allowed finding exit and still reje
   await assert.rejects(runProcess({ executable: process.execPath, args: ['-e', 'console.error("SECRET");process.exit(129)'], cwd: process.cwd(), acceptedExitCodes: [0, 1] }), error => error instanceof Error && /exit 129/.test(error.message) && !error.message.includes('SECRET'));
 });
 
-test('workflow publishes both files to custom artifact and preserves OSV, DT and artifact failures', () => fixture(async root => {
+test('workflow publishes both SBOMs and the OSV report to custom artifact and preserves OSV, DT and artifact failures', () => fixture(async root => {
   const cfg = readTaskConfig(name => ({ projectPath: root, artifactName: 'Custom', sbomFileName: 'arbitrary.json', osvFailOn: 'warnOnly' })[name]);
   const events: string[] = [];
   const services: WorkflowServices = {
     log: () => {}, prepare: async () => ({ node: 'node', npmCli: 'npm', cdxgenCli: 'cdxgen', nodeVersion: '24.22.2', cdxgenVersion: '13.6.0', env: {} }),
     installer: { install: async () => {} }, generate: async () => {}, validate: async path => ({ path, componentCount: 1 }),
     scanOsv: async req => { events.push('scan'); assert.equal(basename(req.sbom.path), 'arbitrary.json'); return { path: join(root, 'sbom.osv.md'), version: '2.7.1', findings: true, findingList: [{ severity: 'high', ids: ['OSV-1'], cves: [], ecosystem: 'npm', name: 'package', version: '1.0.0', fixed: [] }] }; },
-    publish: async (sbom, name) => { events.push('sbom'); assert.equal(name, 'Custom'); assert.equal(basename(sbom.path), 'arbitrary.json'); },
+    publish: async (sbom, name) => { events.push('sbom'); assert.equal(name, 'Custom'); assert.ok(['arbitrary.json', 'arbitrary-dev.json'].includes(basename(sbom.path))); },
     publishReport: async (report, name) => { events.push('report'); assert.equal(name, 'Custom'); assert.equal(basename(report.path), 'sbom.osv.md'); },
     publishSummary: async report => { events.push('summary'); assert.equal(basename(report.path), 'sbom.osv.md'); },
   };
   await runWorkflow(cfg, join(root, 'temp'), services);
-  assert.deepEqual(events, ['scan', 'sbom', 'report', 'summary']);
+  assert.deepEqual(events, ['scan', 'sbom', 'sbom', 'report', 'summary']);
   events.length = 0;
   await runWorkflow({ ...cfg, runOsv: false }, join(root, 'temp'), services);
-  assert.deepEqual(events, ['sbom']);
+  assert.deepEqual(events, ['sbom', 'sbom']);
   events.length = 0;
   const dt = { apiUrl: 'https://dt.invalid', projectUuid: 'd40ce445-3566-49d5-bd8d-2601d73cf0d4', apiKey: 'test', skipTlsCertificateCheck: false };
   await assert.rejects(runWorkflow({ ...cfg, uploadToDt: true, dt }, join(root, 'temp'), {
     ...services, scanOsv: async () => { events.push('scan'); throw new Error('scanner broken'); },
     upload: async () => { events.push('dt'); throw new Error('DT broken'); },
   }), error => error instanceof Error && /scanner broken/.test(error.message) && /DT broken/.test(error.message));
-  assert.deepEqual(events, ['scan', 'dt', 'sbom']);
+  assert.deepEqual(events, ['scan', 'dt', 'sbom', 'sbom']);
   events.length = 0;
   await assert.rejects(runWorkflow(cfg, join(root, 'temp'), { ...services, publish: async () => { events.push('sbom'); throw new Error('publication broken'); } }), /publication broken/);
-  assert.deepEqual(events, ['scan', 'sbom', 'report', 'summary']);
+  assert.deepEqual(events, ['scan', 'sbom', 'sbom', 'report', 'summary']);
   await assert.rejects(runWorkflow(cfg, join(root, 'temp'), { ...services, publishReport: async () => { throw new Error('report upload broken'); } }), /OSV 成品發佈.*report upload broken/);
   assert.equal(events.at(-1), 'summary', 'summary must still be attempted after artifact error');
   await assert.rejects(runWorkflow(cfg, join(root, 'temp'), { ...services, publishSummary: async () => { throw new Error('summary upload broken'); } }), /OSV 摘要發佈.*summary upload broken/);

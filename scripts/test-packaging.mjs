@@ -12,7 +12,8 @@ test('Marketplace CLI creates private/public bundles and rejects stale, mismatch
   const fixture = await mkdtemp(resolve('.smoke', 'marketplace-SYNTHETIC-'));
   const sourceRoots = [...PACKAGING_SOURCE_ROOTS, 'node_modules'];
   const version = JSON.parse(await readFile('package.json', 'utf8')).version;
-  for (const path of sourceRoots) await cp(path, join(fixture, path), { recursive: true });
+  // worktree 的 node_modules 可能是 junction；複製內容到隔離目錄，避免建立需要額外權限的連結。
+  for (const path of sourceRoots) await cp(path, join(fixture, path), { recursive: true, dereference: true });
   await writeFile(join(fixture, 'SYNTHETIC-FIXTURE.txt'), '僅供包裝測試：Publisher與Repo皆為合成字串，不可當正式交付或上傳。\n');
   const env = { ...process.env, SBOM_PILOT_PUBLISHER: 'sbom-fixture-only', SBOM_PILOT_REPOSITORY_URL: 'https://github.com/sbom-fixture-only/synthetic-never-publish' };
   const run = (args, success = true, environment = env) => {
@@ -48,6 +49,12 @@ test('Marketplace CLI creates private/public bundles and rejects stale, mismatch
   const privatePath = join(fixture, `packages/private/sbom-fixture-only.sbom-pilot-${version}.vsix`);
   const privateBytes = await readFile(privatePath);
   const privateZip = await JSZip.loadAsync(privateBytes);
+  const task = JSON.parse(await privateZip.file('dist/task.json').async('string'));
+  for (const name of ['artifactName', 'sbomFileName']) {
+    const input = task.inputs.find(input => input.name === name);
+    assert.equal(Object.hasOwn(input, 'defaultValue'), false);
+    assert.match(input.helpMarkDown, /未填時使用/);
+  }
   assert.ok(privateZip.file('README.md'));
   for (const prefix of ['docs/', 'examples/', 'marketplace/']) assert.ok(!Object.keys(privateZip.files).some(name => name.startsWith(prefix)));
   assert.equal(privateZip.file('images/marketplace-hero.png'), null);

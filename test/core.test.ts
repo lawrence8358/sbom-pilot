@@ -146,9 +146,9 @@ test('workflow validates before publication; publish failure fails stage', () =>
   let published = 0;
   const services = { log: () => {}, prepare: async () => tools, installer: { install: async () => {} }, generate: async () => {}, validate: async (path: string) => ({ path, componentCount: 1 }), publish: async () => { published++; throw new Error('upload failed'); } };
   await assert.rejects(runWorkflow(config(root), root, services), /成品發佈/);
-  assert.equal(published, 1);
+  assert.equal(published, 2);
   await assert.rejects(runWorkflow(config(root), root, { ...services, validate: async () => { throw new Error('bad BOM'); } }), /SBOM 驗證/);
-  assert.equal(published, 1);
+  assert.equal(published, 2);
 }));
 test('workflow reports installation failure and publishes no invalid artifact', () => fixture(async root => {
   let published = false;

@@ -104,7 +104,7 @@ async function installDependencies(
   });
 }
 
-/** 依序準備、還原、單次掃描及驗證；依 OSV 門檻阻擋 DT，發佈有效成品後彙整錯誤。 */
+/** 共用一次還原產生並驗證兩份 SBOM；依產品 OSV 門檻阻擋 DT，發佈成品後彙整錯誤。 */
 export async function runWorkflow(
   input: TaskConfig,
   tempDirectory: string,
@@ -126,7 +126,7 @@ export async function runWorkflow(
 
   await mkdir(tempDirectory, { recursive: true });
 
-  // 工具與依賴準備完成後，才開始產生唯一一份掃描輸出。
+  // 工具與依賴準備完成後，兩份掃描共用同一份還原資料。
   const tools = await stage('工具準備', () =>
     (services.prepare ?? prepareTools)(
       { nodeVersion: config.nodeVersion, cdxgenVersion: config.cdxgenVersion, tempDirectory },
@@ -138,8 +138,20 @@ export async function runWorkflow(
   services.log('##[section]開始安裝／還原專案依賴');
   await stage('依賴安裝', () => installDependencies(config, tools, run, tempDirectory, services));
 
-  // 只掃描一次，再驗證同一份檔案；上傳與成品不能各自重建 BOM。
+  // 產品與完整 SBOM 只在必要套件篩選及輸出路徑上有差異。
   const outputPath = join(tempDirectory, 'sbom', config.sbomFileName!);
+  const fullFileName = config.sbomFileName!.replace(/\.json$/i, '-dev.json');
+  if (fullFileName === config.sbomFileName) {
+    throw new StageError('參數驗證', new Error('完整 SBOM 與產品 SBOM 檔名不可相同。'));
+  }
+  const outputs = [
+    { outputPath, requiredOnly: true, artifact: `${config.artifactName}/${config.sbomFileName}` },
+    {
+      outputPath: join(tempDirectory, 'sbom', fullFileName),
+      requiredOnly: false,
+      artifact: `${config.artifactName}/${fullFileName}`,
+    },
+  ];
 
   await mkdir(join(tempDirectory, 'sbom'), { recursive: true });
   services.log('##[section]開始產生 SBOM（cdxgen）');
@@ -149,27 +161,32 @@ export async function runWorkflow(
         environment: config.environment,
         scanRoot: config.projectPath,
         restoreTarget: config.dotnetTarget,
-        requiredOnly: true,
+        outputs,
         specVersion: config.specVersion,
         installDeps: false,
         fetchLicense: config.fetchLicense,
         noCache: config.noCache,
         excludes: scanExcludes({ config, tools, outputPath }),
         scopedToRestoreGraph: Boolean(tools.dotnetScanIncludes?.length),
-        artifact: `${config.artifactName}/${config.sbomFileName}`,
       })}`,
     ),
   );
-  await stage('SBOM 產生', () =>
-    (services.generate ?? generateSbom)({ config, tools, outputPath }, run),
-  );
-
-  services.log('##[section]開始驗證 SBOM（CycloneDX）');
-  const sbom = await stage('SBOM 驗證', () =>
-    (services.validate ?? validateSbom)(outputPath, config.specVersion),
-  );
-
-  services.log(`CycloneDX ${config.specVersion} 驗證通過；組件數：${sbom.componentCount}。`);
+  const sboms: ValidatedSbom[] = [];
+  for (const output of outputs) {
+    const label = output.requiredOnly ? '產品 SBOM' : '完整 SBOM';
+    await stage(`SBOM 產生（${label}）`, () =>
+      (services.generate ?? generateSbom)({ config, tools, ...output }, run),
+    );
+    services.log(`##[section]開始驗證 SBOM（CycloneDX，${label}）`);
+    const validated = await stage(`SBOM 驗證（${label}）`, () =>
+      (services.validate ?? validateSbom)(output.outputPath, config.specVersion),
+    );
+    services.log(
+      `${label} CycloneDX ${config.specVersion} 驗證通過；組件數：${validated.componentCount}。`,
+    );
+    sboms.push(validated);
+  }
+  const sbom = sboms[0];
 
   // OSV／門檻／DT 各自保留錯誤，仍嘗試發佈有效 SBOM 及已完成的報告。
   const errors: unknown[] = [];
@@ -230,10 +247,12 @@ export async function runWorkflow(
 
   // 成品請求結束後才傳遞先前 OSV／門檻／DT 錯誤，不能吞掉任一失敗。
   services.log('##[section]開始發佈 SBOM 成品（Azure Pipelines）');
-  try {
-    await stage('成品發佈', () => services.publish(sbom, config.artifactName!));
-  } catch (error) {
-    errors.push(error);
+  for (const validated of sboms) {
+    try {
+      await stage('成品發佈', () => services.publish(validated, config.artifactName!));
+    } catch (error) {
+      errors.push(error);
+    }
   }
 
   if (report) {

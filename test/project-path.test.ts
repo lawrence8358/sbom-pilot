@@ -72,6 +72,6 @@ test('Classic solution filename reaches installation and the actual scanner as a
     publish: async sbom => { assert.equal(sbom.componentCount, 1); published++; },
   });
   assert.equal(result.componentCount, 1);
-  assert.deepEqual([installed, scanned, published], [1, 1, 1]);
+  assert.deepEqual([installed, scanned, published], [1, 2, 2]);
   assert.ok(logs.some(message => message.includes('單次還原') && message.includes('還原圖')));
 }));
