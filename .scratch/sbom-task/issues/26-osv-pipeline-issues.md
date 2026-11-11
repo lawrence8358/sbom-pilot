@@ -1,8 +1,8 @@
-# 24: OSV 弱點顯示在執行結果的 Warnings／Errors
+# 26: OSV 弱點顯示在執行結果的 Warnings／Errors
 
 Type: task
 Status: ready-for-agent
-Blocked by: 23
+Blocked by: 25
 
 ## 規格
 

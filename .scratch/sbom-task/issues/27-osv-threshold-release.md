@@ -1,8 +1,8 @@
-# 25: 0.3.0 發佈與 OSV 行為變更說明
+# 27: 0.3.0 發佈與 OSV 行為變更說明
 
 Type: task
 Status: ready-for-agent
-Blocked by: 23, 24
+Blocked by: 25, 26
 
 ## 規格
 
