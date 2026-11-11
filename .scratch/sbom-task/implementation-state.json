@@ -31,7 +31,8 @@
     "20",
     "21",
     "24",
-    "25"
+    "25",
+    "26"
   ],
   "activeWorktrees": [],
   "reviewStatus": "01-16-independent-review-closed; 17-self-checked-and-package-verified; 18-self-checked-and-live-azure-verified; 19-self-checked-and-live-azure-default-custom-verified; 20-independent-standards-spec-reviewed-and-live-azure-verified; 21-independent-standards-spec-reviewed-integrated-github-pushed",
@@ -44,7 +45,7 @@
   "notesDirectory": "../.sbom-pilot-notes",
   "recheckHead": "3c69674fed70adaf3a14255343bf7de57e97dc91",
   "localImplementationStatus": "0.2.0-complete-github-main-pushed-marketplace-manual",
-  "currentCheckpoint": ".scratch/sbom-task/checkpoints/25.md",
+  "currentCheckpoint": ".scratch/sbom-task/checkpoints/26.md",
   "cleanupStatus": "current-15-16-worktrees-removed; five protected old residual directories retained",
   "cleanupReport": ".scratch/sbom-task/reviews/current-worktree-cleanup.md",
   "releaseIdentity": {
