@@ -81,7 +81,8 @@ a {
   text-decoration: underline;
 }
 
-a:focus-visible {
+a:focus-visible,
+button:focus-visible {
   outline: 2px solid var(--focus-border-color, #005a9e);
   outline-offset: 2px;
 }
@@ -94,4 +95,46 @@ a:focus-visible {
   table {
     min-width: 800px;
   }
+}
+
+.zero-count {
+  color: var(--text-secondary-color, #595959);
+  opacity: 0.65;
+}
+
+.severity-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: 1px solid var(--component-grid-cell-bottom-border-color, #d0d0d0);
+  border-radius: 3px;
+  padding: 6px 12px;
+  background: var(--background-color, #fff);
+}
+
+button[aria-pressed='true'] {
+  border-color: var(--communication-foreground, #005a9e);
+  box-shadow: inset 0 -3px var(--communication-foreground, #005a9e);
+  font-weight: 600;
+}
+
+th button {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+th[aria-sort='ascending'] button::after {
+  content: ' ▲';
+}
+
+th[aria-sort='descending'] button::after {
+  content: ' ▼';
 }
