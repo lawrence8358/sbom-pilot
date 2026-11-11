@@ -75,8 +75,7 @@ async function main(): Promise<void> {
       },
 
       /** 以 UTF-8 寫出頁籤契約附件，保留到工作清理以供 Agent 非同步讀取。 */
-      publishTabReport: async (report) => {
-        const path = join(tempDirectory!, 'osv-tab-report.json');
+      publishTabReport: async (report, path) => {
         await writeFile(path, JSON.stringify(report), 'utf8');
         tl.addAttachment(OSV_TAB_ATTACHMENT_TYPE, 'osv-report', path);
         console.log('OSV 弱點報告頁籤附件已排入 Agent 佇列。');

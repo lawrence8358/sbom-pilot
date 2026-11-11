@@ -79,7 +79,7 @@ test('browser entry initializes host themes and reads attachments with Server-co
           dtSkipped: false,
           sboms: { product: '產品.json', full: '完整.json' },
           product: { status: 'disabled', findings: [] },
-          devExtra: { status: 'disabled', findings: [] },
+          developmentExtra: { status: 'disabled', findings: [] },
         }),
       );
     },

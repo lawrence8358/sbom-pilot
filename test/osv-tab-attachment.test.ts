@@ -40,7 +40,7 @@ test('workflow publishes one contract attachment with full threshold verdict and
   assert.deepEqual({ ...report, generatedAt: 'time' }, {
     schemaVersion: 1, generatedAt: 'time', scannerVersion: '2.7.1', threshold: 'high', exceeded: true, dtSkipped: true,
     sboms: { product: 'PrimeX.JSON', full: 'PrimeX-dev.json' },
-    product: { status: 'completed', findings: [product] }, devExtra: { status: 'completed', findings: [dev] },
+    product: { status: 'completed', findings: [product] }, developmentExtra: { status: 'completed', findings: [dev] },
   });
   assert.deepEqual(artifacts, ['PrimeX.JSON', 'PrimeX-dev.json', 'product.md', 'full.md']);
   assert.deepEqual(summaries, []);
@@ -63,7 +63,7 @@ for (const failed of [['product'], ['full'], ['product', 'full']]) for (const th
     assert.equal(attachments.length, 1);
     assert.deepEqual(attachments[0].product, failed.includes('product') ? { status: 'failed', findings: [] } : { status: 'completed', findings: [product] });
     // 差集需要兩份結果；任一份失敗時不能宣稱開發套件沒有額外弱點。
-    assert.deepEqual(attachments[0].devExtra, { status: 'failed', findings: [] });
+    assert.deepEqual(attachments[0].developmentExtra, { status: 'failed', findings: [] });
     assert.equal(attachments[0].scannerVersion, failed.length === 2 ? undefined : '2.7.1');
     assert.equal(attachments[0].exceeded, !failed.includes('full') && threshold === 'high');
     assert.equal(attachments[0].dtSkipped, false, 'DT 未啟用，不能宣稱略過上傳');
@@ -107,7 +107,7 @@ test('disabled OSV still attaches disabled sections without scanning or publishi
   });
   assert.equal(attachments.length, 1);
   assert.deepEqual(attachments[0].product, { status: 'disabled', findings: [] });
-  assert.deepEqual(attachments[0].devExtra, { status: 'disabled', findings: [] });
+  assert.deepEqual(attachments[0].developmentExtra, { status: 'disabled', findings: [] });
   assert.equal(attachments[0].threshold, undefined);
   assert.equal(attachments[0].scannerVersion, undefined);
   assert.equal(attachments[0].exceeded, false);

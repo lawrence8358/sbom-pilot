@@ -1,22 +1,16 @@
 import { osvSeverityOrder, osvSeverityLabels, type OsvFinding } from './osv-report';
 
-export const osvFailOnValues = [
-  'critical',
-  'high',
-  'medium',
-  'low',
-  'unknown',
-  'warnOnly',
-] as const;
-export type OsvFailOn = (typeof osvFailOnValues)[number];
+import {
+  osvFailOnValues,
+  osvThresholdLabels as labels,
+  type OsvThreshold,
+} from './shared/osv-tab-contract';
+export { osvFailOnValues } from './shared/osv-tab-contract';
+export type OsvFailOn = OsvThreshold;
 export interface OsvFindingGroups {
   exceeded: readonly OsvFinding[];
   below: readonly OsvFinding[];
 }
-const labels = {
-  ...osvSeverityLabels,
-  warnOnly: '僅警告',
-};
 
 /** 嚴格驗證 OSV 失敗門檻，只對未提供的設定採用未知預設。 */
 export function validateOsvFailOn(value: unknown = 'unknown'): OsvFailOn {

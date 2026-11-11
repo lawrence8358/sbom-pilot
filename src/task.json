@@ -141,7 +141,7 @@
         "product": "產品 SBOM"
       },
       "visibleRule": "uploadToDt = true",
-      "helpMarkDown": "選擇上傳到 DT 專案的 SBOM，每次只上傳一份。預設完整 SBOM（含開發套件），讓 DT 也追蹤開發套件弱點；選產品 SBOM 則只上傳交付產品實際部署的內容。"
+      "helpMarkDown": "選擇上傳到 DT 專案的 SBOM，每次只上傳一份。預設完整 SBOM（含開發套件），讓 DT 也追蹤開發套件弱點；選產品 SBOM 則只上傳交付產品實際部署的內容。 選產品 SBOM 可維持 0.3.0 以前只上傳產品內容的行為。"
     },
     {
       "name": "dtApiUrl",

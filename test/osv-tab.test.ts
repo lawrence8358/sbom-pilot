@@ -29,7 +29,7 @@ const report: OsvTabReport = {
       },
     ],
   },
-  devExtra: {
+  developmentExtra: {
     status: 'completed',
     findings: [
       {
@@ -90,7 +90,7 @@ test('overview counts affected package versions once and sums all six severity l
   const value = structuredClone(report);
   const base = value.product.findings[0];
   value.product.findings.push({ ...base, severity: 'critical', ids: ['GHSA-second'] });
-  value.devExtra.findings = [
+  value.developmentExtra.findings = [
     { ...base, severity: 'medium', ids: ['GHSA-extra'] },
     { ...base, version: '2.0.0', severity: 'low' },
     { ...base, ecosystem: 'NuGet', severity: 'none' },
@@ -263,7 +263,7 @@ test('empty, disabled and failed sections show distinct messages and never imply
   const root = new JSDOM('<main></main>').window.document.querySelector('main')!;
   const value = structuredClone(report);
   value.product.findings = [];
-  value.devExtra.findings = [];
+  value.developmentExtra.findings = [];
   renderOsvReport(root, value);
   assert.equal(root.querySelectorAll('section').length, 2);
   assert.match(root.querySelectorAll('section')[0].textContent!, /產品 SBOM 未發現已知弱點。/);
@@ -271,7 +271,7 @@ test('empty, disabled and failed sections show distinct messages and never imply
   assert.doesNotMatch(root.textContent!, /目前篩選條件下/);
   for (const status of ['disabled', 'failed'] as const) {
     value.product = { status, findings: [] };
-    value.devExtra = { status, findings: [] };
+    value.developmentExtra = { status, findings: [] };
     renderOsvReport(root, value);
     for (const section of root.querySelectorAll('section')) {
       assert.match(
@@ -353,14 +353,27 @@ test('disabled and failed scans do not claim to pass, while warnOnly and passing
   renderOsvReport(root, value);
   assert.match(root.querySelector('.verdict')!.textContent!, /僅警告/);
   value.product = { status: 'disabled', findings: [] };
-  value.devExtra = { status: 'disabled', findings: [] };
+  value.developmentExtra = { status: 'disabled', findings: [] };
   renderOsvReport(root, value);
   assert.match(root.textContent!, /本次未執行 OSV 弱點掃描/);
   assert.doesNotMatch(root.textContent!, /未達到/);
   value.product = report.product;
-  value.devExtra = { status: 'failed', findings: [] };
+  value.developmentExtra = { status: 'failed', findings: [] };
   renderOsvReport(root, value);
   assert.match(root.textContent!, /掃描失敗.*無法判定/);
   assert.doesNotMatch(root.textContent!, /未達到/);
   assert.equal(root.querySelectorAll('h2').length, 2);
+});
+
+test('product scan failure preserves the exceeded full SBOM verdict', () => {
+  const root = new JSDOM('<main></main>').window.document.querySelector('main')!;
+  renderOsvReport(root, {
+    ...report,
+    product: { status: 'failed', findings: [] },
+    developmentExtra: { status: 'failed', findings: [] },
+  });
+  const verdict = root.querySelector('.verdict')!.textContent!;
+  assert.match(verdict, /超過失敗門檻『高』/);
+  assert.match(verdict, /產品 SBOM 掃描失敗/);
+  assert.doesNotMatch(verdict, /無法判定完整結果/);
 });

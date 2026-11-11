@@ -1,3 +1,10 @@
+import {
+  osvRatings as ratings,
+  osvSeverityOrder,
+  osvSeverityLabels,
+  type OsvSeverity,
+} from './shared/osv-tab-contract';
+export { osvSeverityOrder, osvSeverityLabels, type OsvSeverity } from './shared/osv-tab-contract';
 import { valid, gte, lt } from 'semver';
 
 type RecordValue = Record<string, unknown>;
@@ -13,19 +20,6 @@ export interface OsvFinding {
   published?: string;
   modified?: string;
 }
-const ratings = [
-  { severity: 'critical', label: '危急', name: 'Critical', icon: '🔴', minimum: 9 },
-  { severity: 'high', label: '高', name: 'High', icon: '🟠', minimum: 7 },
-  { severity: 'medium', label: '中', name: 'Medium', icon: '🟡', minimum: 4 },
-  { severity: 'low', label: '低', name: 'Low', icon: '🔵', minimum: 0.1 },
-  { severity: 'none', label: '無', name: 'None', icon: '⚪', minimum: 0 },
-  { severity: 'unknown', label: '未知', name: 'Unknown', icon: '⚪', minimum: -1 },
-] as const;
-export type OsvSeverity = (typeof ratings)[number]['severity'];
-export const osvSeverityOrder: readonly OsvSeverity[] = ratings.map((item) => item.severity);
-export const osvSeverityLabels = Object.fromEntries(
-  ratings.map((item) => [item.severity, item.label]),
-) as Record<OsvSeverity, string>;
 
 /** 以生態系、套件、版本與排序後的 OSV ID 集合識別弱點，不受日期或評分變動影響。 */
 export function osvFindingIdentity(finding: OsvFinding): string {

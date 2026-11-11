@@ -19,7 +19,7 @@ for (const failure of ['none', 'workflow', 'attachment']) {
           builder.onLoad({ filter: /.*/, namespace: 'workflow-fixture' }, () => ({ contents: `
             exports.runWorkflow = async (_config, _temp, services) => {
               await services.publishTabReport({schemaVersion:1, generatedAt:'2026-11-11T00:00:00Z', exceeded:false, dtSkipped:false,
-                sboms:{product:'產品.json',full:'完整.json'},product:{status:'disabled',findings:[]},devExtra:{status:'disabled',findings:[]}});
+                sboms:{product:'產品.json',full:'完整.json'},product:{status:'disabled',findings:[]},developmentExtra:{status:'disabled',findings:[]}}, require('node:path').join(_temp, 'osv-tab-report.json'));
               if (process.env.FIXTURE_FAILURE === 'workflow') throw new Error('workflow broken');
             };
           ` }));

@@ -16,7 +16,7 @@ SBOM Pilot 擴充套件新增建置結果頁籤「OSV 弱點報告」，只在�
 
 ```ts
 type OsvSeverity = 'critical' | 'high' | 'medium' | 'low' | 'none' | 'unknown';
-type OsvThreshold = OsvSeverity | 'warnOnly'; // 不含 'none'，沿用 osvFailOn 值
+type OsvThreshold = Exclude<OsvSeverity, 'none'> | 'warnOnly'; // 沿用 osvFailOn 值
 interface OsvTabFinding {
   severity: OsvSeverity; score?: number;          // CVSS 0–10，缺少為未知
   ecosystem: string; name: string; version: string;
@@ -32,7 +32,7 @@ interface OsvTabReport {
   threshold?: OsvThreshold; exceeded: boolean; dtSkipped: boolean;
   sboms: { product: string; full: string };       // 檔名
   product: OsvTabSection;                         // 產品 SBOM 弱點
-  devExtra: OsvTabSection;                        // 完整 SBOM 扣除產品 SBOM 的弱點；任一次 OSV 失敗即 failed
+  developmentExtra: OsvTabSection;                // 完整 SBOM 扣除產品 SBOM 的弱點；任一次 OSV 失敗即 failed
 }
 ```
 

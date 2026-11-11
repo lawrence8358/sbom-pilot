@@ -8,10 +8,8 @@ const issueLimit = 50;
 export function logOsvIssues(
   groups: OsvFindingGroups,
   log: (message: string) => void,
-  devExtra: OsvFinding[] = [],
+  developmentIds: ReadonlySet<string> = new Set(),
 ): void {
-  const developmentIds = new Set(devExtra.map(osvFindingIdentity));
-
   for (const [type, findings] of [
     ['error', groups.exceeded],
     ['warning', groups.below],

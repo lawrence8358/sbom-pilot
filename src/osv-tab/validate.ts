@@ -1,7 +1,8 @@
-import type { OsvTabReport } from '../shared/osv-tab-contract';
-
-const severities = ['critical', 'high', 'medium', 'low', 'none', 'unknown'];
-const thresholds = ['critical', 'high', 'medium', 'low', 'unknown', 'warnOnly'];
+import {
+  osvSeverityOrder as severities,
+  osvFailOnValues as thresholds,
+  type OsvTabReport,
+} from '../shared/osv-tab-contract';
 
 /** 附件必須是一般物件，不能把陣列或空值當成報告欄位。 */
 function record(value: unknown): value is Record<string, unknown> {
@@ -28,7 +29,7 @@ function optionalDate(value: unknown): boolean {
 function finding(value: unknown): boolean {
   return (
     record(value) &&
-    severities.includes(String(value.severity)) &&
+    severities.some((severity) => severity === value.severity) &&
     ['ecosystem', 'name', 'version'].every((key) => typeof value[key] === 'string') &&
     ['fixed', 'ids', 'cves'].every((key) => strings(value[key])) &&
     (value.score === undefined ||
@@ -65,14 +66,15 @@ export function parseOsvTabReport(value: unknown): OsvTabReport {
     ) ||
     !Number.isFinite(Date.parse(value.generatedAt)) ||
     (value.scannerVersion !== undefined && typeof value.scannerVersion !== 'string') ||
-    (value.threshold !== undefined && !thresholds.includes(String(value.threshold))) ||
+    (value.threshold !== undefined &&
+      !thresholds.some((threshold) => threshold === value.threshold)) ||
     typeof value.exceeded !== 'boolean' ||
     typeof value.dtSkipped !== 'boolean' ||
     !record(value.sboms) ||
     typeof value.sboms.product !== 'string' ||
     typeof value.sboms.full !== 'string' ||
     !section(value.product) ||
-    !section(value.devExtra)
+    !section(value.developmentExtra)
   ) {
     throw new Error('OSV 弱點報告資料格式不正確，請檢查建置附件。');
   }

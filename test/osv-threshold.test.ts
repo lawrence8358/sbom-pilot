@@ -122,8 +122,12 @@ test('failed product comparison does not claim full-report findings are developm
   }), /product unavailable.*失敗門檻/);
   assert.ok(!events.includes('dt'));
   const issues = logs.filter(line => line.startsWith('##vso[task.logissue '));
-  assert.equal(issues.length, 1);
-  assert.doesNotMatch(issues[0], /開發套件/);
+  const warnings = issues.filter(line => line.includes('產品 SBOM 弱點掃描失敗，無法區分開發套件額外弱點'));
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /type=warning;/);
+  const findings = issues.filter(line => !warnings.includes(line));
+  assert.equal(findings.length, 1);
+  assert.doesNotMatch(findings[0], /開發套件/);
 }));
 
 test('OSV threshold defaults to unknown, accepts six fixed values and rejects invalid inputs', () => {
@@ -246,7 +250,7 @@ test('OSV technical failure blocks DT, preserves the valid SBOM and logs the ski
   }), /OSV 弱點掃描.*scanner broken/);
   assert.deepEqual(events, ['scan', 'scan', 'sbom', 'sbom', 'attachment']);
   assert.ok(logs.some(message => /OSV.*失敗.*已略過 DT 上傳/.test(message)));
-  assert.ok(!logs.some(message => message.startsWith('##vso[task.logissue ')));
+  assert.deepEqual(logs.filter(message => message.startsWith('##vso[task.logissue ')), ['##vso[task.logissue type=warning;]產品 SBOM 弱點掃描失敗，無法區分開發套件額外弱點']);
 }));
 
 // 預期阻擋集合直接取自規格，逐一驗證等於門檻、低於門檻、無與未知的邊界。
@@ -289,7 +293,7 @@ test('only exceeded findings are counted in descending risk order alongside all 
     publishTabReport: async () => { events.push('attachment'); throw new Error('attachment broken'); },
   }), error => {
     assert.ok(error instanceof Error);
-    assert.equal(error.message, 'OSV 弱點達到失敗門檻『高』：危急 1、高 3；已略過 DT 上傳。；[成品發佈] SBOM broken；[成品發佈] SBOM broken；[OSV 成品發佈] report broken；[OSV 成品發佈] report broken；[OSV 頁籤附件發佈] attachment broken');
+    assert.equal(error.message, 'OSV 弱點達到失敗門檻『高』：危急 1、高 3；已略過 DT 上傳。；[成品發佈（產品 SBOM）] SBOM broken；[成品發佈（完整 SBOM）] SBOM broken；[OSV 成品發佈（產品 SBOM）] report broken；[OSV 成品發佈（完整 SBOM）] report broken；[OSV 頁籤附件發佈] attachment broken');
     return true;
   });
   assert.deepEqual(events, ['scan', 'scan', 'sbom', 'sbom', 'report', 'report', 'attachment']);
@@ -311,12 +315,12 @@ test('warning-only mode attempts DT after OSV failure and preserves DT and SBOM 
     publish: async () => { events.push('sbom'); throw new Error('SBOM broken'); },
   }), error => {
     assert.ok(error instanceof Error);
-    assert.equal(error.message, '[OSV 弱點掃描（產品 SBOM）] scanner broken；[OSV 弱點掃描（完整 SBOM）] scanner broken；[DT 上傳] DT broken；[成品發佈] SBOM broken；[成品發佈] SBOM broken');
+    assert.equal(error.message, '[OSV 弱點掃描（產品 SBOM）] scanner broken；[OSV 弱點掃描（完整 SBOM）] scanner broken；[DT 上傳] DT broken；[成品發佈（產品 SBOM）] SBOM broken；[成品發佈（完整 SBOM）] SBOM broken');
     return true;
   });
   assert.deepEqual(events, ['scan', 'scan', 'dt', 'sbom', 'sbom', 'attachment']);
   assert.ok(!logs.some(message => message.includes('已略過 DT 上傳')));
-  assert.ok(!logs.some(message => message.startsWith('##vso[task.logissue ')));
+  assert.deepEqual(logs.filter(message => message.startsWith('##vso[task.logissue ')), ['##vso[task.logissue type=warning;]產品 SBOM 弱點掃描失敗，無法區分開發套件額外弱點']);
 }));
 
 test('disabled OSV ignores invalid thresholds and still uploads DT and publishes SBOM', () => workflowFixture(async (root, services, events, logs) => {

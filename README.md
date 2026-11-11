@@ -174,7 +174,7 @@ OSV 工具下載、連線、無可掃描套件或報告產生等技術失敗都�
 9. 開始上傳 SBOM 至 Dependency-Track（DT，未啟用則略過）
 10. 開始發佈 SBOM 成品（Azure Pipelines）
 11. 開始發佈 OSV 弱點報告（Azure Pipelines，有完成報告時）
-12. 開始發佈 OSV 弱點報告頁籤附件（有完成報告時）
+12. 開始發佈 OSV 弱點報告頁籤附件（未啟用 OSV 時也會上傳標示未執行的附件）
 
 每個子程序以單行 [command] JSON 顯示 executable、argv 與 cwd，掃描前提供設定摘要。秘密顯示為 ***，不轉印原始子程序輸出。JSON 用於核對參數，並非可直接貼入 shell 的命令。DT 上傳另列 [http] PUT 與遮罩 Header。
 

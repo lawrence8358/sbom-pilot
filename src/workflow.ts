@@ -1,7 +1,7 @@
 import { commandRedactor, diagnosticJson, withCommandLogging } from './command-log';
 import { basename, join } from 'node:path';
 import { mkdir } from 'node:fs/promises';
-import { validateConfig, type TaskConfig } from './config';
+import { validateConfig, type TaskConfig, type DtSbomVariant } from './config';
 import { prepareTools, type ToolPreparer, type ToolContext } from './tools';
 import type { DependencyInstaller } from './install/contracts';
 import { javascriptInstaller } from './install/javascript';
@@ -14,8 +14,9 @@ import { runProcess, type ProcessRunner } from './process';
 import { uploadToDependencyTrack } from './dt/upload';
 import { createOsvScanner, type OsvScanner, type OsvReport } from './osv';
 import { partitionOsvFindings, osvThresholdMessage } from './osv-threshold';
+import { taskLogIssue } from './logging-command';
 import { logOsvIssues } from './osv-issues';
-import { developmentExtraFindings } from './osv-report';
+import { developmentExtraFindings, osvFindingIdentity, type OsvFinding } from './osv-report';
 import type { OsvTabReport } from './shared/osv-tab-contract';
 
 export type ArtifactPublisher = (sbom: ValidatedSbom, artifactName: string) => Promise<void>;
@@ -31,7 +32,7 @@ export interface WorkflowServices {
   upload?: SbomUploader;
   scanOsv?: OsvScanner;
   publishReport?: (report: OsvReport, artifactName: string) => Promise<void>;
-  publishTabReport?: (report: OsvTabReport) => Promise<void>;
+  publishTabReport?: (report: OsvTabReport, outputPath: string) => Promise<void>;
 }
 export class StageError extends Error {
   /** 將安全原始錯誤加上工作階段名稱，讓使用者定位失敗位置。 */
@@ -142,13 +143,24 @@ export async function runWorkflow(
 
   // 產品與完整 SBOM 只在必要套件篩選及輸出路徑上有差異。
   const outputPath = join(tempDirectory, 'sbom', config.sbomFileName!);
-  const fullFileName = config.sbomFileName!.replace(/\.json$/i, '-dev.json');
-  if (fullFileName === config.sbomFileName) {
-    throw new StageError('參數驗證', new Error('完整 SBOM 與產品 SBOM 檔名不可相同。'));
-  }
-  const outputs = [
-    { outputPath, requiredOnly: true, artifact: `${config.artifactName}/${config.sbomFileName}` },
+  const fullFileName = config.fullSbomFileName;
+  const outputs: {
+    variant: DtSbomVariant;
+    label: string;
+    outputPath: string;
+    requiredOnly: boolean;
+    artifact: string;
+  }[] = [
     {
+      variant: 'product',
+      label: '產品 SBOM',
+      outputPath,
+      requiredOnly: true,
+      artifact: `${config.artifactName}/${config.sbomFileName}`,
+    },
+    {
+      variant: 'full',
+      label: '完整 SBOM',
       outputPath: join(tempDirectory, 'sbom', fullFileName),
       requiredOnly: false,
       artifact: `${config.artifactName}/${fullFileName}`,
@@ -173,9 +185,14 @@ export async function runWorkflow(
       })}`,
     ),
   );
-  const sboms: ValidatedSbom[] = [];
+  const sboms: {
+    variant: DtSbomVariant;
+    label: string;
+    sbom: ValidatedSbom;
+    report?: OsvReport;
+  }[] = [];
   for (const output of outputs) {
-    const label = output.requiredOnly ? '產品 SBOM' : '完整 SBOM';
+    const { label, variant } = output;
     await stage(`SBOM 產生（${label}）`, () =>
       (services.generate ?? generateSbom)({ config, tools, ...output }, run),
     );
@@ -186,13 +203,14 @@ export async function runWorkflow(
     services.log(
       `${label} CycloneDX ${config.specVersion} 驗證通過；組件數：${validated.componentCount}。`,
     );
-    sboms.push(validated);
+    sboms.push({ variant, label, sbom: validated });
   }
-  const sbom = sboms[0];
+  const product = sboms.find((item) => item.variant === 'product')!;
+  const full = sboms.find((item) => item.variant === 'full')!;
 
   // OSV／門檻／DT 各自保留錯誤，仍嘗試發佈有效 SBOM 及已完成的報告。
   const errors: unknown[] = [];
-  const reports: (OsvReport | undefined)[] = [];
+  let developmentExtra: OsvFinding[] = [];
   let dtBlocked = false;
   let exceededThreshold = false;
 
@@ -202,11 +220,10 @@ export async function runWorkflow(
     /** 同次工作流程的兩份 SBOM 共用一次工具取得，測試可注入掃描服務。 */
     const scan = services.scanOsv ?? createOsvScanner();
 
-    for (const [index, validated] of sboms.entries()) {
-      const variant = index === 0 ? 'product' : 'full';
-      const label = index === 0 ? '產品 SBOM' : '完整 SBOM';
+    for (const entry of sboms) {
+      const { variant, label, sbom: validated } = entry;
       try {
-        reports[index] = await stage(`OSV 弱點掃描（${label}）`, () =>
+        entry.report = await stage(`OSV 弱點掃描（${label}）`, () =>
           scan(
             {
               sbom: validated,
@@ -223,6 +240,9 @@ export async function runWorkflow(
         );
       } catch (error) {
         errors.push(error);
+        if (variant === 'product') {
+          services.log(taskLogIssue('warning', '產品 SBOM 弱點掃描失敗，無法區分開發套件額外弱點'));
+        }
         if (threshold !== 'warnOnly') {
           dtBlocked = true;
           if (config.uploadToDt)
@@ -230,14 +250,14 @@ export async function runWorkflow(
         }
       }
     }
-    const report = reports[1];
+    const report = full.report;
     if (report) {
       const groups = partitionOsvFindings(report.findingList, threshold);
       const { exceeded } = groups;
-      const devExtra = reports[0]
-        ? developmentExtraFindings(reports[0].findingList, report.findingList)
+      developmentExtra = product.report
+        ? developmentExtraFindings(product.report.findingList, report.findingList)
         : [];
-      logOsvIssues(groups, services.log, devExtra);
+      logOsvIssues(groups, services.log, new Set(developmentExtra.map(osvFindingIdentity)));
       if (exceeded.length) {
         exceededThreshold = true;
         dtBlocked = true;
@@ -252,10 +272,9 @@ export async function runWorkflow(
 
   if (config.uploadToDt && !dtBlocked) {
     services.log('##[section]開始上傳 SBOM 至 Dependency-Track（DT）');
-    const dtSbom = config.dtSbomVariant === 'product' ? sboms[0] : sboms[1];
-    services.log(
-      `DT 上傳版本：${config.dtSbomVariant === 'product' ? '產品 SBOM' : '完整 SBOM'}（${basename(dtSbom.path)}）。`,
-    );
+    const selected = sboms.find((item) => item.variant === config.dtSbomVariant)!;
+    const dtSbom = selected.sbom;
+    services.log(`DT 上傳版本：${selected.label}（${basename(dtSbom.path)}）。`);
     try {
       await stage('DT 上傳', () =>
         services.upload
@@ -271,19 +290,19 @@ export async function runWorkflow(
 
   // 成品請求結束後才傳遞先前 OSV／門檻／DT 錯誤，不能吞掉任一失敗。
   services.log('##[section]開始發佈 SBOM 成品（Azure Pipelines）');
-  for (const validated of sboms) {
+  for (const { sbom: validated, label } of sboms) {
     try {
-      await stage('成品發佈', () => services.publish(validated, config.artifactName!));
+      await stage(`成品發佈（${label}）`, () => services.publish(validated, config.artifactName!));
     } catch (error) {
       errors.push(error);
     }
   }
 
-  for (const report of reports) {
+  for (const { report, label } of sboms) {
     if (!report) continue;
     services.log('##[section]開始發佈 OSV 弱點報告（Azure Pipelines）');
     try {
-      await stage('OSV 成品發佈', async () => {
+      await stage(`OSV 成品發佈（${label}）`, async () => {
         if (!services.publishReport) throw new Error('缺少 OSV 報告成品發佈介面。');
         await services.publishReport(report, config.artifactName!);
       });
@@ -297,27 +316,31 @@ export async function runWorkflow(
   try {
     await stage('OSV 頁籤附件發佈', async () => {
       if (!services.publishTabReport) throw new Error('缺少 OSV 頁籤附件發佈介面。');
-      await services.publishTabReport({
-        schemaVersion: 1,
-        generatedAt: new Date().toISOString(),
-        scannerVersion: reports[1]?.version ?? reports[0]?.version,
-        threshold: config.runOsv ? config.osvFailOn : undefined,
-        exceeded: exceededThreshold,
-        dtSkipped: Boolean(config.uploadToDt && dtBlocked),
-        sboms: { product: config.sbomFileName!, full: fullFileName },
-        product: {
-          status: !config.runOsv ? 'disabled' : reports[0] ? 'completed' : 'failed',
-          findings: reports[0]?.findingList ?? [],
+      await services.publishTabReport(
+        {
+          schemaVersion: 1,
+          generatedAt: new Date().toISOString(),
+          scannerVersion: full.report?.version ?? product.report?.version,
+          threshold: config.runOsv ? config.osvFailOn : undefined,
+          exceeded: exceededThreshold,
+          dtSkipped: Boolean(config.uploadToDt && dtBlocked),
+          sboms: { product: config.sbomFileName!, full: fullFileName },
+          product: {
+            status: !config.runOsv ? 'disabled' : product.report ? 'completed' : 'failed',
+            findings: product.report?.findingList ?? [],
+          },
+          developmentExtra: {
+            // 差集依賴兩份成功結果，不能把比較失敗當成沒有額外弱點。
+            status: !config.runOsv
+              ? 'disabled'
+              : product.report && full.report
+                ? 'completed'
+                : 'failed',
+            findings: developmentExtra,
+          },
         },
-        devExtra: {
-          // 差集依賴兩份成功結果，不能把比較失敗當成沒有額外弱點。
-          status: !config.runOsv ? 'disabled' : reports[0] && reports[1] ? 'completed' : 'failed',
-          findings:
-            reports[0] && reports[1]
-              ? developmentExtraFindings(reports[0].findingList, reports[1].findingList)
-              : [],
-        },
-      });
+        join(tempDirectory, 'osv-tab-report.json'),
+      );
     });
   } catch (error) {
     errors.push(error);
@@ -329,5 +352,5 @@ export async function runWorkflow(
       errors.map((error) => (error instanceof Error ? error.message : '執行失敗')).join('；'),
     );
 
-  return sbom;
+  return product.sbom;
 }

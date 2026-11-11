@@ -24,7 +24,7 @@ const report = {
   dtSkipped: false,
   sboms: { product: 'sbom.cdx.json', full: 'sbom.cdx-dev.json' },
   product: { status: 'completed', findings: [] },
-  devExtra: { status: 'completed', findings: [] },
+  developmentExtra: { status: 'completed', findings: [] },
 };
 
 test('tab reads this build attachment through the Build client and decodes UTF-8', async () => {

@@ -173,7 +173,9 @@ export function readTaskConfig(read: InputReader): TaskConfig {
 }
 
 /** 在下載工具前驗證模式、版本、路徑與認證格式，回傳實體專案根目錄。 */
-export async function validateConfig(config: TaskConfig): Promise<TaskConfig> {
+export async function validateConfig(
+  config: TaskConfig,
+): Promise<TaskConfig & { fullSbomFileName: string }> {
   if (!['win32', 'linux'].includes(process.platform)) {
     throw new Error('目前僅支援 Windows 與 Linux Agent。');
   }
@@ -225,6 +227,11 @@ export async function validateConfig(config: TaskConfig): Promise<TaskConfig> {
     throw new Error('SBOM 檔名必須以 .json 結尾；輸出格式為 CycloneDX JSON。');
   }
 
+  const fullSbomFileName = sbomFileName.replace(/\.json$/i, '-dev.json');
+  if (fullSbomFileName === sbomFileName) {
+    throw new Error('完整 SBOM 與產品 SBOM 檔名不可相同。');
+  }
+
   if (
     !Array.isArray(config.excludes) ||
     config.excludes.some((value) => typeof value !== 'string' || value.includes('\0'))
@@ -264,6 +271,7 @@ export async function validateConfig(config: TaskConfig): Promise<TaskConfig> {
     dotnetTarget,
     artifactName,
     sbomFileName,
+    fullSbomFileName,
     runOsv,
     osvVersion,
     osvFailOn,

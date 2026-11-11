@@ -6,17 +6,10 @@ import type {
 } from '../shared/osv-tab-contract';
 import { parseOsvTabReport } from './validate';
 
-const labels = {
-  critical: '危急',
-  high: '高',
-  medium: '中',
-  low: '低',
-  none: '無',
-  unknown: '未知',
-  warnOnly: '僅警告',
-};
-
-const severities: OsvSeverity[] = ['critical', 'high', 'medium', 'low', 'none', 'unknown'];
+import {
+  osvThresholdLabels as labels,
+  osvSeverityOrder as severities,
+} from '../shared/osv-tab-contract';
 
 type SortKey = 'severity' | 'score' | 'name' | 'published' | 'modified';
 
@@ -51,8 +44,8 @@ function overview(root: HTMLElement, report: OsvTabReport): void {
   const body = append(table, 'tbody');
   const groups: [string, OsvTabSection[]][] = [
     ['產品 SBOM', [report.product]],
-    ['開發套件額外', [report.devExtra]],
-    ['完整合計', [report.product, report.devExtra]],
+    ['開發套件額外', [report.developmentExtra]],
+    ['完整合計', [report.product, report.developmentExtra]],
   ];
   for (const [label, sections] of groups) {
     const row = append(body, 'tr');
@@ -200,13 +193,16 @@ function section(
   return refresh;
 }
 
-/** 狀態優先於門檻結果，避免未完成的掃描被呈現為已通過。 */
+/** 保留完整 SBOM 已確定的超標判定，其他未完成狀態不得呈現為已通過。 */
 function verdict(report: OsvTabReport): string {
-  const statuses = [report.product.status, report.devExtra.status];
+  const statuses = [report.product.status, report.developmentExtra.status];
   const threshold = `OSV 失敗門檻：${report.threshold ? labels[report.threshold] : '未提供'}`;
+  if (report.exceeded) {
+    return `已達到或超過失敗門檻『${report.threshold ? labels[report.threshold] : '未提供'}』${report.product.status === 'failed' ? '；產品 SBOM 掃描失敗，無法區分開發套件額外弱點' : ''}`;
+  }
   if (statuses.includes('failed')) return `掃描失敗，無法判定完整結果；${threshold}`;
   if (statuses.includes('disabled')) return `本次未執行 OSV 弱點掃描；${threshold}`;
-  return `${report.exceeded ? '已達到或超過' : '未達到'} ${threshold}`;
+  return `未達到 ${threshold}`;
 }
 
 /** 將附件契約呈現為頁籤內可閱讀的報告。 */
@@ -236,7 +232,7 @@ export function renderOsvReport(root: HTMLElement, value: unknown): void {
   const all = append(filters, 'button', '全部顯示');
   all.type = 'button';
   const buttons = severities.map((severity) => {
-    const count = [report.product, report.devExtra]
+    const count = [report.product, report.developmentExtra]
       .flatMap((s) => (s.status === 'completed' ? s.findings : []))
       .filter((f) => f.severity === severity).length;
     const button = append(filters, 'button', `${labels[severity]}（${count}）`);
@@ -251,7 +247,13 @@ export function renderOsvReport(root: HTMLElement, value: unknown): void {
   });
   const sections = [
     section(root, '一、產品 SBOM 弱點', report.product, selected, '產品 SBOM 未發現已知弱點。'),
-    section(root, '二、開發套件額外弱點', report.devExtra, selected, '開發套件無額外弱點。'),
+    section(
+      root,
+      '二、開發套件額外弱點',
+      report.developmentExtra,
+      selected,
+      '開發套件無額外弱點。',
+    ),
   ];
 
   /** 同步多選按鈕與兩區明細，不改變總覽統計。 */

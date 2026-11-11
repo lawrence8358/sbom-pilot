@@ -1,6 +1,6 @@
 # 執行相容性與驗收
 
-本頁區分本機／Docker 與真實 Azure 驗收。Marketplace 已發布 0.1.3，Azure DevOps Services Classic 的既有流程已完成真實執行與成品下載驗證。0.2.0 的 OSV／CVE／CI 摘要目前為本機與容器驗證，尚未發布或在真實 Azure 驗收。Server 安裝、YAML UI、Agent 非同步上傳失敗、arm64 與企業網路條件仍 UNVERIFIED。
+本頁區分本機／Docker 與真實 Azure 驗收。Marketplace 已發布 0.1.3，Azure DevOps Services Classic 的既有流程已完成真實執行與成品下載驗證。0.3.1 的雙份 SBOM、OSV 弱點報告與「OSV 弱點報告」頁籤以本機驗證為準，尚未在真實 Azure 驗收。Server 安裝、YAML UI、Agent 非同步上傳失敗、arm64 與企業網路條件仍 UNVERIFIED。
 
 ## Handler 與平台
 
@@ -35,9 +35,9 @@ OSV 工具快取放在 `Agent.ToolsDirectory/sbom-pilot-osv/<version>/<platform>
 
 Node 下載沿用既有 Agent Proxy／CA／client certificate 支援；OSV 子程序取得標準 Proxy 及 SSL_CERT_FILE，掃描連線仍依 Go 工具本身能力，不能推定 Node 的 client certificate／regex bypass 會自動套用。需能存取 GitHub release 資產、api.osv.dev 與 OSV 掃描所需的外部服務。企業 Proxy／CA、Services／Server 真正成品上傳與失敗傳遞仍需對應環境驗收。
 
-OSV 結束碼0／1各代表無弱點／有弱點，兩者都發佈報告；有弱點時依 OSV 失敗門檻決定結果，預設發現任一弱點即讓 Task 失敗並略過 DT 上傳，仍發佈有效 SBOM、OSV 弱點報告與 CI 摘要。選「僅警告」可維持舊行為，弱點只產生 warning issue 並照常嘗試 DT 上傳。單次 JSON 掃描後，由官方群組最大 CVSS 分數與 CVE 別名產生 Markdown，無評分／CVE 時明示未知／未提供。報告同時發佈 Build Artifact 及 `task.uploadsummary`，後者依官方文件在執行結果的 Extensions 顯示；不保證出現在 Summary 首頁固定位置。兩種發佈獨立嘗試，保留檔案供 Agent 非同步讀取。
+每次還原後產生並驗證產品 SBOM 與完整 SBOM，兩份皆發佈到同一個 Build Artifact。OSV 分別掃描兩份 SBOM，結束碼0／1各代表無弱點／有弱點，兩者都發佈報告。門檻只以完整 SBOM 判定，預設發現任一弱點即讓 Task 失敗並略過 DT 上傳；選「僅警告」時弱點只產生 warning issue 並照常嘗試 DT 上傳。各自的 JSON 掃描結果由官方群組最大 CVSS 分數與 CVE 別名產生 Markdown，無評分／CVE 時明示未知／未提供。報告以 `OSV弱點報告-產品.md`、`OSV弱點報告-完整.md` 發佈到相同 Build Artifact；另上傳結構化建置附件供「OSV 弱點報告」頁籤顯示。未啟用 OSV 時也會上傳標示未執行的附件。各項發佈獨立嘗試，保留檔案供 Agent 非同步讀取。
 
-其他結束碼（包含127一般錯誤、128無套件、129 API錯誤）、逾時、缺少／空白／不相容 JSON 報告均使 Task 失敗，仍嘗試發佈有效 SBOM。OSV 技術失敗時，門檻不是「僅警告」即略過 DT 上傳；設定為「僅警告」時仍嘗試 DT 上傳。OSV／DT／成品／摘要多重錯誤一併回報。
+其他結束碼（包含127一般錯誤、128無套件、129 API錯誤）、逾時、缺少／空白／不相容 JSON 報告均使 Task 失敗，仍嘗試發佈有效 SBOM。OSV 技術失敗時，門檻不是「僅警告」即略過 DT 上傳；設定為「僅警告」時仍嘗試 DT 上傳。OSV／DT／成品／頁籤附件多重錯誤一併回報。
 
 ### 共用網路政策
 

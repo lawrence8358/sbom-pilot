@@ -46,8 +46,8 @@ test('one dependency installation produces, validates and publishes product and 
   for (const [name, count] of [['產品 SBOM', '0'], ['完整 SBOM', '1']]) assert.ok(logs.some(line => line.includes(name) && line.includes(`組件數：${count}`)));
   const settings = JSON.parse(logs.find(line => line.startsWith('掃描設定：'))!.slice('掃描設定：'.length));
   assert.deepEqual(settings.outputs, [
-    { outputPath: join(root, 'sbom', 'sbom.cdx.json'), requiredOnly: true, artifact: 'SBOM/sbom.cdx.json' },
-    { outputPath: join(root, 'sbom', 'sbom.cdx-dev.json'), requiredOnly: false, artifact: 'SBOM/sbom.cdx-dev.json' },
+    { variant: 'product', label: '產品 SBOM', outputPath: join(root, 'sbom', 'sbom.cdx.json'), requiredOnly: true, artifact: 'SBOM/sbom.cdx.json' },
+    { variant: 'full', label: '完整 SBOM', outputPath: join(root, 'sbom', 'sbom.cdx-dev.json'), requiredOnly: false, artifact: 'SBOM/sbom.cdx-dev.json' },
   ]);
 }));
 

@@ -1,3 +1,4 @@
+import type { DtSbomVariant } from './config';
 import { createHash } from 'node:crypto';
 import { setTimeout } from 'node:timers/promises';
 import {
@@ -27,7 +28,7 @@ export interface OsvReport {
 }
 export interface OsvRequest {
   sbom: ValidatedSbom;
-  variant?: 'product' | 'full';
+  variant?: DtSbomVariant;
   version: string;
   tempDirectory: string;
   cacheDirectory: string;
