@@ -5,21 +5,44 @@ import { CommonServiceIds, type IProjectPageService } from 'azure-devops-extensi
 import { AttachmentBuildClient } from './build-client';
 import { loadOsvTab, type OsvTabServices } from './load';
 
-/** 初始化主機主題並從建置頁服務取得目前專案與建置，避免解析 iframe 網址。 */
+interface HostBuild {
+  id?: number;
+  project?: { id?: string };
+}
+
+/** 建置結果頁籤由主機設定的 onBuildChanged 傳入目前建置；逾時則交由備援來源。 */
+function configuredBuild(timeoutMs = 10000): Promise<HostBuild | undefined> {
+  const config = SDK.getConfiguration() as {
+    onBuildChanged?: (handler: (build: HostBuild) => void) => void;
+  };
+  if (typeof config?.onBuildChanged !== 'function') return Promise.resolve(undefined);
+
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(undefined), timeoutMs);
+    config.onBuildChanged!((build) => {
+      clearTimeout(timer);
+      resolve(build);
+    });
+  });
+}
+
+/** 初始化主機主題，優先以頁籤設定取得目前建置，避免解析 iframe 網址。 */
 function hostServices(): OsvTabServices {
   let client: AttachmentBuildClient | undefined;
   return {
-    /** 等待主機握手後再索取頁面資訊與授權服務。 */
+    /** 等待主機握手後取得建置；舊主機改用建置頁資料服務與專案頁服務。 */
     async initialize() {
       await SDK.init({ loaded: false, applyTheme: true });
-      const buildPage = await SDK.getService<IBuildPageDataService>(
-        BuildServiceIds.BuildPageDataService,
-      );
-      const projectPage = await SDK.getService<IProjectPageService>(
-        CommonServiceIds.ProjectPageService,
-      );
-      const project = await projectPage.getProject();
-      return { project: project?.id ?? '', buildId: buildPage.getBuildPageData()?.build?.id ?? 0 };
+      await SDK.ready();
+      const build = (await configuredBuild()) ?? (await pageDataBuild());
+      const project =
+        build?.project?.id ||
+        (
+          await (
+            await SDK.getService<IProjectPageService>(CommonServiceIds.ProjectPageService)
+          ).getProject()
+        )?.id;
+      return { project: project ?? '', buildId: build?.id ?? 0 };
     },
 
     /** 成功或可閱讀的錯誤都已呈現後，通知主機關閉載入指示。 */
@@ -30,6 +53,14 @@ function hostServices(): OsvTabServices {
       return (client ??= getClient(AttachmentBuildClient));
     },
   };
+}
+
+/** 舊版建置頁提供的建置資料；新版頁籤主機可能回傳空值。 */
+async function pageDataBuild(): Promise<HostBuild | undefined> {
+  const buildPage = await SDK.getService<IBuildPageDataService>(
+    BuildServiceIds.BuildPageDataService,
+  );
+  return buildPage.getBuildPageData()?.build;
 }
 
 const root = document.getElementById('osv-report');

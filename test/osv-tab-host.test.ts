@@ -21,6 +21,8 @@ test('browser entry initializes host themes and reads attachments with Server-co
           builder.onLoad({ filter: /.*/, namespace: 'host' }, () => ({
             contents: `
         export const init = (...args) => globalThis.host.init(...args);
+        export const ready = async () => {};
+        export const getConfiguration = () => globalThis.host.configuration ?? {};
         export const getService = (...args) => globalThis.host.getService(...args);
         export const getAccessToken = async () => 'synthetic-host-token';
         export const notifyLoadSucceeded = () => globalThis.host.loaded();
@@ -45,14 +47,19 @@ test('browser entry initializes host themes and reads attachments with Server-co
     Headers,
     Response,
     host: {
+      // 真實 build-results-tab 主機以設定回呼提供建置，建置頁資料服務回傳空值。
+      configuration: {
+        onBuildChanged: (handler: (build: unknown) => void) =>
+          setTimeout(() => handler({ id: 35, project: { id: 'project-id' } }), 0),
+      },
       async init(options: unknown) {
         calls.push(options);
       },
       async getService(id: string) {
         if (id === 'ms.vss-build-web.build-page-data-service')
-          return { getBuildPageData: () => ({ build: { id: 35 } }) };
+          return { getBuildPageData: () => undefined };
         if (id === 'ms.vss-tfs-web.tfs-page-data-service')
-          return { getProject: async () => ({ id: 'project-id' }) };
+          return { getProject: async () => ({ id: 'wrong-project' }) };
         if (id === 'ms.vss-features.location-service')
           return { getResourceAreaLocation: async () => 'https://server.test/tfs/collection/' };
         throw new Error(`Unexpected host service: ${id}`);
