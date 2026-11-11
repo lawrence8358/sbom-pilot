@@ -18,6 +18,9 @@
   "categories": [
     "Azure Pipelines"
   ],
+  "scopes": [
+    "vso.build"
+  ],
   "icons": {
     "default": "images/extension-icon.png"
   },
@@ -30,6 +33,10 @@
     }
   },
   "files": [
+    {
+      "path": "dist/osv-tab",
+      "addressable": true
+    },
     {
       "path": "dist"
     },
@@ -51,6 +58,20 @@
       ],
       "properties": {
         "name": "dist"
+      }
+    },
+    {
+      "id": "osv-report-tab",
+      "type": "ms.vss-web.tab",
+      "targets": [
+        "ms.vss-build-web.build-results-view"
+      ],
+      "properties": {
+        "name": "OSV 弱點報告",
+        "uri": "dist/osv-tab/index.html",
+        "supportsTasks": [
+          "ae7d525c-a209-48e5-8f3e-17b24500b7b5"
+        ]
       }
     }
   ]

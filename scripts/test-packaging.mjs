@@ -55,7 +55,24 @@ test('Marketplace CLI creates private/public bundles and rejects stale, mismatch
   assert.equal(privateZip.file('CHANGELOG.md'), null);
   assert.ok(privateZip.file('dist/THIRD-PARTY-NOTICES.md'));
   assert.ok(privateZip.file('dist/licenses/manifest.json'));
+  // 頁籤必須隨實際 VSIX 出貨，不能只驗證來源 manifest。
+  const tabHtml = await privateZip.file('dist/osv-tab/index.html')?.async('string');
+  assert.match(tabHtml ?? '', /charset="utf-8"/);
+  for (const asset of ['index.js', 'styles.css']) assert.ok(privateZip.file(`dist/osv-tab/${asset}`));
+  const tabManifest = JSON.parse(await privateZip.file('extension.vsomanifest').async('string'));
+  const tab = tabManifest.contributions.find(item => item.id === 'osv-report-tab');
+  assert.equal(tab.type, 'ms.vss-web.tab');
+  assert.deepEqual(tab.targets, ['ms.vss-build-web.build-results-view']);
+  assert.deepEqual(tab.properties.supportsTasks, ['ae7d525c-a209-48e5-8f3e-17b24500b7b5']);
+  assert.deepEqual(tabManifest.scopes, ['vso.build']);
+  const browserLicenses = JSON.parse(await privateZip.file('dist/licenses/manifest.json').async('string'));
+  for (const name of ['azure-devops-extension-api', 'azure-devops-extension-sdk', 'whatwg-fetch']) {
+    assert.ok(browserLicenses.some(item => item.name === name), `頁籤缺少授權告示：${name}`);
+  }
   const privateXml = await privateZip.file('extension.vsixmanifest').async('string');
+  for (const asset of ['index.html', 'index.js', 'styles.css']) {
+    assert.ok(privateXml.split('\n').some(line => line.includes(`Path="dist/osv-tab/${asset}"`) && line.includes('Addressable="true"')), `頁籤資源不可由主機存取：${asset}`);
+  }
   assert.match(privateXml, /Publisher="sbom-fixture-only"/);
   assert.doesNotMatch(privateXml.match(/<GalleryFlags>([^<]*)<\/GalleryFlags>/)?.[1] ?? '', /Public/);
   const bundle = join(fixture, 'packages/submission/private', (await readdir(join(fixture, 'packages/submission/private')))[0]);
@@ -116,6 +133,6 @@ test('Marketplace CLI creates private/public bundles and rejects stale, mismatch
   assert.match(mismatch.stderr, /封裝模式不符/);
   await writeFile(`${publicPath}.provenance.json`, publicReceiptBytes);
   const generated = await publicZip.file('extension.vsomanifest').async('string');
-  assert.deepEqual(JSON.parse(generated).scopes, []);
+  assert.deepEqual(JSON.parse(generated).scopes, ['vso.build']);
   console.log(`SYNTHETIC FIXTURE ONLY: ${fixture}`);
 });
