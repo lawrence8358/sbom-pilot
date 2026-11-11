@@ -77,6 +77,7 @@ Task 向上讀取 global.json 的完整 sdk.version、rollForward 與 allowPrere
 | sbomFileName／SBOM 檔名 | sbom.cdx.json | 單一 .json 檔名，不含目錄；清空沿用預設 |
 | runOsv／執行 OSV 弱點掃描 | true | 所有模式預設勾選，位於 DT 勾選框上方；取消時不下載或執行 OSV |
 | osvVersion／OSV Scanner 版本 | latest | OSV 啟用時顯示；每次取得官方 Latest 穩定版本，也可填精確版本，例如 2.7.1 |
+| osvFailOn／OSV 失敗門檻 | unknown | OSV 啟用時顯示；預設「未知」，發現任一弱點即讓 Task 失敗並略過 DT 上傳；選「僅警告」可維持 0.2.x 行為 |
 | uploadToDt／推送到 DT | false | 啟用後上傳同一份已驗證 SBOM |
 
 預設排除規則：
@@ -93,6 +94,8 @@ Task 向上讀取 global.json 的完整 sdk.version、rollForward 與 allowPrere
 
 預設將本次已驗證的 SBOM 交給 [Google OSV Scanner](https://github.com/google/osv-scanner)，單次掃描取得 JSON 後產生 **sbom.osv.md**。報告包含醒目的危急／高／中／低／未知分級、CVSS 分數、可點選的 CVE 與 OSV 識別碼、套件版本及修復版本，依嚴重程度由高至低排序，頁首列出各級數量。CVE 從 OSV 別名取得；沒有編號時標為「未提供」，缺少評分則標為「未知」，不自行推測。相同弱點別名合併成一列；相同套件的不同版本分開列出。
 
+**0.3.0 行為變更**：預設改為發現弱點即失敗並略過 DT 上傳；要維持 0.2.x 行為請選「僅警告」。也可選危急、高、中或低作為失敗門檻；達到或高於門檻的弱點會讓 Task 失敗並略過 DT，低於門檻的弱點只發出警告。每筆弱點會以 Azure Pipelines issue 呈現：超過門檻列為 **Errors**，未超過列為 **Warnings**；每類最多列出 50 則，超出時另列剩餘筆數，完整細節見 OSV 報告。
+
 報告與 SBOM 放在同一個 artifactName 中，也使用 [Azure Pipelines Markdown Summary](https://learn.microsoft.com/en-us/azure/devops/pipelines/scripts/logging-commands?view=azure-devops#uploadsummary-add-some-markdown-content-to-the-build-summary) 附到此次 CI 執行結果。開啟該次 Pipeline run 的 **Extensions（擴充功能）** 頁籤即可查看 **sbom.osv.md**，不必下載；入口與 Markdown 外觀依 Services／Server 版本而異，並非保證顯示在 Summary 首頁的固定位置。成品仍可下載保存。無弱點也會保留報告與摘要；自訂 SBOM 檔名仍可掃描。OSV 弱點報告與軟體組成清單是不同檔案，DT 接收的仍是原 SBOM。
 
 [官方安裝文件](https://google.github.io/osv-scanner/installation/)沒有提供 npm install 方式。Task 以 Node.js 下載官方 Windows／Linux x64／arm64 執行檔，驗證 SHA-256 與實際版本，不需要為 OSV 預裝 PowerShell、Go 或額外安裝 Task。
@@ -101,7 +104,7 @@ osvVersion: latest 每次透過官方 releases/latest 解析 Latest 正式 relea
 
 工具保存於 Agent.ToolsDirectory/sbom-pilot-osv，依版本／作業系統／架構分開。每次重用前驗證檔案 SHA-256、實際版本及必要 CLI 選項；完整快取不重新下載，損壞或缺失則重新取得。相同持久 Agent 可跨執行重用；雲端每次新建 VM 通常沒有先前快取，仍需首次下載。無 Agent.ToolsDirectory 時只使用此次工作暫存。
 
-OSV 發現弱點會記警告並發佈報告，Task 不因此失敗。下載、連線、無可掃描套件或報告產生失敗則讓 Task 失敗，仍嘗試發佈已驗證的 SBOM；DT 與成品錯誤也會保留。OSV 下載需能存取 github.com 與其 release 資產來源，掃描需連到 api.osv.dev 等 OSV 服務；Proxy／CA 條件見[相容性](https://github.com/lawrence8358/sbom-pilot/blob/main/docs/compatibility.md)。
+OSV 工具下載、連線、無可掃描套件或報告產生等技術失敗都會讓 Task 失敗，並仍嘗試發佈已驗證的 SBOM。啟用 DT 時，門檻不是「僅警告」會略過 DT；選「僅警告」則仍嘗試 DT 上傳，但 OSV 技術錯誤仍會在工作結尾回報失敗。DT 與成品錯誤也會保留。OSV 下載需能存取 github.com 與其 release 資產來源，掃描需連到 api.osv.dev 等 OSV 服務；Proxy／CA 條件見[相容性](https://github.com/lawrence8358/sbom-pilot/blob/main/docs/compatibility.md)。
 
 ~~~yaml
 - task: SbomPilot@0
@@ -179,7 +182,7 @@ OSV 發現弱點會記警告並發佈報告，Task 不因此失敗。下載、�
 | 工具準備失敗 | 下載來源、Proxy／CA、可寫暫存與快取、Node >=24 |
 | 安裝或還原失敗 | 正確根目錄、唯一鎖檔、packageManager、global.json、SDK／MSBuild、套件來源與認證 |
 | SBOM 驗證失敗 | cdxgen 版本與必要 assets；僅有檔案存在不足以發佈 |
-| OSV 掃描失敗 | 官方 GitHub release 下載、版本與 SHA-256、OSV API 連線、可掃描套件；有弱點只警告 |
+| OSV 掃描失敗 | 官方 GitHub release 下載、版本與 SHA-256、OSV API 連線、可掃描套件；弱點是否使工作失敗依 osvFailOn 設定 |
 | 找不到成品 | 使用 Build 工作，核對 Agent 上傳與整個工作結果 |
 | DT 401／403／404／TLS | Key 權限、UUID、服務根網址、Agent 可達性與 CA |
 
