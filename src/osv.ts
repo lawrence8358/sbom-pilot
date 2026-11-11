@@ -300,11 +300,7 @@ export const scanOsv: OsvScanner = async (request, run, log) => {
   }
   await writeFile(path, report.markdown);
 
-  log(
-    findings
-      ? '##[warning]OSV 發現已知弱點，請查看成品中的 sbom.osv.md。'
-      : 'OSV 掃描完成，未發現已知弱點。',
-  );
+  if (!findings) log('OSV 掃描完成，未發現已知弱點。');
 
   return { path, version: tool.version, findings, findingList: report.findingList };
 };

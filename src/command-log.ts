@@ -1,6 +1,12 @@
 import { agentNetworkCredentials } from './azure-secret-inputs';
 import type { TaskConfig } from './config';
 import type { ProcessRunner } from './process';
+import { TaskCommand } from 'azure-pipelines-task-lib/taskcommand';
+
+/** 使用 Agent 官方序列化器跳脫訊息資料，固定 issue 屬性以免外部字串注入指令。 */
+export function taskLogIssue(type: 'error' | 'warning', message: string): string {
+  return new TaskCommand('task.logissue', { type }, message).toString();
+}
 
 // 三種顯示情境共用秘密旗標名稱，各自保留字串內聯／完整旗標／argv 指派的邊界。
 const SECRET_FLAG_NAME_PATTERN =

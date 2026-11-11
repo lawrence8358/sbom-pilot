@@ -14,6 +14,7 @@ import { runProcess, type ProcessRunner } from './process';
 import { uploadToDependencyTrack } from './dt/upload';
 import { scanOsv, type OsvScanner, type OsvReport } from './osv';
 import { partitionOsvFindings, osvThresholdMessage } from './osv-threshold';
+import { logOsvIssues } from './osv-issues';
 
 export type ArtifactPublisher = (sbom: ValidatedSbom, artifactName: string) => Promise<void>;
 export type SbomUploader = (sbom: ValidatedSbom) => Promise<void>;
@@ -190,7 +191,9 @@ export async function runWorkflow(
           services.log,
         ),
       );
-      const { exceeded } = partitionOsvFindings(report.findingList, config.osvFailOn!);
+      const groups = partitionOsvFindings(report.findingList, config.osvFailOn!);
+      const { exceeded } = groups;
+      logOsvIssues(groups, services.log);
       if (exceeded.length) {
         dtBlocked = true;
         const message = osvThresholdMessage(

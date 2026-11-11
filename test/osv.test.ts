@@ -146,13 +146,13 @@ test('single custom-named SBOM produces Markdown for no findings and findings, n
       }] : []);
       const markdown = await readFile(report.path, 'utf8');
       if (exitCode === 1) { assert.match(markdown, /危急 Critical/); assert.match(markdown, /CVE-2026-12345/); }
-      assert.equal(logs.some(line => line.startsWith('##[warning]')), exitCode === 1);
+      assert.equal(logs.some(line => line.startsWith('##[warning]')), false);
     }
   }
   await assert.rejects(scanOsv(req, runner, () => {}), /ENOENT|Markdown/);
 }));
 
-test('scan exposes the complete sorted fixture list alongside the unchanged Markdown artifact and warning', () => fixture(async root => {
+test('scan exposes the complete sorted fixture list alongside the unchanged Markdown artifact without a duplicate warning', () => fixture(async root => {
   const req = request(root);
   const asset = osvAsset(process.platform, process.arch);
   await writeFile(req.sbom.path, '{}');
@@ -176,7 +176,7 @@ test('scan exposes the complete sorted fixture list alongside the unchanged Mark
   assert.equal(await readFile(report.path, 'utf8'), await readFile('test/fixtures/osv-findings.md', 'utf8'));
   assert.equal(report.version, '2.7.1');
   assert.equal(report.findings, true);
-  assert.equal(logs.at(-1), '##[warning]OSV 發現已知弱點，請查看成品中的 sbom.osv.md。');
+  assert.equal(logs.some(line => line.startsWith('##[warning]')), false);
 }));
 
 test('process runner accepts only explicitly allowed finding exit and still rejects actual errors', async () => {
