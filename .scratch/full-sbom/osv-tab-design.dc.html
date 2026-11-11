@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>OSV 弱點報告頁籤</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--link);text-decoration:none}a:hover{color:var(--link);text-decoration:underline}
+.osv-root{font-family:"Segoe UI","Microsoft JhengHei","PingFang TC","Noto Sans TC",system-ui,sans-serif}
+.osv-table{border-collapse:collapse;width:100%;min-width:980px;font-size:13px}
+.osv-table th,.osv-table td{border:1px solid var(--border);padding:8px 12px;vertical-align:top;text-align:left}
+.osv-table th{background:var(--head);font-weight:600;white-space:nowrap}
+.osv-table td.num,.osv-table th.num{text-align:right}
+.osv-table tbody tr:hover td{background:var(--hover)}
+.osv-sort{all:unset;cursor:pointer;display:inline-flex;gap:4px;align-items:center;min-height:24px}
+.osv-sort:focus-visible,.osv-chip:focus-visible,.osv-tab:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.osv-chip{cursor:pointer;font:inherit;font-size:13px;display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 12px;border-radius:16px}
+.osv-tab{all:unset;cursor:pointer;padding:10px 2px;font-size:14px}
+</style>
+</helmet>
+<div class="osv-root" style="{{themeVars}} min-height: 100vh; background: var(--page); color: var(--text); box-sizing: border-box; padding: 24px 32px 48px;">
+<div style="max-width: 1360px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px;">
+
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<div style="font-size: 20px; font-weight: 600;">#2741 • Merged PR 115: feat: 時間型別雙資料庫相容</div>
+<div style="font-size: 13px; color: var(--muted);">SBOM EIP Backend (Master)</div>
+</div>
+
+<nav aria-label="建置結果頁籤" style="display: flex; gap: 24px; border-bottom: 1px solid var(--border); flex-wrap: wrap;">
+<a href="#" class="osv-tab" style="color: var(--muted);">Summary</a>
+<a href="#" class="osv-tab" style="color: var(--muted);">Code Coverage*</a>
+<a href="#" class="osv-tab" aria-current="page" style="color: var(--text); font-weight: 600; border-bottom: 2px solid var(--link);">OSV 弱點報告</a>
+</nav>
+
+<section style="background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 24px 28px; display: flex; flex-direction: column; gap: 22px;">
+
+<div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--link);"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z"></path><path d="M9 12l2 2 4-4"></path></svg>
+<h1 style="margin: 0; font-size: 26px; font-weight: 600;">OSV 弱點報告</h1>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; font-size: 13px;">
+<span style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 4px; background: var(--failBg); color: var(--failText); font-weight: 600;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+超過失敗門檻「未知」（含全部弱點）
+</span>
+<span style="color: var(--muted);">報告產生時間 <span style="color: var(--text);">2026-11-11 14:30（UTC+8）</span></span>
+<span style="color: var(--muted);">OSV Scanner <span style="color: var(--text);">2.7.1</span></span>
+<span style="color: var(--muted);">範例資料，非真實弱點</span>
+</div>
+
+<div style="overflow-x: auto;">
+<table class="osv-table" style="min-width: 760px;">
+<thead><tr>
+<th>範圍</th><th>SBOM</th><th class="num">受影響套件</th><th class="num">弱點</th>
+<sc-for list="{{sevHeads}}" as="h" hint-placeholder-count="6"><th class="num"><span style="display: inline-flex; align-items: center; gap: 6px;"><span style="{{h.dotStyle}}"></span>{{h.label}}</span></th></sc-for>
+</tr></thead>
+<tbody>
+<sc-for list="{{overview}}" as="o" hint-placeholder-count="3">
+<tr>
+<td style="font-weight: 600; white-space: nowrap;">{{o.scope}}</td>
+<td><code style="font-family: Consolas, monospace; font-size: 12px;">{{o.sbom}}</code></td>
+<td class="num">{{o.pkgs}}</td>
+<td class="num" style="font-weight: 600;">{{o.total}}</td>
+<sc-for list="{{o.counts}}" as="c" hint-placeholder-count="6"><td class="num" style="{{c.style}}">{{c.n}}</td></sc-for>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+<span style="font-size: 13px; color: var(--muted); margin-right: 4px;">篩選等級</span>
+<sc-for list="{{chips}}" as="chip" hint-placeholder-count="6">
+<button type="button" class="osv-chip" aria-pressed="{{chip.pressed}}" onClick="{{chip.toggle}}" style="{{chip.style}}"><span style="{{chip.dotStyle}}"></span>{{chip.label}} {{chip.count}}</button>
+</sc-for>
+<button type="button" class="osv-chip" onClick="{{resetFilter}}" style="background: transparent; color: var(--link); border: 1px solid transparent;">全部顯示</button>
+</div>
+
+<sc-for list="{{sections}}" as="sec" hint-placeholder-count="2">
+<div style="display: flex; flex-direction: column; gap: 10px;">
+<div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; border-top: 1px solid var(--border); padding-top: 18px;">
+<h2 style="margin: 0; font-size: 18px; font-weight: 600;">{{sec.title}}</h2>
+<code style="font-family: Consolas, monospace; font-size: 12px; color: var(--muted);">{{sec.sbom}}</code>
+<span style="font-size: 13px; color: var(--muted);">顯示 {{sec.shown}} ／ {{sec.total}} 筆</span>
+</div>
+<p style="margin: 0; font-size: 13px; color: var(--muted);">{{sec.note}}</p>
+<sc-if value="{{sec.empty}}" hint-placeholder-val="{{false}}">
+<div style="border: 1px dashed var(--border); border-radius: 4px; padding: 16px; font-size: 13px; color: var(--muted);">{{sec.emptyText}}</div>
+</sc-if>
+<sc-if value="{{sec.hasRows}}" hint-placeholder-val="{{true}}">
+<div style="overflow-x: auto;">
+<table class="osv-table">
+<thead><tr>
+<sc-for list="{{heads}}" as="col" hint-placeholder-count="8">
+<th class="{{col.cls}}" aria-sort="{{col.aria}}"><sc-if value="{{col.sortable}}" hint-placeholder-val="{{true}}"><button type="button" class="osv-sort" onClick="{{col.sort}}">{{col.label}}<span aria-hidden="true" style="color: var(--muted); font-size: 11px;">{{col.arrow}}</span></button></sc-if><sc-if value="{{col.plain}}" hint-placeholder-val="{{false}}">{{col.label}}</sc-if></th>
+</sc-for>
+</tr></thead>
+<tbody>
+<sc-for list="{{sec.rows}}" as="r" hint-placeholder-count="4">
+<tr>
+<td style="white-space: nowrap;"><span style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600;"><span style="{{r.dotStyle}}"></span>{{r.sevLabel}}</span></td>
+<td class="num">{{r.scoreText}}</td>
+<td><div style="font-weight: 600;">{{r.name}}</div><div style="font-size: 12px; color: var(--muted);">{{r.eco}}</div></td>
+<td style="white-space: nowrap;">{{r.ver}}</td>
+<td style="white-space: nowrap; font-weight: 600; color: var(--fix);">{{r.fixText}}</td>
+<td style="white-space: nowrap;">
+<sc-if value="{{r.noCve}}" hint-placeholder-val="{{false}}"><div style="font-size: 12px; color: var(--muted);">（無 CVE，僅 GHSA）</div></sc-if>
+<sc-for list="{{r.links}}" as="l" hint-placeholder-count="2"><div><a href="{{l.href}}" target="_blank" rel="noopener noreferrer">{{l.text}}</a></div></sc-for>
+</td>
+<td style="white-space: nowrap;">{{r.pub}}</td>
+<td style="white-space: nowrap;">{{r.mod}}</td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+</sc-if>
+</div>
+</sc-for>
+
+<p style="margin: 0; font-size: 12px; line-height: 1.7; color: var(--muted); border-top: 1px solid var(--border); padding-top: 14px;">依 OSV 群組最大 CVSS 由高至低排序：危急 ≥9.0、高 ≥7.0、中 ≥4.0、低 &gt;0、無 =0，缺少評分為未知。發佈日期與最後修改取自 OSV 記錄的 published／modified（UTC 日期）。建議升級依目前版本所屬分支列出，請確認適用版本。完整報告見成品 OSV弱點報告-產品.md、OSV弱點報告-完整.md。資料來源：<a href="https://google.github.io/osv-scanner/output/" target="_blank" rel="noopener noreferrer">OSV Scanner</a>；分級依 <a href="https://www.first.org/cvss/v3.1/specification-document#Qualitative-Severity-Rating-Scale" target="_blank" rel="noopener noreferrer">FIRST CVSS</a>。</p>
+
+</section>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":true,"section":"主題"},"$preview":{"width":1280,"height":1400}}'>
+var SEV = [
+  { k: 'critical', l: '危急', c: '#e81123', ring: false },
+  { k: 'high', l: '高', c: '#f7630c', ring: false },
+  { k: 'medium', l: '中', c: '#ffb900', ring: false },
+  { k: 'low', l: '低', c: '#2b88d8', ring: false },
+  { k: 'none', l: '無', c: '#a19f9d', ring: false },
+  { k: 'unknown', l: '未知', c: '#a19f9d', ring: true }
+];
+var RANK = { critical: 0, high: 1, medium: 2, low: 3, none: 4, unknown: 5 };
+function cve(id) { return { text: id, href: 'https://www.cve.org/CVERecord?id=' + id }; }
+function ghsa(id) { return { text: id, href: 'https://osv.dev/' + id }; }
+var PRODUCT = [
+  { sev: 'high', score: 7.5, name: 'System.Security.Cryptography.Pkcs', eco: 'NuGet', ver: '10.0.0', fix: '10.0.13', cves: ['CVE-2026-84008'], ghsa: ['GHSA-846f-f764-76mx'], pub: '2026-02-10', mod: '2026-03-02' },
+  { sev: 'high', score: 7.5, name: 'System.Security.Cryptography.Pkcs', eco: 'NuGet', ver: '9.0.13', fix: '9.0.21', cves: ['CVE-2026-84008'], ghsa: ['GHSA-846f-f764-76mx'], pub: '2026-02-10', mod: '2026-03-02' },
+  { sev: 'medium', score: 6.9, name: 'AngleSharp', eco: 'NuGet', ver: '1.1.2', fix: '1.5.0', cves: ['CVE-2026-54570'], ghsa: ['GHSA-pgww-w46g-26qg'], pub: '2026-01-21', mod: '2026-02-05' },
+  { sev: 'medium', score: 6.9, name: 'MySqlConnector', eco: 'NuGet', ver: '2.4.0', fix: '2.6.1', cves: [], ghsa: ['GHSA-473q-m89c-ghf8'], pub: '2025-12-03', mod: '2026-01-18' },
+  { sev: 'medium', score: 5.9, name: 'System.Security.Cryptography.Pkcs', eco: 'NuGet', ver: '10.0.0', fix: '10.0.13', cves: ['CVE-2026-70162'], ghsa: ['GHSA-2fmv-rc2c-59x7'], pub: '2026-04-08', mod: '2026-04-30' },
+  { sev: 'medium', score: 5.9, name: 'System.Security.Cryptography.Pkcs', eco: 'NuGet', ver: '9.0.13', fix: '9.0.21', cves: ['CVE-2026-70162'], ghsa: ['GHSA-2fmv-rc2c-59x7'], pub: '2026-04-08', mod: '2026-04-30' }
+];
+var DEV = [
+  { sev: 'critical', score: 9.8, name: 'sample-build-plugin', eco: 'npm', ver: '3.1.0', fix: '3.1.4', cves: ['CVE-2026-00001'], ghsa: ['GHSA-aaaa-bbbb-cccc'], pub: '2026-06-17', mod: '2026-07-01' },
+  { sev: 'high', score: 7.5, name: 'sample-dev-server', eco: 'npm', ver: '5.0.4', fix: '5.2.1', cves: ['CVE-2026-00002'], ghsa: ['GHSA-dddd-eeee-ffff'], pub: '2026-05-22', mod: '2026-06-09' },
+  { sev: 'medium', score: 5.3, name: 'sample-glob-matcher', eco: 'npm', ver: '4.0.5', fix: '4.0.8', cves: [], ghsa: ['GHSA-gggg-hhhh-jjjj'], pub: '2026-03-30', mod: '2026-04-02' },
+  { sev: 'unknown', score: null, name: 'sample-test-runner', eco: 'npm', ver: '1.2.0', fix: '', cves: [], ghsa: ['GHSA-kkkk-mmmm-pppp'], pub: '', mod: '2026-08-12' }
+];
+var COLS = [
+  { key: 'sev', label: '等級', sortable: true },
+  { key: 'score', label: 'CVSS', sortable: true, num: true },
+  { key: 'name', label: '套件', sortable: true },
+  { key: 'ver', label: '目前版本', sortable: false },
+  { key: 'fix', label: '建議升級', sortable: false },
+  { key: 'ids', label: '弱點編號', sortable: false },
+  { key: 'pub', label: '發佈日期', sortable: true },
+  { key: 'mod', label: '最後修改', sortable: true }
+];
+function dot(s, size) {
+  var px = size || 10;
+  var base = 'display:inline-block;flex:none;width:' + px + 'px;height:' + px + 'px;border-radius:50%;box-sizing:border-box;';
+  return s.ring ? base + 'border:2px solid ' + s.c + ';background:transparent;' : base + 'background:' + s.c + ';';
+}
+function sevOf(k) { for (var i = 0; i < SEV.length; i++) if (SEV[i].k === k) return SEV[i]; return SEV[5]; }
+function pkgCount(rows) { var m = {}; rows.forEach(function (r) { m[r.eco + '|' + r.name + '|' + r.ver] = 1; }); return Object.keys(m).length; }
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { off: {}, sortKey: 'score', sortDir: 'desc' };
+  }
+  renderVals() {
+    var self = this;
+    var dark = this.props.dark ?? true;
+    var t = dark
+      ? { page: '#1b1a19', card: '#252423', head: '#2f2e2d', hover: '#323130', border: '#484644', text: 'rgba(255,255,255,0.92)', muted: '#c8c6c4', link: '#6cb8f6', fix: '#8fd694', failBg: 'rgba(232,17,35,0.18)', failText: '#ff99a4', zero: '#8a8886' }
+      : { page: '#f8f8f8', card: '#ffffff', head: '#f3f2f1', hover: '#f3f9fd', border: '#d2d0ce', text: '#201f1e', muted: '#605e5c', link: '#0063b1', fix: '#107c10', failBg: '#fde7e9', failText: '#a4262c', zero: '#a19f9d' };
+    var themeVars = Object.keys(t).map(function (k) { return '--' + k + ':' + t[k] + ';'; }).join(' ');
+    var off = this.state.off;
+    var sortKey = this.state.sortKey, sortDir = this.state.sortDir;
+    function sorted(rows) {
+      var dir = sortDir === 'asc' ? 1 : -1;
+      return rows.slice().sort(function (a, b) {
+        var va, vb;
+        if (sortKey === 'sev') { va = -RANK[a.sev]; vb = -RANK[b.sev]; }
+        else if (sortKey === 'score') { va = a.score == null ? -1 : a.score; vb = b.score == null ? -1 : b.score; }
+        else { va = a[sortKey] || ''; vb = b[sortKey] || ''; }
+        if (va < vb) return -dir; if (va > vb) return dir;
+        return a.name.localeCompare(b.name);
+      });
+    }
+    function view(r) {
+      var s = sevOf(r.sev);
+      return {
+        dotStyle: dot(s), sevLabel: s.l,
+        scoreText: r.score == null ? '—' : r.score.toFixed(1),
+        name: r.name, eco: r.eco, ver: r.ver,
+        fixText: r.fix || '未提供',
+        noCve: r.cves.length === 0,
+        links: r.cves.map(cve).concat(r.ghsa.map(ghsa)),
+        pub: r.pub || '未提供', mod: r.mod || '未提供'
+      };
+    }
+    function section(title, sbom, note, rows, emptyText) {
+      var shown = sorted(rows.filter(function (r) { return !off[r.sev]; })).map(view);
+      return { title: title, sbom: sbom, note: note, total: rows.length, shown: shown.length, rows: shown, hasRows: shown.length > 0, empty: shown.length === 0, emptyText: rows.length ? '目前篩選條件下沒有弱點。' : emptyText };
+    }
+    function counts(rows) {
+      return SEV.map(function (s) {
+        var n = rows.filter(function (r) { return r.sev === s.k; }).length;
+        return { n: n, style: n ? 'font-weight:600;' : 'color:var(--zero);' };
+      });
+    }
+    var all = PRODUCT.concat(DEV);
+    return {
+      themeVars: themeVars,
+      sevHeads: SEV.map(function (s) { return { label: s.l, dotStyle: dot(s) }; }),
+      overview: [
+        { scope: '產品', sbom: 'sbom.cdx.json', pkgs: pkgCount(PRODUCT), total: PRODUCT.length, counts: counts(PRODUCT) },
+        { scope: '開發套件額外', sbom: 'sbom.cdx-dev.json', pkgs: pkgCount(DEV), total: DEV.length, counts: counts(DEV) },
+        { scope: '完整合計', sbom: '', pkgs: pkgCount(all), total: all.length, counts: counts(all) }
+      ],
+      chips: SEV.map(function (s) {
+        var on = !off[s.k];
+        var n = all.filter(function (r) { return r.sev === s.k; }).length;
+        return {
+          label: s.l, count: n, pressed: on ? 'true' : 'false', dotStyle: dot(s, 9),
+          style: on ? 'background:var(--head);color:var(--text);border:1px solid var(--border);' : 'background:transparent;color:var(--muted);border:1px dashed var(--border);opacity:0.75;',
+          toggle: function () { var next = Object.assign({}, self.state.off); next[s.k] = !next[s.k]; self.setState({ off: next }); }
+        };
+      }),
+      resetFilter: function () { self.setState({ off: {} }); },
+      heads: COLS.map(function (c) {
+        var active = c.key === sortKey;
+        return {
+          label: c.label, sortable: c.sortable, plain: !c.sortable, cls: c.num ? 'num' : '',
+          arrow: active ? (sortDir === 'asc' ? '▲' : '▼') : (c.sortable ? '↕' : ''),
+          aria: active ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none',
+          sort: function () {
+            if (self.state.sortKey === c.key) self.setState({ sortDir: self.state.sortDir === 'asc' ? 'desc' : 'asc' });
+            else self.setState({ sortKey: c.key, sortDir: (c.key === 'name') ? 'asc' : 'desc' });
+          }
+        };
+      }),
+      sections: [
+        section('一、產品 SBOM 弱點', 'sbom.cdx.json', '部署到正式環境的套件，請優先處理。', PRODUCT, '產品 SBOM 未發現已知弱點。'),
+        section('二、開發套件額外弱點', 'sbom.cdx-dev.json', '只出現在完整 SBOM（含開發套件）、產品 SBOM 未列的項目；影響建置與開發工具鏈，不隨產品部署。', DEV, '開發套件無額外弱點。')
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
