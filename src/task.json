@@ -10,7 +10,7 @@
   "version": {
     "Major": 0,
     "Minor": 3,
-    "Patch": 0
+    "Patch": 1
   },
   "instanceNameFormat": "SBOM Pilot",
   "runsOn": [
@@ -94,7 +94,7 @@
       "label": "執行 OSV 弱點掃描",
       "required": false,
       "defaultValue": "true",
-      "helpMarkDown": "預設啟用，所有開發環境共用。掃描本次已驗證的 SBOM，產生含風險分級、CVSS、CVE 與修復版本的 sbom.osv.md，依風險排序，發佈到相同 Build Artifact 並附到 CI 執行摘要的 Extensions 頁籤，可直接查看。缺少 CVE／評分會標示未提供／未知。弱點達到 OSV 失敗門檻時略過 DT 上傳並讓 Task 失敗；預設任何弱點都擋，選「僅警告」可維持舊行為。工具、連線、報告或發佈失敗也會讓 Task 失敗，仍嘗試發佈有效 SBOM。取消勾選時略過 OSV 工具準備、掃描及摘要。"
+      "helpMarkDown": "預設啟用，所有開發環境共用。分別掃描產品 SBOM 與完整 SBOM，產生 OSV弱點報告-產品.md、OSV弱點報告-完整.md，並發佈到相同 Build Artifact 與建置結果的「OSV 弱點報告」頁籤。缺少 CVE／評分會標示未提供／未知。弱點達到 OSV 失敗門檻時略過 DT 上傳並讓 Task 失敗；預設任何弱點都擋，選「僅警告」可維持舊行為。工具、連線、報告或發佈失敗也會讓 Task 失敗，仍嘗試發佈有效 SBOM。取消勾選時略過 OSV 工具準備、掃描及報告頁籤資料。"
     },
     {
       "name": "osvVersion",
@@ -120,7 +120,7 @@
         "unknown": "未知",
         "warnOnly": "僅警告"
       },
-      "helpMarkDown": "任一弱點達到或高於門檻時，略過 DT 上傳並讓 Task 失敗，仍發佈 SBOM、OSV 弱點報告成品與 CI 摘要。等級由高至低為危急（CVSS ≥9.0）、高（≥7.0）、中（≥4.0）、低（>0）、無（=0）、未知（缺少評分）。「低」不含「無」與「未知」；預設「未知」包含全部弱點。「僅警告」永不因弱點阻擋，可維持舊行為；但 OSV 工具、連線或報告產生失敗仍讓 Task 失敗，此時僅「僅警告」允許繼續上傳 DT。未啟用 OSV 時忽略此設定。"
+      "helpMarkDown": "產品與開發套件的任一弱點達到或高於門檻時，略過 DT 上傳並讓 Task 失敗，仍發佈 SBOM 與 OSV 報告。等級由高至低為危急（CVSS ≥9.0）、高（≥7.0）、中（≥4.0）、低（>0）、無（=0）、未知（缺少評分）。「低」不含「無」與「未知」；預設「未知」包含全部弱點。「僅警告」永不因弱點阻擋，可維持舊行為；但 OSV 工具、連線或報告產生失敗仍讓 Task 失敗，此時僅「僅警告」允許繼續上傳 DT。未啟用 OSV 時忽略此設定。"
     },
     {
       "name": "uploadToDt",

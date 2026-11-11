@@ -14,7 +14,7 @@ npm test
 npm run test:packaging
 ~~~
 
-npm test 編譯測試並檢查凍結安裝、還原範圍、認證隔離、掃描、Schema、DT、命令遮罩與錯誤傳遞。test:packaging 在隔離目錄實際建立私有／公開 VSIX，驗證身分、payload、來源新鮮度與竄改拒絕。
+npm test 編譯測試並檢查凍結安裝、還原範圍、認證隔離、掃描、Schema、DT、命令遮罩與錯誤傳遞。test:packaging 在隔離目錄實際建立私有／公開 VSIX，驗證 0.3.1 的 package／lock／Task／extension 版本一致、公開文件契約、身分、payload、來源新鮮度與竄改拒絕。
 
 真實工具測試依改動選擇 test:smoke、test:smoke:osv、test:smoke:pnpm、test:smoke:yarn、test:smoke:dotnet、test:smoke:framework、test:smoke:combined、test:smoke:npm-auth、test:smoke:nuget-auth。這些會下載並執行真實工具；一般測試不自動改寫專案鎖檔。OSV smoke 使用官方 latest（可用 OSV_SMOKE_VERSION 指定）、真實 API、有弱點／無弱點 SBOM、自訂檔名與快取重用，證據在 .smoke/21；其他既有 smoke 明確關閉 OSV，避免將新增外部連線混入原測試範圍。
 
@@ -38,7 +38,7 @@ npm run package:dev 建立本機測試 VSIX；npm run test:final -- --cases=npm,
 
 ## 打包與發版
 
-參閱 [Marketplace 操作](docs/marketplace.md)。同步更新 package.json、package-lock.json 的根版本、src/task.json 與 vss-extension.json，保留 Task GUID、名稱與既有輸入。major 決定 YAML 的 SbomPilot@0。
+參閱 [Marketplace 操作](docs/marketplace.md)。0.3.1 的 Task 與擴充套件版本需同步更新 package.json、package-lock.json 根版本、src/task.json 與 vss-extension.json，封裝測試會核對來源與 VSIX 版本一致。保留 Task GUID、名稱與既有輸入；major 決定 YAML 的 SbomPilot@0。發版說明記於 `.scratch/full-sbom/release-notes-0.3.1.md`。
 
 README.md 是唯一市集介紹，圖片使用 GitHub raw HTTPS，文件連至 GitHub 絕對網址。VSIX 只包含 dist、README、圖示及 manifest 需要的 LICENSE；開發文件與範例留在 GitHub。THIRD-PARTY-NOTICES.md 與完整 runtime 授權必須保留，建置會複製至 dist。
 

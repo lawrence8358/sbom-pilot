@@ -2,11 +2,11 @@
 
 ![SBOM Pilot](https://raw.githubusercontent.com/lawrence8358/sbom-pilot/main/images/marketplace-hero.png)
 
-在 Azure Pipelines 加入一個 **SBOM Pilot — Generate & Upload SBOM** Task，即可準備 Node.js 與 cdxgen、安裝／還原專案依賴，產生 CycloneDX 1.6 JSON，並預設執行 OSV 弱點掃描，將 SBOM 與 Markdown 報告發佈為 Build Artifact。也可將同一份 SBOM 上傳到既有 Dependency-Track（DT）專案。
+在 Azure Pipelines 加入一個 **SBOM Pilot — Generate & Upload SBOM** Task，即可準備 Node.js 與 cdxgen、安裝／還原專案依賴，產生產品 SBOM 與完整 SBOM，並預設執行 OSV 弱點掃描，將 SBOM 與 Markdown 報告發佈為 Build Artifact。也可將選定的 SBOM 上傳到既有 Dependency-Track（DT）專案。
 
 ## 安裝與前置條件
 
-從 [Azure DevOps Marketplace](https://marketplace.visualstudio.com/items?itemName=LawrenceShen.sbom-pilot) 選擇 **Get it free** 並安裝至組織。Azure DevOps Server 請由 Collection 管理員依該 Server 的擴充功能管理流程安裝 VSIX。
+從 [Azure DevOps Marketplace](https://marketplace.visualstudio.com/items?itemName=LawrenceShen.sbom-pilot) 選擇 **Get it free** 並安裝至組織。0.3.1 新增 `vso.build` 建置讀取權限；組織管理員需更新擴充套件並重新同意授權。Azure DevOps Server 請由 Collection 管理員依該 Server 的擴充功能管理流程安裝 VSIX。
 
 - 適用 Classic Build 與 YAML Build，使用 Windows／Linux Agent；Classic Release 不適用。.NET Framework 限 Windows。
 - Task 提供 Node20_1／Node24 handler，最低 Agent 版本為 3.238.0。目前實測 x64；arm64、特定 Server／Agent 配對與企業網路條件見[相容性](https://github.com/lawrence8358/sbom-pilot/blob/main/docs/compatibility.md)。
@@ -41,7 +41,7 @@ JavaScript／TypeScript（例如 Vue、Angular）只需改成：
 
 Classic Build：在 Agent job 選 **Add task → SBOM Pilot**，設定「開發環境」與「專案路徑」，儲存並執行。欄位與 YAML 相同。
 
-成功後在 Build 結果的成品頁選 **SBOM**，下載 **sbom.cdx.json** 與 **sbom.osv.md**。Task 顯示「已排入佇列」代表已要求 Agent 上傳，請以工作結果及成品頁確認上傳完成。新版預設 SBOM 檔名由 bom.json 改為 sbom.cdx.json；既有 Pipeline 明確設定的 sbomFileName 仍會保留，下載腳本請依實際設定調整。
+成功後在 Build 結果的成品頁選 **SBOM**，下載產品 SBOM **sbom.cdx.json**、完整 SBOM **sbom.cdx-dev.json**，以及 **OSV弱點報告-產品.md**、**OSV弱點報告-完整.md**。Build 結果另有「OSV 弱點報告」頁籤可查看掃描結果。Task 顯示「已排入佇列」代表已要求 Agent 上傳，請以工作結果及成品頁確認上傳完成。既有 Pipeline 明確設定的 sbomFileName 仍會保留，下載腳本請依實際設定調整。
 
 ## 選擇開發環境與路徑
 
@@ -62,7 +62,7 @@ Task 向上讀取 global.json 的完整 sdk.version、rollForward 與 allowPrere
 
 **.NET Framework**：傳統格式使用 Agent 預裝 MSBuild，不安裝整套 Visual Studio；packages.config 需可由 solution 或 repositoryPath 判定套件位置；未使用任何 NuGet 套件的傳統專案會略過還原，仍檢查 targeting pack。詳見 [.NET Framework](https://github.com/lawrence8358/sbom-pilot/blob/main/docs/framework.md)。
 
-**前後端合併**：設定 environment: combined、projectPath: '$(Build.SourcesDirectory)/product'。Task 安裝各前端根目錄並還原 .NET Core，再以 -t dotnet -t js 單次遞迴掃描，共用排除規則，產生一份 SBOM。啟用 DT 時對應同一產品 UUID；傳統 .NET Framework 使用獨立 netframework 模式。詳見[合併規則](https://github.com/lawrence8358/sbom-pilot/blob/main/docs/combined.md)與[範例](https://github.com/lawrence8358/sbom-pilot/blob/main/examples/combined-product/package.json)。
+**前後端合併**：設定 environment: combined、projectPath: '$(Build.SourcesDirectory)/product'。Task 安裝各前端根目錄並還原 .NET Core，再以 -t dotnet -t js 單次遞迴掃描，共用排除規則，產生產品 SBOM 與完整 SBOM。啟用 DT 時對應同一產品 UUID；傳統 .NET Framework 使用獨立 netframework 模式。詳見[合併規則](https://github.com/lawrence8358/sbom-pilot/blob/main/docs/combined.md)與[範例](https://github.com/lawrence8358/sbom-pilot/blob/main/examples/combined-product/package.json)。
 
 ## 參數
 
@@ -78,7 +78,8 @@ Task 向上讀取 global.json 的完整 sdk.version、rollForward 與 allowPrere
 | runOsv／執行 OSV 弱點掃描 | true | 所有模式預設勾選，位於 DT 勾選框上方；取消時不下載或執行 OSV |
 | osvVersion／OSV Scanner 版本 | latest | OSV 啟用時顯示；每次取得官方 Latest 穩定版本，也可填精確版本，例如 2.7.1 |
 | osvFailOn／OSV 失敗門檻 | unknown | OSV 啟用時顯示；預設「未知」，發現任一弱點即讓 Task 失敗並略過 DT 上傳；選「僅警告」可維持 0.2.x 行為 |
-| uploadToDt／推送到 DT | false | 啟用後上傳同一份已驗證 SBOM |
+| uploadToDt／推送到 DT | false | 啟用後上傳所選版本；預設為完整 SBOM（含開發套件），也可選產品 SBOM |
+| dtSbomVariant／DT 上傳版本 | full | DT 每次只接收一份；選產品 SBOM 可只上傳交付產品實際部署的內容 |
 
 預設排除規則：
 
@@ -92,11 +93,11 @@ Task 向上讀取 global.json 的完整 sdk.version、rollForward 與 allowPrere
 
 ### OSV 弱點掃描
 
-預設將本次已驗證的 SBOM 交給 [Google OSV Scanner](https://github.com/google/osv-scanner)，單次掃描取得 JSON 後產生 **sbom.osv.md**。報告包含醒目的危急／高／中／低／未知分級、CVSS 分數、可點選的 CVE 與 OSV 識別碼、套件版本及修復版本，依嚴重程度由高至低排序，頁首列出各級數量。CVE 從 OSV 別名取得；沒有編號時標為「未提供」，缺少評分則標為「未知」，不自行推測。相同弱點別名合併成一列；相同套件的不同版本分開列出。
+預設將產品 SBOM 與完整 SBOM 分別交給 [Google OSV Scanner](https://github.com/google/osv-scanner)，產生 **OSV弱點報告-產品.md** 與 **OSV弱點報告-完整.md**。完整 SBOM 包含開發套件，兩份報告可辨識開發套件帶來的額外弱點。報告包含危急／高／中／低／未知分級、CVSS 分數、可點選的 CVE 與 OSV 識別碼、套件版本及修復版本，依嚴重程度排序並列出各級數量。CVE 從 OSV 別名取得；沒有編號時標為「未提供」，缺少評分則標為「未知」，不自行推測。相同弱點別名合併成一列；相同套件的不同版本分開列出。
 
-**0.3.0 行為變更**：預設改為發現弱點即失敗並略過 DT 上傳；要維持 0.2.x 行為請選「僅警告」。也可選危急、高、中或低作為失敗門檻；達到或高於門檻的弱點會讓 Task 失敗並略過 DT，低於門檻的弱點只發出警告。每筆弱點會以 Azure Pipelines issue 呈現：超過門檻列為 **Errors**，未超過列為 **Warnings**；每類最多列出 50 則，超出時另列剩餘筆數，完整細節見 OSV 報告。
+**0.3.0 行為變更**：預設改為發現弱點即失敗並略過 DT 上傳；要維持舊行為請選「僅警告」。0.3.1 起，DT 預設上傳完整 SBOM（含開發套件），也可選產品 SBOM；完整 SBOM 的開發套件弱點同樣依 OSV 失敗門檻阻擋建置。要調整阻擋範圍可設定門檻，或選「僅警告」。也可選危急、高、中或低作為失敗門檻；達到或高於門檻的弱點會讓 Task 失敗並略過 DT，低於門檻的弱點只發出警告。每筆弱點會以 Azure Pipelines issue 呈現：超過門檻列為 **Errors**，未超過列為 **Warnings**；每類最多列出 50 則，超出時另列剩餘筆數，完整細節見 OSV 報告。
 
-報告與 SBOM 放在同一個 artifactName 中，也使用 [Azure Pipelines Markdown Summary](https://learn.microsoft.com/en-us/azure/devops/pipelines/scripts/logging-commands?view=azure-devops#uploadsummary-add-some-markdown-content-to-the-build-summary) 附到此次 CI 執行結果。開啟該次 Pipeline run 的 **Extensions（擴充功能）** 頁籤即可查看 **sbom.osv.md**，不必下載；入口與 Markdown 外觀依 Services／Server 版本而異，並非保證顯示在 Summary 首頁的固定位置。成品仍可下載保存。無弱點也會保留報告與摘要；自訂 SBOM 檔名仍可掃描。OSV 弱點報告與軟體組成清單是不同檔案，DT 接收的仍是原 SBOM。
+兩份報告與 SBOM 放在同一個 artifactName 中。開啟該次 Pipeline run 的「OSV 弱點報告」建置結果頁籤即可查看結果，完整報告仍可從成品頁下載保存。無弱點也會保留報告；自訂 SBOM 檔名仍會依規則產生完整 SBOM 檔名。OSV 弱點報告與軟體組成清單是不同檔案，DT 接收所選的 SBOM。
 
 [官方安裝文件](https://google.github.io/osv-scanner/installation/)沒有提供 npm install 方式。Task 以 Node.js 下載官方 Windows／Linux x64／arm64 執行檔，驗證 SHA-256 與實際版本，不需要為 OSV 預裝 PowerShell、Go 或額外安裝 Task。
 
@@ -173,7 +174,7 @@ OSV 工具下載、連線、無可掃描套件或報告產生等技術失敗都�
 9. 開始上傳 SBOM 至 Dependency-Track（DT，未啟用則略過）
 10. 開始發佈 SBOM 成品（Azure Pipelines）
 11. 開始發佈 OSV 弱點報告（Azure Pipelines，有完成報告時）
-12. 開始發佈 OSV 報告至 CI 摘要（有完成報告時）
+12. 開始發佈 OSV 弱點報告頁籤附件（有完成報告時）
 
 每個子程序以單行 [command] JSON 顯示 executable、argv 與 cwd，掃描前提供設定摘要。秘密顯示為 ***，不轉印原始子程序輸出。JSON 用於核對參數，並非可直接貼入 shell 的命令。DT 上傳另列 [http] PUT 與遮罩 Header。
 

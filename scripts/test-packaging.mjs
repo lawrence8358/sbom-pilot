@@ -6,6 +6,45 @@ import { spawnSync } from 'node:child_process';
 import JSZip from 'jszip';
 import { hash, PACKAGING_SOURCE_ROOTS } from './packaging-state.mjs';
 
+test('0.3.1 release versions and public documentation stay aligned with the packaged extension', async () => {
+  const pkg = JSON.parse(await readFile('package.json', 'utf8'));
+  const lock = JSON.parse(await readFile('package-lock.json', 'utf8'));
+  const extension = JSON.parse(await readFile('vss-extension.json', 'utf8'));
+  const task = JSON.parse(await readFile('src/task.json', 'utf8'));
+  assert.equal(pkg.version, '0.3.1');
+  assert.equal(lock.version, pkg.version);
+  assert.equal(lock.packages[''].version, pkg.version);
+  assert.equal(extension.version, pkg.version);
+  assert.deepEqual(task.version, { Major: 0, Minor: 3, Patch: 1 });
+
+  const [readme, devReadme, releaseNotes] = await Promise.all([
+    readFile('README.md', 'utf8'),
+    readFile('README-Dev.md', 'utf8'),
+    readFile('.scratch/full-sbom/release-notes-0.3.1.md', 'utf8'),
+  ]);
+  for (const text of [readme, releaseNotes]) {
+    assert.match(text, /完整 SBOM/);
+    assert.match(text, /產品 SBOM/);
+  }
+  assert.match(devReadme, /0\.3\.1/);
+  assert.match(releaseNotes, /開發套件弱點.*失敗門檻/);
+  assert.match(releaseNotes, /僅警告/);
+  assert.match(releaseNotes, /sbom\.cdx-dev\.json/);
+  assert.match(releaseNotes, /OSV弱點報告-產品\.md/);
+  assert.match(releaseNotes, /OSV弱點報告-完整\.md/);
+  assert.match(releaseNotes, /還原.*產品 SBOM/);
+  assert.match(releaseNotes, /OSV 弱點報告.*頁籤/);
+  assert.match(releaseNotes, /Extensions 摘要/);
+  assert.match(releaseNotes, /組織管理員.*更新.*重新同意/);
+  assert.match(readme, /OSV 弱點報告/);
+  assert.doesNotMatch(readme, /Extensions（擴充功能）/);
+  assert.match(readme, /sbom\.cdx-dev\.json/);
+  assert.match(readme, /OSV弱點報告-產品\.md/);
+  assert.match(readme, /OSV弱點報告-完整\.md/);
+  assert.match(releaseNotes, /vso\.build/);
+  assert.match(releaseNotes, /重新同意/);
+});
+
 /** 真正執行CLI於隔離的合成身分fixture；不使用或覆寫工作目錄的正式產物。 */
 test('Marketplace CLI creates private/public bundles and rejects stale, mismatched and tampered packages', { timeout: 180_000 }, async () => {
   await mkdir('.smoke', { recursive: true });
@@ -53,6 +92,8 @@ test('Marketplace CLI creates private/public bundles and rejects stale, mismatch
   const privateBytes = await readFile(privatePath);
   const privateZip = await JSZip.loadAsync(privateBytes);
   const task = JSON.parse(await privateZip.file('dist/task.json').async('string'));
+  assert.deepEqual(task.version, { Major: 0, Minor: 3, Patch: 1 });
+  assert.match(await privateZip.file('extension.vsixmanifest').async('string'), new RegExp(`Version="${version}"`));
   for (const name of ['artifactName', 'sbomFileName']) {
     const input = task.inputs.find(input => input.name === name);
     assert.equal(Object.hasOwn(input, 'defaultValue'), false);

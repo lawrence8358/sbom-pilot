@@ -343,7 +343,9 @@ test('task exposes the OSV threshold options, default, visibility and CVSS bound
   assert.equal(input.visibleRule, 'runOsv = true');
   assert.deepEqual(input.options, { critical: '危急', high: '高', medium: '中', low: '低', unknown: '未知', warnOnly: '僅警告' });
   assert.ok(manifest.inputs.indexOf(input) < manifest.inputs.findIndex((item: { name: string }) => item.name === 'uploadToDt'));
-  for (const text of ['9.0', '7.0', '4.0', '>0', '=0', '未知', '僅警告', 'DT', 'SBOM', '摘要']) assert.ok(input.helpMarkDown.includes(text), text);
+  for (const text of ['9.0', '7.0', '4.0', '>0', '=0', '未知', '僅警告', 'DT', 'SBOM']) assert.ok(input.helpMarkDown.includes(text), text);
+  assert.match(manifest.inputs.find((item: { name: string }) => item.name === 'runOsv').helpMarkDown, /OSV 弱點報告.*頁籤/);
+  assert.doesNotMatch(manifest.inputs.find((item: { name: string }) => item.name === 'runOsv').helpMarkDown, /Extensions|摘要/);
   assert.doesNotMatch(manifest.inputs.find((item: { name: string }) => item.name === 'runOsv').helpMarkDown, /發現弱點只警告/);
 });
 

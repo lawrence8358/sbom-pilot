@@ -35,14 +35,22 @@
     "25",
     "26",
     "27",
-    "28"
+    "28",
+    "29",
+    "30",
+    "31",
+    "35",
+    "33",
+    "32"
   ],
   "activeWorktrees": [
     {
-      "ticket": "29",
-      "branch": "ticket/29-full-sbom",
-      "path": "../sbom-pilot-wt/29",
-      "implementer": "codex gpt-6.1-sol medium"
+      "ticket": "34",
+      "branch": "ticket/34-full-sbom-release",
+      "worktree": "../sbom-pilot-wt/34",
+      "checkpoint": ".scratch/sbom-task/checkpoints/34.md",
+      "phase": "docs-version",
+      "implementer": "codex gpt-6-luna medium"
     }
   ],
   "reviewStatus": "01-16-independent-review-closed; 17-self-checked-and-package-verified; 18-self-checked-and-live-azure-verified; 19-self-checked-and-live-azure-default-custom-verified; 20-independent-standards-spec-reviewed-and-live-azure-verified; 21-independent-standards-spec-reviewed-integrated-github-pushed; 24-27-independent-standards-spec-reviewed-fixes-integrated",
@@ -112,6 +120,7 @@
       "35": "gpt-6-astra/high"
     },
     "dispatchDir": "../.sbom-pilot-notes/full-sbom/dispatch",
-    "reviewBase": "55b7046"
+    "reviewBase": "55b7046",
+    "mainNodeModulesNote": "tab deps installed into main node_modules with --no-save (sdk 4.2.0, api 5.279.1, jsdom 30.1.3, @types/jsdom 30.0.0); run npm ci after main merges feature/full-sbom"
   }
 }
