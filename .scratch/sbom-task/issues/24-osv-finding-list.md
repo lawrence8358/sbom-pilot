@@ -1,4 +1,4 @@
-# 22: OSV 結果帶出逐筆弱點與風險等級（先重構）
+# 24: OSV 結果帶出逐筆弱點與風險等級（先重構）
 
 Type: task
 Status: ready-for-agent

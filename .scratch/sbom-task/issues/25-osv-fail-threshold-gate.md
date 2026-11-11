@@ -1,8 +1,8 @@
-# 23: OSV 失敗門檻：超過門檻擋 DT 並讓 Task 失敗
+# 25: OSV 失敗門檻：超過門檻擋 DT 並讓 Task 失敗
 
 Type: task
 Status: ready-for-agent
-Blocked by: 22
+Blocked by: 24
 
 ## 規格
 
