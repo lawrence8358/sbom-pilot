@@ -105,6 +105,7 @@ test('missing attachments, permissions, malformed data and wrong-build links sho
       /找不到.*附件|無法讀取|無法載入|格式不正確|建置資訊/,
     );
     assert.equal(root.querySelector('img'), null);
+    assert.equal(root.querySelector('table'), null);
     assert.doesNotMatch(root.textContent!, /secret response|未達到/);
     if (scenario === 'wrong-build' || scenario === 'context') assert.equal(downloads, 0);
   }
