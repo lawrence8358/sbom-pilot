@@ -12,7 +12,7 @@ test('extension exposes the OSV tab only for the SBOM Pilot task and requests bu
     (item: { id: string }) => item.id === OSV_TAB_CONTRIBUTION_ID,
   );
   assert.ok(tab, 'OSV report tab contribution is required');
-  assert.equal(tab.type, 'ms.vss-web.tab');
+  assert.equal(tab.type, 'ms.vss-build-web.build-results-tab');
   assert.deepEqual(tab.targets, ['ms.vss-build-web.build-results-view']);
   assert.equal(tab.properties.name, 'OSV 弱點報告');
   assert.deepEqual(tab.properties.supportsTasks, [task.id]);

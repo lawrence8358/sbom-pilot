@@ -96,7 +96,7 @@ SBOM Pilot 以 cdxgen `--required-only` 產生 SBOM，排除開發套件，原�
   - JSON 帶 `schemaVersion`，內容包括：判定（是否超標、門檻）、報告產生時間（ISO 8601 含時區）、OSV Scanner 版本、兩份 SBOM 檔名、產品弱點清單、開發套件額外弱點清單、總覽統計，以及 OSV 是否執行或失敗的狀態。
   - 未啟用 OSV 時仍上傳一份只標示未執行的 JSON，讓頁籤顯示對應訊息。附件上傳失敗加入錯誤清單。
 - **頁籤（擴充套件）**：
-  - `vss-extension.json` 新增 `ms.vss-web.tab` 元件，目標為 `ms.vss-build-web.build-results-view`，名稱「OSV 弱點報告」，`supportsTasks` 指定 SBOM Pilot Task ID。
+  - `vss-extension.json` 新增 `ms.vss-build-web.build-results-tab` 元件，目標為 `ms.vss-build-web.build-results-view`，名稱「OSV 弱點報告」，`supportsTasks` 指定 SBOM Pilot Task ID。
   - 新增 `scopes`：`vso.build`。
   - 前端使用 `azure-devops-extension-sdk` 與 `azure-devops-extension-api`，以 Build REST client 讀取本建置的自訂附件，再依 `schemaVersion` 呈現。不使用 React，小型 TypeScript 打包即可。
   - 所有外部字串以文字節點或跳脫後輸出，不使用未跳脫的 `innerHTML`；連結只允許 `https://osv.dev/`、`https://www.cve.org/`。

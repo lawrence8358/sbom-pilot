@@ -7,7 +7,7 @@
     "type": "git",
     "uri": "https://github.com/lawrence8358/sbom-pilot"
   },
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "產生 CycloneDX SBOM 的單一 Azure Pipelines Task。",
   "public": false,
   "targets": [
@@ -62,7 +62,7 @@
     },
     {
       "id": "osv-report-tab",
-      "type": "ms.vss-web.tab",
+      "type": "ms.vss-build-web.build-results-tab",
       "targets": [
         "ms.vss-build-web.build-results-view"
       ],

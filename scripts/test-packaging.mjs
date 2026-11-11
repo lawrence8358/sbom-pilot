@@ -6,27 +6,30 @@ import { spawnSync } from 'node:child_process';
 import JSZip from 'jszip';
 import { hash, PACKAGING_SOURCE_ROOTS } from './packaging-state.mjs';
 
-test('0.3.1 release versions and public documentation stay aligned with the packaged extension', async () => {
+test('0.3.2 release versions and public documentation stay aligned with the packaged extension', async () => {
   const pkg = JSON.parse(await readFile('package.json', 'utf8'));
   const lock = JSON.parse(await readFile('package-lock.json', 'utf8'));
   const extension = JSON.parse(await readFile('vss-extension.json', 'utf8'));
   const task = JSON.parse(await readFile('src/task.json', 'utf8'));
-  assert.equal(pkg.version, '0.3.1');
+  assert.equal(pkg.version, '0.3.2');
   assert.equal(lock.version, pkg.version);
   assert.equal(lock.packages[''].version, pkg.version);
   assert.equal(extension.version, pkg.version);
-  assert.deepEqual(task.version, { Major: 0, Minor: 3, Patch: 1 });
+  assert.deepEqual(task.version, { Major: 0, Minor: 3, Patch: 2 });
 
   const [readme, devReadme, releaseNotes] = await Promise.all([
     readFile('README.md', 'utf8'),
     readFile('README-Dev.md', 'utf8'),
     readFile('.scratch/full-sbom/release-notes-0.3.1.md', 'utf8'),
   ]);
+  const patchNotes = await readFile('.scratch/full-sbom/release-notes-0.3.2.md', 'utf8');
+  assert.match(patchNotes, /ms\.vss-build-web\.build-results-tab/);
+  assert.match(patchNotes, /0\.3\.2/);
   for (const text of [readme, releaseNotes]) {
     assert.match(text, /完整 SBOM/);
     assert.match(text, /產品 SBOM/);
   }
-  assert.match(devReadme, /0\.3\.1/);
+  assert.match(devReadme, /0\.3\.2/);
   assert.match(releaseNotes, /開發套件弱點.*失敗門檻/);
   assert.match(releaseNotes, /僅警告/);
   assert.match(releaseNotes, /sbom\.cdx-full\.json/);
@@ -92,7 +95,7 @@ test('Marketplace CLI creates private/public bundles and rejects stale, mismatch
   const privateBytes = await readFile(privatePath);
   const privateZip = await JSZip.loadAsync(privateBytes);
   const task = JSON.parse(await privateZip.file('dist/task.json').async('string'));
-  assert.deepEqual(task.version, { Major: 0, Minor: 3, Patch: 1 });
+  assert.deepEqual(task.version, { Major: 0, Minor: 3, Patch: 2 });
   assert.match(await privateZip.file('extension.vsixmanifest').async('string'), new RegExp(`Version="${version}"`));
   for (const name of ['artifactName', 'sbomFileName']) {
     const input = task.inputs.find(input => input.name === name);
@@ -112,7 +115,7 @@ test('Marketplace CLI creates private/public bundles and rejects stale, mismatch
   for (const asset of ['index.js', 'styles.css']) assert.ok(privateZip.file(`dist/osv-tab/${asset}`));
   const tabManifest = JSON.parse(await privateZip.file('extension.vsomanifest').async('string'));
   const tab = tabManifest.contributions.find(item => item.id === 'osv-report-tab');
-  assert.equal(tab.type, 'ms.vss-web.tab');
+  assert.equal(tab.type, 'ms.vss-build-web.build-results-tab');
   assert.deepEqual(tab.targets, ['ms.vss-build-web.build-results-view']);
   assert.deepEqual(tab.properties.supportsTasks, ['ae7d525c-a209-48e5-8f3e-17b24500b7b5']);
   assert.deepEqual(tabManifest.scopes, ['vso.build']);
