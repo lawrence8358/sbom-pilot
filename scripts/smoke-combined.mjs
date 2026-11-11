@@ -78,7 +78,7 @@ for (const scenario of scenarios) {
     return runProcess(command);
   };
   const config = { environment: scenario === 'dotnet' ? 'dotnet' : 'combined', projectPath: project, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: parseExcludes(DEFAULT_EXCLUDES), fetchLicense: false, noCache: true, runOsv: false, uploadToDt: false };
-  const services = { run, log: console.log, prepare: async () => ({ ...tools, env: { ...tools.env } }), publish: async () => { publications++; } };
+  const services = { run, log: console.log, publishTabReport: async () => {}, prepare: async () => ({ ...tools, env: { ...tools.env } }), publish: async () => { publications++; } };
   const result = await runWorkflow(config, runDirectory, services);
   const bytes = await readFile(result.path), bom = JSON.parse(bytes);
   const components = [...bom.components, ...(bom.metadata?.component?.components ?? [])];

@@ -14,7 +14,7 @@ if (command === 'check') {
 } else if (command === 'submission') {
   await createSubmission(join('packages', mode, `${manifest.publisher}.${manifest.id}-${manifest.version}.vsix.provenance.json`), options);
 } else {
-  const build = spawnSync(process.execPath, ['scripts/build.mjs'], { stdio: 'inherit' });
+  const build = spawnSync(process.execPath, ['scripts/build.mjs', ...(options.local ? ['--local'] : [])], { stdio: 'inherit' });
   if (build.error || build.status !== 0) throw new Error('建置失敗，未建立新封裝。', { cause: build.error });
   const receipt = await packageExtension({ ...options, output: join('packages', mode) });
   await createSubmission(receipt, { ...options, allowPreview: command === 'preview' });

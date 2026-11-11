@@ -46,6 +46,9 @@ test('Marketplace CLI creates private/public bundles and rejects stale, mismatch
     await writeFile(iconPath, iconBytes);
   }
   run(['scripts/packaging.mjs', 'package', '--private']);
+  // 以封裝時覆寫的身分執行入口，即使參數驗證失敗也必須連到實際頁籤。
+  const linkedTask = run(['dist/index.js'], true, { ...env, BUILD_BUILDID: '42', RELEASE_RELEASEID: '', SYSTEM_COLLECTIONURI: 'https://server.invalid/tfs/collection/', SYSTEM_TEAMPROJECT: 'Project A', INPUT_PROJECTPATH: '' });
+  assert.match(linkedTask.stdout, /https:\/\/server\.invalid\/tfs\/collection\/Project%20A\/_build\/results\?buildId=42&view=sbom-fixture-only\.sbom-pilot\.osv-report-tab/);
   const privatePath = join(fixture, `packages/private/sbom-fixture-only.sbom-pilot-${version}.vsix`);
   const privateBytes = await readFile(privatePath);
   const privateZip = await JSZip.loadAsync(privateBytes);
@@ -141,5 +144,10 @@ test('Marketplace CLI creates private/public bundles and rejects stale, mismatch
   await writeFile(`${publicPath}.provenance.json`, publicReceiptBytes);
   const generated = await publicZip.file('extension.vsomanifest').async('string');
   assert.deepEqual(JSON.parse(generated).scopes, ['vso.build']);
+  run(['scripts/packaging.mjs', 'preview']);
+  const previewTask = run(['dist/index.js'], true, { ...env, BUILD_BUILDID: '42', RELEASE_RELEASEID: '', SYSTEM_COLLECTIONURI: 'https://server.invalid/tfs/collection/', SYSTEM_TEAMPROJECT: 'Project A', INPUT_PROJECTPATH: '' });
+  assert.match(previewTask.stdout, /view=local-dev-placeholder\.sbom-pilot\.osv-report-tab/);
+  const wrongBuildIdentity = run(['scripts/package.mjs', '--private'], false);
+  assert.match(wrongBuildIdentity.stderr, /建置身分.*重新 build/);
   console.log(`SYNTHETIC FIXTURE ONLY: ${fixture}`);
 });

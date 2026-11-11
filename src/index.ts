@@ -1,14 +1,30 @@
 import { dtApiKeyInput, npmCredentialsInput, nugetCredentialsInput } from './azure-secret-inputs';
 import * as tl from 'azure-pipelines-task-lib/task';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { readTaskConfig } from './config';
 import { readAzureInput } from './azure-inputs';
 import { runWorkflow } from './workflow';
+import { OSV_TAB_ATTACHMENT_TYPE, OSV_TAB_CONTRIBUTION_ID } from './shared/osv-tab-contract';
+import extension from '../vss-extension.json';
+
+/** 從擴充套件資訊與建置變數推導頁籤連結，保留地端集合路徑並編碼專案名稱。 */
+function osvTabUrl(): string | undefined {
+  const collection = tl.getVariable('System.CollectionUri');
+  const project = tl.getVariable('System.TeamProject');
+  const build = tl.getVariable('Build.BuildId');
+  const tab = extension.contributions.find((item) => item.id === OSV_TAB_CONTRIBUTION_ID);
+  if (!collection || !project || !build || !tab) return;
+
+  const contribution = `${extension.publisher}.${extension.id}.${tab.id}`;
+
+  return `${collection.replace(/\/+$/, '')}/${encodeURIComponent(project)}/_build/results?buildId=${encodeURIComponent(build)}&view=${encodeURIComponent(contribution)}`;
+}
 
 /** 銜接 Azure Build 輸入、工作流程與結果；finally 清理掃描工具但保留待 Agent 上傳的 SBOM。 */
 async function main(): Promise<void> {
   let tempDirectory: string | undefined;
+  let resultLink = '';
 
   try {
     if (dtApiKeyInput) {
@@ -18,6 +34,11 @@ async function main(): Promise<void> {
       throw new Error(
         '此 Task 需要 Classic Build 或 YAML Build 工作；Classic Release 不支援 Build Artifact 上傳。',
       );
+    }
+    const reportUrl = osvTabUrl();
+    if (reportUrl) {
+      resultLink = ` OSV 弱點報告：${reportUrl}`;
+      console.log(`OSV 弱點報告：${reportUrl}`);
     }
 
     const config = readTaskConfig((name) =>
@@ -53,17 +74,19 @@ async function main(): Promise<void> {
         console.log('OSV 弱點報告上傳已排入 Agent 佇列；請由工作結果及成品頁確認完成。');
       },
 
-      /** 將同一份 Markdown 附加到此次 CI 的 Extensions 摘要，無需下載成品。 */
-      publishSummary: async (report) => {
-        tl.uploadSummary(report.path);
-        console.log('OSV 弱點報告已排入 CI 摘要上傳佇列；請於執行結果的 Extensions 查看。');
+      /** 以 UTF-8 寫出頁籤契約附件，保留到工作清理以供 Agent 非同步讀取。 */
+      publishTabReport: async (report) => {
+        const path = join(tempDirectory!, 'osv-tab-report.json');
+        await writeFile(path, JSON.stringify(report), 'utf8');
+        tl.addAttachment(OSV_TAB_ATTACHMENT_TYPE, 'osv-report', path);
+        console.log('OSV 弱點報告頁籤附件已排入 Agent 佇列。');
       },
     });
-    tl.setResult(tl.TaskResult.Succeeded, 'SBOM 已產生並驗證，成品上傳已排入佇列。');
+    tl.setResult(tl.TaskResult.Succeeded, `SBOM 已產生並驗證，成品上傳已排入佇列。${resultLink}`);
   } catch (error) {
     tl.setResult(
       tl.TaskResult.Failed,
-      error instanceof Error ? error.message : 'SBOM Pilot 執行失敗。',
+      `${error instanceof Error ? error.message : 'SBOM Pilot 執行失敗。'}${resultLink}`,
     );
   } finally {
     // 清理掃描工具暫存，保留已驗證成品供 Agent 非同步讀取。

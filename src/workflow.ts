@@ -16,6 +16,7 @@ import { createOsvScanner, type OsvScanner, type OsvReport } from './osv';
 import { partitionOsvFindings, osvThresholdMessage } from './osv-threshold';
 import { logOsvIssues } from './osv-issues';
 import { developmentExtraFindings } from './osv-report';
+import type { OsvTabReport } from './shared/osv-tab-contract';
 
 export type ArtifactPublisher = (sbom: ValidatedSbom, artifactName: string) => Promise<void>;
 export type SbomUploader = (sbom: ValidatedSbom) => Promise<void>;
@@ -30,7 +31,7 @@ export interface WorkflowServices {
   upload?: SbomUploader;
   scanOsv?: OsvScanner;
   publishReport?: (report: OsvReport, artifactName: string) => Promise<void>;
-  publishSummary?: (report: OsvReport) => Promise<void>;
+  publishTabReport?: (report: OsvTabReport) => Promise<void>;
 }
 export class StageError extends Error {
   /** 將安全原始錯誤加上工作階段名稱，讓使用者定位失敗位置。 */
@@ -193,6 +194,7 @@ export async function runWorkflow(
   const errors: unknown[] = [];
   const reports: (OsvReport | undefined)[] = [];
   let dtBlocked = false;
+  let exceededThreshold = false;
 
   if (config.runOsv) {
     const threshold = config.osvFailOn!;
@@ -237,6 +239,7 @@ export async function runWorkflow(
         : [];
       logOsvIssues(groups, services.log, devExtra);
       if (exceeded.length) {
+        exceededThreshold = true;
         dtBlocked = true;
         const message = osvThresholdMessage(exceeded, threshold, Boolean(config.uploadToDt));
         services.log(message);
@@ -289,17 +292,35 @@ export async function runWorkflow(
     }
   }
 
-  const productReport = reports[0];
-  if (productReport) {
-    services.log('##[section]開始發佈 OSV 報告至 CI 摘要');
-    try {
-      await stage('OSV 摘要發佈', async () => {
-        if (!services.publishSummary) throw new Error('缺少 OSV 報告摘要發佈介面。');
-        await services.publishSummary(productReport);
+  // 頁籤附件與下載成品分開發佈，先前階段失敗仍保留可用的掃描資料。
+  services.log('##[section]開始發佈 OSV 弱點報告頁籤資料');
+  try {
+    await stage('OSV 頁籤附件發佈', async () => {
+      if (!services.publishTabReport) throw new Error('缺少 OSV 頁籤附件發佈介面。');
+      await services.publishTabReport({
+        schemaVersion: 1,
+        generatedAt: new Date().toISOString(),
+        scannerVersion: reports[1]?.version ?? reports[0]?.version,
+        threshold: config.runOsv ? config.osvFailOn : undefined,
+        exceeded: exceededThreshold,
+        dtSkipped: Boolean(config.uploadToDt && dtBlocked),
+        sboms: { product: config.sbomFileName!, full: fullFileName },
+        product: {
+          status: !config.runOsv ? 'disabled' : reports[0] ? 'completed' : 'failed',
+          findings: reports[0]?.findingList ?? [],
+        },
+        devExtra: {
+          // 差集依賴兩份成功結果，不能把比較失敗當成沒有額外弱點。
+          status: !config.runOsv ? 'disabled' : reports[0] && reports[1] ? 'completed' : 'failed',
+          findings:
+            reports[0] && reports[1]
+              ? developmentExtraFindings(reports[0].findingList, reports[1].findingList)
+              : [],
+        },
       });
-    } catch (error) {
-      errors.push(error);
-    }
+    });
+  } catch (error) {
+    errors.push(error);
   }
 
   if (errors.length === 1) throw errors[0];

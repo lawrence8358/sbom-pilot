@@ -162,7 +162,7 @@ async function main() {
         return runProcess(command);
       };
       const config = { environment: name === 'combined' ? 'combined' : 'vue', projectPath: project, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: parseExcludes(DEFAULT_EXCLUDES), fetchLicense: false, noCache: true, runOsv: false, uploadToDt: false, npmCredentials: credential };
-      const services = { run, log, prepare: async () => ({ ...scopedTools, env: { ...scopedTools.env } }), publish: async () => { publications++; } };
+      const services = { run, log, publishTabReport: async () => {}, prepare: async () => ({ ...scopedTools, env: { ...scopedTools.env } }), publish: async () => { publications++; } };
       await cleanInstall(); phase = 'success'; counts = [];
       const result = await runWorkflow(config, join(state, 'success'), services);
       assert.ok(!(await readdir(join(state, 'success'))).some(name => name.startsWith('sbom-npm-auth-') || name.startsWith('sbom-manager-')), 'Success auth/manager temp cleanup failed');

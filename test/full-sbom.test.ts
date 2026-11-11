@@ -21,7 +21,7 @@ test('one dependency installation produces, validates and publishes product and 
   const logs: string[] = [];
   let installs = 0;
   const result = await runWorkflow(config, root, {
-    log: message => logs.push(message), prepare: async () => tools,
+    log: message => logs.push(message), publishTabReport: async () => {}, prepare: async () => tools,
     installer: { install: async () => { installs++; } },
     run: async command => {
       commands.push(command);
@@ -69,12 +69,12 @@ for (const [product, full] of [['sbom.cdx.json', 'sbom.cdx-dev.json'], ['PrimeX.
     const input = readTaskConfig(name => ({ projectPath: root, sbomFileName: product, artifactName: 'Custom', uploadToDt: 'true', dtApiUrl: 'https://dt.invalid', dtProjectUuid: 'd40ce445-3566-49d5-bd8d-2601d73cf0d4', dtApiKey: 'fixture' })[name]);
     const published: string[][] = [], scanned: string[] = [], uploaded: string[] = [];
     const result = await runWorkflow(input, root, {
-      log: () => {}, prepare: async () => tools, installer: { install: async () => {} },
+      log: () => {}, publishTabReport: async () => {}, prepare: async () => tools, installer: { install: async () => {} },
       generate: async request => { await writeFile(request.outputPath, JSON.stringify({ bomFormat: 'CycloneDX', specVersion: '1.6', components: [] })); },
       scanOsv: async request => { scanned.push(basename(request.sbom.path)); return { path: join(root, 'sbom.osv.md'), version: '2.7.1', findings: false, findingList: [] }; },
       upload: async sbom => { uploaded.push(basename(sbom.path)); },
       publish: async (sbom, name) => { published.push([basename(sbom.path), name]); },
-      publishReport: async () => {}, publishSummary: async () => {},
+      publishReport: async () => {},
     });
     assert.equal(basename(result.path), product);
     assert.deepEqual(published, [[product, 'Custom'], [full, 'Custom']]);
@@ -88,7 +88,7 @@ test('DT can explicitly upload the product SBOM and its variant input is visible
   const uploaded: string[] = [];
   const logs: string[] = [];
   await runWorkflow(input, root, {
-    log: message => logs.push(message), prepare: async () => tools, installer: { install: async () => {} },
+    log: message => logs.push(message), publishTabReport: async () => {}, prepare: async () => tools, installer: { install: async () => {} },
     generate: async request => { await writeFile(request.outputPath, JSON.stringify({ bomFormat: 'CycloneDX', specVersion: '1.6', components: [] })); },
     upload: async sbom => { uploaded.push(basename(sbom.path)); }, publish: async () => {},
   });
@@ -109,7 +109,7 @@ for (const variant of ['product', 'full']) for (const failure of ['generation', 
     const input = readTaskConfig(name => ({ projectPath: root })[name]);
     const events: string[] = [];
     await assert.rejects(runWorkflow(input, root, {
-      log: () => {}, prepare: async () => tools, installer: { install: async () => {} },
+      log: () => {}, publishTabReport: async () => {}, prepare: async () => tools, installer: { install: async () => {} },
       generate: async request => {
         const selected = basename(request.outputPath) === (variant === 'product' ? 'sbom.cdx.json' : 'sbom.cdx-dev.json');
         if (selected && failure === 'generation') throw new Error('generator broken');
@@ -125,7 +125,7 @@ for (const variant of ['product', 'full']) for (const failure of ['generation', 
 test('each SBOM publication is attempted and both publication errors are preserved', () => fixture(async root => {
   const published: string[] = [];
   await assert.rejects(runWorkflow(readTaskConfig(name => ({ projectPath: root, runOsv: 'false' })[name]), root, {
-    log: () => {}, prepare: async () => tools, installer: { install: async () => {} }, generate: async () => {},
+    log: () => {}, publishTabReport: async () => {}, prepare: async () => tools, installer: { install: async () => {} }, generate: async () => {},
     validate: async path => ({ path, componentCount: 0 }),
     publish: async sbom => { published.push(basename(sbom.path)); throw new Error(`failed ${basename(sbom.path)}`); },
   }), /failed sbom.cdx.json.*failed sbom.cdx-dev.json/);

@@ -56,7 +56,7 @@ for (const format of ['non-sdk-package-reference', 'packages-config', 'sdk-net48
   const immutableFiles = [nugetConfig, projectFile, ...(isPackagesConfig ? [join(projectDirectory, 'packages.config')] : []), ...(format === 'non-sdk-package-reference' ? [join(projectDirectory, 'locked.dependencies.json')] : [])];
   const before = await Promise.all(immutableFiles.map(async path => [path, await hash(path)]));
   let published = 0;
-  const services = { log: console.log, prepare: async () => ({ ...tools, env: { ...tools.env } }), publish: async () => { published++; } };
+  const services = { log: console.log, publishTabReport: async () => {}, prepare: async () => ({ ...tools, env: { ...tools.env } }), publish: async () => { published++; } };
   const artifact = await runWorkflow(config(product), join(root, `run-${format}`), services);
   const bytes = await readFile(artifact.path); const bom = JSON.parse(bytes);
   const direct = bom.components.find(component => component.name === 'Microsoft.Extensions.Logging');
@@ -83,9 +83,9 @@ const failure = join(root, 'failure-targets'); await mkdir(failure, { recursive:
 await writeFile(join(failure, 'NuGet.Config'), sourceConfig());
 await writeFile(join(failure, 'Product.csproj'), classicProject('<Import Project="Missing.Web.Workload.targets"/>'));
 let failedPublications = 0;
-const services = { log: () => {}, prepare: async () => ({ ...tools, env: { ...tools.env } }), publish: async () => { failedPublications++; } };
+const services = { log: () => {}, publishTabReport: async () => {}, prepare: async () => ({ ...tools, env: { ...tools.env } }), publish: async () => { failedPublications++; } };
 await assert.rejects(runWorkflow(config(failure), join(root, 'run-failure-targets'), services), /依賴安裝.*workloads/);
-await assert.rejects(runWorkflow(config(failure), join(root, 'run-failure-msbuild'), { ...services, prepare: async () => ({ ...tools, env: { ...tools.env, MSBUILD_EXE_PATH: join(root, 'missing', 'MSBuild.exe') } }) }), /依賴安裝.*預裝.*MSBuild/);
+await assert.rejects(runWorkflow(config(failure), join(root, 'run-failure-msbuild'), { ...services, publishTabReport: async () => {}, prepare: async () => ({ ...tools, env: { ...tools.env, MSBUILD_EXE_PATH: join(root, 'missing', 'MSBuild.exe') } }) }), /依賴安裝.*預裝.*MSBuild/);
 assert.equal(failedPublications, 0);
 console.log('FRAMEWORK FAILURE PASS: missing MSBuild and missing imported workload targets fail before publication.');
 console.log('Only local artifact adapters tested; real Azure DevOps installation/publication remains external validation.');

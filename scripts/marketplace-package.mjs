@@ -45,6 +45,7 @@ export async function verifyArchive(path, manifest) {
 export async function packageExtension(options = {}) {
   const { manifest, mode } = await packagingConfig(options);
   const build = await verifyBuild();
+  assert.deepEqual(build.extensionIdentity, { publisher: manifest.publisher, id: manifest.id }, '建置身分與封裝不符，請使用相同身分重新 build；預覽建置請加 --local。');
   if (mode !== 'preview') {
     const inventory = await readJson('dist/licenses/manifest.json');
     if (inventory.some(item => item.upstreamNoticeMissing)) throw new Error('正式打包仍有上游 runtime 授權告示待確認，請先處理 dist/licenses/manifest.json 中的 upstreamNoticeMissing。');

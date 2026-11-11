@@ -25,7 +25,7 @@ const workspace = join(base, 'workspace-product');
 await cp('examples/pnpm-workspace', workspace, { recursive: true });
 const lockPath = join(workspace, 'pnpm-lock.yaml');
 const before = await digest(lockPath);
-const result = await runWorkflow(config(workspace), join(base, 'workspace-run'), { log: console.log, prepare: async () => tools, publish });
+const result = await runWorkflow(config(workspace), join(base, 'workspace-run'), { log: console.log, publishTabReport: async () => {}, prepare: async () => tools, publish });
 const bom = JSON.parse(await readFile(result.path, 'utf8'));
 for (const name of ['vue', 'lodash']) {
   if (!bom.components.some(component => component.name === name)) throw new Error(`Workspace BOM missing ${name}`);
@@ -55,7 +55,7 @@ await withPackageManager({ root: standalone, manager: 'pnpm', version: '12.16.1'
   await runProcess({ executable: command.executable, args: [...command.args, 'install', '--lockfile-only'], cwd: standalone, env: tools.env });
 });
 const nativeBefore = await digest(join(standalone, 'pnpm-lock.yaml'));
-const nativeResult = await runWorkflow(config(standalone), join(base, 'native-run'), { log: console.log, prepare: async () => tools, publish });
+const nativeResult = await runWorkflow(config(standalone), join(base, 'native-run'), { log: console.log, publishTabReport: async () => {}, prepare: async () => tools, publish });
 const nativeBom = JSON.parse(await readFile(nativeResult.path, 'utf8'));
 if (!nativeBom.components.some(component => component.name === 'is-number') || nativeBefore !== await digest(join(standalone, 'pnpm-lock.yaml'))) throw new Error('Native pnpm dependency missing or lock changed');
 console.log('NATIVE PNPM PASS: 12.16.1 hash verified, installed and scanned standalone dependency, lock unchanged.');

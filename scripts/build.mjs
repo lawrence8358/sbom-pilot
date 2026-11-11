@@ -1,16 +1,24 @@
 import { build } from 'esbuild';
 import { cp, mkdir, readFile, rm, readdir, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
-import { sourceSnapshot, recordBuild } from './packaging-state.mjs';
+import { sourceSnapshot, recordBuild, packagingConfig } from './packaging-state.mjs';
 
 const sources = await sourceSnapshot();
+// 頁籤連結與實際封裝共用身分推導；一般 build 未設定發佈身分時沿用來源 manifest。
+const extension = process.argv.includes('--local') || process.env.SBOM_PILOT_PUBLISHER
+  ? (await packagingConfig({ local: process.argv.includes('--local') })).manifest
+  : JSON.parse(await readFile('vss-extension.json', 'utf8'));
 const check = spawnSync(process.execPath, ['node_modules/typescript/bin/tsc', '--noEmit'], { stdio: 'inherit' });
 if (check.status !== 0) process.exit(check.status ?? 1);
 await rm('dist', { recursive: true, force: true });
 await mkdir('dist', { recursive: true });
 // jsonc-parser's UMD entry passes require through a factory, hiding relative
 // imports from the bundler. Its published ESM entry bundles those imports safely.
-const bundled = await build({ entryPoints: ['src/index.ts'], bundle: true, platform: 'node', target: 'node20', format: 'cjs', outfile: 'dist/index.js', external: ['azure-pipelines-task-lib'], alias: { 'jsonc-parser': 'jsonc-parser/lib/esm/main.js' }, metafile: true });
+const bundled = await build({ entryPoints: ['src/index.ts'], bundle: true, platform: 'node', target: 'node20', format: 'cjs', outfile: 'dist/index.js', external: ['azure-pipelines-task-lib'], alias: { 'jsonc-parser': 'jsonc-parser/lib/esm/main.js' }, metafile: true,
+  plugins: [{ name: 'packaged-extension-identity', setup(builder) {
+    builder.onLoad({ filter: /[\\/]vss-extension\.json$/ }, () => ({ contents: JSON.stringify(extension), loader: 'json' }));
+  } }],
+});
 // 頁籤採獨立瀏覽器入口，SDK／API 隨 bundle 出貨，不加入 Task 執行期。
 const tab = await build({ entryPoints: ['src/osv-tab/index.ts'], bundle: true, platform: 'browser', target: 'es2020', format: 'iife', outfile: 'dist/osv-tab/index.js', metafile: true });
 await cp('src/osv-tab/index.html', 'dist/osv-tab/index.html');
@@ -53,4 +61,4 @@ for (const source of bundledRoots) {
 }
 await writeFile('dist/licenses/manifest.json', JSON.stringify(attributions.sort((a, b) => a.name.localeCompare(b.name) || a.version.localeCompare(b.version)), null, 2));
 await writeFile('dist/licenses/runtime-inputs.json', JSON.stringify({ handler: Object.keys(bundled.metafile.inputs), sdk: Object.keys(sdk.metafile.inputs), tab: Object.keys(tab.metafile.inputs) }, null, 2));
-await recordBuild(sources);
+await recordBuild(sources, { publisher: extension.publisher, id: extension.id });

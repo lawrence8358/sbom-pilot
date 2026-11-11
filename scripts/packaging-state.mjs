@@ -33,10 +33,10 @@ export async function snapshot(files) {
 export const distSnapshot = async () => snapshot(await filesAt('dist'));
 
 /** 建置前後來源必須一致；此收據把目前 dist 與實際建置來源綁定。 */
-export async function recordBuild(sources) {
+export async function recordBuild(sources, extensionIdentity) {
   assert.deepEqual(await sourceSnapshot(), sources, '建置期間來源已更動，請重新 build。');
   await mkdir('packages', { recursive: true });
-  await writeJson('packages/build-provenance.json', { schemaVersion: 1, sources, dist: await distSnapshot() });
+  await writeJson('packages/build-provenance.json', { schemaVersion: 1, sources, dist: await distSnapshot(), extensionIdentity });
 }
 
 /** 不能用舊 build 搭配新文件／程式或修改過的 dist 產生正式封裝。 */

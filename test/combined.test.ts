@@ -160,7 +160,7 @@ test('default combined workflow prepares frontend/backend and publishes both val
     return { stdout: '', stderr: '' };
   };
   let published = 0;
-  const result = await runWorkflow(config(root), join(root, 'temp'), { log: () => {}, run: runner, prepare: async () => ({ ...tools, env: { ...tools.env } }), publish: async sbom => { published++; assert.equal(sbom.componentCount, 2); } });
+  const result = await runWorkflow(config(root), join(root, 'temp'), { log: () => {}, run: runner, publishTabReport: async () => {}, prepare: async () => ({ ...tools, env: { ...tools.env } }), publish: async sbom => { published++; assert.equal(sbom.componentCount, 2); } });
   assert.equal(published, 2);
   assert.equal(calls.filter(command => command.args[0] === tools.cdxgenCli).length, 2);
   assert.equal(calls.filter(command => command.args[0] === 'restore').length, 1);

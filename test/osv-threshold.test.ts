@@ -22,7 +22,7 @@ async function workflowFixture(action: (root: string, services: WorkflowServices
     upload: async () => { events.push('dt'); },
     publish: async () => { events.push('sbom'); },
     publishReport: async () => { events.push('report'); },
-    publishSummary: async () => { events.push('summary'); },
+    publishTabReport: async () => { events.push('attachment'); },
   };
   try { await action(root, services, events, logs); } finally { await rm(root, { recursive: true, force: true }); }
 }
@@ -37,7 +37,7 @@ function dtConfig(root: string) {
   return readTaskConfig(name => ({ projectPath: root, uploadToDt: 'true', dtApiUrl: 'https://dt.invalid', dtProjectUuid: 'd40ce445-3566-49d5-bd8d-2601d73cf0d4', dtApiKey: 'fixture' })[name]);
 }
 
-test('workflow scans both validated SBOMs and publishes both reports to one artifact with only the product summary', () => workflowFixture(async (root, services) => {
+test('workflow scans both validated SBOMs and publishes both reports to one artifact with one tab attachment', () => workflowFixture(async (root, services) => {
   const scans: string[] = [], published: string[] = [], summaries: string[] = [];
   const cfg = { ...dtConfig(root), sbomFileName: 'PrimeX.JSON', artifactName: 'Custom' };
   await runWorkflow(cfg, join(root, 'temp'), {
@@ -47,11 +47,11 @@ test('workflow scans both validated SBOMs and publishes both reports to one arti
       return { path: request.variant === 'product' ? 'OSV弱點報告-產品.md' : 'OSV弱點報告-完整.md', version: '2.7.1', findings: false, findingList: [] };
     },
     publishReport: async (report, artifact) => { published.push(`${artifact}/${report.path}`); },
-    publishSummary: async report => { summaries.push(report.path); },
+    publishTabReport: async report => { summaries.push(report.product.status); },
   });
   assert.deepEqual(scans, [join(root, 'temp', 'sbom', 'PrimeX.JSON'), join(root, 'temp', 'sbom', 'PrimeX-dev.json')]);
   assert.deepEqual(published, ['Custom/OSV弱點報告-產品.md', 'Custom/OSV弱點報告-完整.md']);
-  assert.deepEqual(summaries, ['OSV弱點報告-產品.md']);
+  assert.deepEqual(summaries, ['completed']);
 }));
 
 test('only development findings exceeding the threshold still block DT and fail while full-report issues identify development packages', () => workflowFixture(async (root, services, events, logs) => {
@@ -96,7 +96,7 @@ for (const threshold of ['high', 'warnOnly'] as const) {
           return { path: request.variant!, version: '2.7.1', findings: false, findingList: [] };
         },
         publishReport: async report => { published.push(report.path); },
-        publishSummary: async report => { summaries.push(report.path); },
+        publishTabReport: async report => { summaries.push(report.product.status); },
       }), error => {
         assert.ok(error instanceof Error);
         for (const variant of failed) assert.ok(error.message.includes(`${variant} broken`));
@@ -104,7 +104,7 @@ for (const threshold of ['high', 'warnOnly'] as const) {
       });
       assert.deepEqual(scans, ['product', 'full']);
       assert.deepEqual(published, ['product', 'full'].filter(variant => !failed.includes(variant)));
-      assert.deepEqual(summaries, failed.includes('product') ? [] : ['product']);
+      assert.deepEqual(summaries, [failed.includes('product') ? 'failed' : 'completed']);
       assert.equal(events.includes('dt'), threshold === 'warnOnly');
       assert.equal(events.filter(event => event === 'sbom').length, 2);
       assert.equal(logs.some(line => line.includes('已略過 DT 上傳')), threshold !== 'warnOnly');
@@ -144,7 +144,7 @@ test('empty YAML OSV threshold inputs default to unknown', () => {
 
 test('default threshold blocks DT, preserves all publications and reports exceeded counts', () => workflowFixture(async (root, services, events, logs) => {
   await assert.rejects(runWorkflow(dtConfig(root), join(root, 'temp'), services), /OSV 弱點達到失敗門檻『未知』：高 1；已略過 DT 上傳。/);
-  assert.deepEqual(events, ['scan', 'scan', 'sbom', 'sbom', 'report', 'report', 'summary']);
+  assert.deepEqual(events, ['scan', 'scan', 'sbom', 'sbom', 'report', 'report', 'attachment']);
   assert.ok(logs.some(message => /失敗門檻『未知』：高 1；已略過 DT 上傳。/.test(message)));
 }));
 
@@ -177,7 +177,7 @@ test('warning-only issues preserve descending report severity and show missing C
     assert.match(line, /OSV-1（未提供），修復版本 未提供，https:\/\/osv.dev\/OSV-1$/);
   }
   assert.deepEqual(findingList, snapshot, 'issue 排序不能修改報告清單');
-  assert.deepEqual(events, ['dt', 'sbom', 'sbom', 'report', 'report', 'summary']);
+  assert.deepEqual(events, ['dt', 'sbom', 'sbom', 'report', 'report', 'attachment']);
 }));
 
 test('errors and warnings each retain the 50 highest risks with overflow summaries and a complete report', () => workflowFixture(async (root, services, events, logs) => {
@@ -191,7 +191,7 @@ test('errors and warnings each retain the 50 highest risks with overflow summari
     ...services,
     scanOsv: async () => ({ path: join(root, 'sbom.osv.md'), version: '2.7.1', findings: true, findingList }),
     publishReport: async report => { events.push('report'); assert.deepEqual(report.findingList, findingList); assert.equal(report.findingList.length, 105); },
-    publishSummary: async report => { events.push('summary'); assert.deepEqual(report.findingList, findingList); },
+    publishTabReport: async report => { events.push('attachment'); assert.deepEqual(report.product.findings, findingList); },
   }), /危急 1、高 51/);
   const issues = logs.filter(line => line.startsWith('##vso[task.logissue '));
   const errors = issues.filter(line => line.startsWith('##vso[task.logissue type=error;]'));
@@ -205,7 +205,7 @@ test('errors and warnings each retain the 50 highest risks with overflow summari
   assert.match(warnings[49], /UNKNOWN-48（/);
   assert.equal(warnings[50], '##vso[task.logissue type=warning;]另有 3 筆，詳見 OSV 弱點報告');
   assert.deepEqual(issues, [...errors, ...warnings]);
-  assert.deepEqual(events, ['sbom', 'sbom', 'report', 'report', 'summary']);
+  assert.deepEqual(events, ['sbom', 'sbom', 'report', 'report', 'attachment']);
 }));
 
 test('external newlines, percent signs and command delimiters remain within one issue message', () => workflowFixture(async (root, services, events, logs) => {
@@ -244,7 +244,7 @@ test('OSV technical failure blocks DT, preserves the valid SBOM and logs the ski
   await assert.rejects(runWorkflow(dtConfig(root), join(root, 'temp'), {
     ...services, scanOsv: async () => { events.push('scan'); throw new Error('scanner broken'); },
   }), /OSV 弱點掃描.*scanner broken/);
-  assert.deepEqual(events, ['scan', 'scan', 'sbom', 'sbom']);
+  assert.deepEqual(events, ['scan', 'scan', 'sbom', 'sbom', 'attachment']);
   assert.ok(logs.some(message => /OSV.*失敗.*已略過 DT 上傳/.test(message)));
   assert.ok(!logs.some(message => message.startsWith('##vso[task.logissue ')));
 }));
@@ -267,10 +267,10 @@ for (const [threshold, blockedSeverities] of thresholdCases) {
       });
       if (blockedSeverities.includes(severity)) {
         await assert.rejects(completion, /OSV 弱點達到失敗門檻.*已略過 DT 上傳/);
-        assert.deepEqual(events, ['scan', 'scan', 'sbom', 'sbom', 'report', 'report', 'summary']);
+        assert.deepEqual(events, ['scan', 'scan', 'sbom', 'sbom', 'report', 'report', 'attachment']);
       } else {
         assert.equal((await completion).componentCount, 1);
-        assert.deepEqual(events, ['scan', 'scan', 'dt', 'sbom', 'sbom', 'report', 'report', 'summary']);
+        assert.deepEqual(events, ['scan', 'scan', 'dt', 'sbom', 'sbom', 'report', 'report', 'attachment']);
       }
       const issues = logs.filter(line => line.startsWith('##vso[task.logissue '));
       assert.equal(issues.length, 1);
@@ -286,20 +286,20 @@ test('only exceeded findings are counted in descending risk order alongside all 
     scanOsv: async () => { events.push('scan'); return { path: join(root, 'sbom.osv.md'), version: '2.7.1', findings: true, findingList: ['low', 'high', 'unknown', 'critical', 'high', 'none', 'medium', 'high'].map(value => finding(value as OsvSeverity)) }; },
     publish: async () => { events.push('sbom'); throw new Error('SBOM broken'); },
     publishReport: async () => { events.push('report'); throw new Error('report broken'); },
-    publishSummary: async () => { events.push('summary'); throw new Error('summary broken'); },
+    publishTabReport: async () => { events.push('attachment'); throw new Error('attachment broken'); },
   }), error => {
     assert.ok(error instanceof Error);
-    assert.equal(error.message, 'OSV 弱點達到失敗門檻『高』：危急 1、高 3；已略過 DT 上傳。；[成品發佈] SBOM broken；[成品發佈] SBOM broken；[OSV 成品發佈] report broken；[OSV 成品發佈] report broken；[OSV 摘要發佈] summary broken');
+    assert.equal(error.message, 'OSV 弱點達到失敗門檻『高』：危急 1、高 3；已略過 DT 上傳。；[成品發佈] SBOM broken；[成品發佈] SBOM broken；[OSV 成品發佈] report broken；[OSV 成品發佈] report broken；[OSV 頁籤附件發佈] attachment broken');
     return true;
   });
-  assert.deepEqual(events, ['scan', 'scan', 'sbom', 'sbom', 'report', 'report', 'summary']);
+  assert.deepEqual(events, ['scan', 'scan', 'sbom', 'sbom', 'report', 'report', 'attachment']);
 }));
 
 test('unknown threshold counts zero and unknown scores without claiming disabled DT was skipped', () => workflowFixture(async (root, services, events, logs) => {
   await assert.rejects(runWorkflow({ ...dtConfig(root), uploadToDt: false }, join(root, 'temp'), {
     ...services, scanOsv: async () => { events.push('scan'); return { path: join(root, 'sbom.osv.md'), version: '2.7.1', findings: true, findingList: [finding('unknown'), finding('none')] }; },
   }), /OSV 弱點達到失敗門檻『未知』：無 1、未知 1。$/);
-  assert.deepEqual(events, ['scan', 'scan', 'sbom', 'sbom', 'report', 'report', 'summary']);
+  assert.deepEqual(events, ['scan', 'scan', 'sbom', 'sbom', 'report', 'report', 'attachment']);
   assert.ok(!logs.some(message => message.includes('已略過 DT 上傳')));
 }));
 
@@ -314,14 +314,14 @@ test('warning-only mode attempts DT after OSV failure and preserves DT and SBOM 
     assert.equal(error.message, '[OSV 弱點掃描（產品 SBOM）] scanner broken；[OSV 弱點掃描（完整 SBOM）] scanner broken；[DT 上傳] DT broken；[成品發佈] SBOM broken；[成品發佈] SBOM broken');
     return true;
   });
-  assert.deepEqual(events, ['scan', 'scan', 'dt', 'sbom', 'sbom']);
+  assert.deepEqual(events, ['scan', 'scan', 'dt', 'sbom', 'sbom', 'attachment']);
   assert.ok(!logs.some(message => message.includes('已略過 DT 上傳')));
   assert.ok(!logs.some(message => message.startsWith('##vso[task.logissue ')));
 }));
 
 test('disabled OSV ignores invalid thresholds and still uploads DT and publishes SBOM', () => workflowFixture(async (root, services, events, logs) => {
   await runWorkflow(Object.assign({}, dtConfig(root), { runOsv: false, osvFailOn: 'bad' }), join(root, 'temp'), services);
-  assert.deepEqual(events, ['dt', 'sbom', 'sbom']);
+  assert.deepEqual(events, ['dt', 'sbom', 'sbom', 'attachment']);
   assert.ok(!logs.some(message => message.startsWith('##vso[task.logissue ')));
 }));
 
@@ -329,7 +329,7 @@ test('unknown threshold succeeds without findings and retains DT and all publica
   await runWorkflow(dtConfig(root), join(root, 'temp'), {
     ...services, scanOsv: async () => { events.push('scan'); return { path: join(root, 'sbom.osv.md'), version: '2.7.1', findings: false, findingList: [] }; },
   });
-  assert.deepEqual(events, ['scan', 'scan', 'dt', 'sbom', 'sbom', 'report', 'report', 'summary']);
+  assert.deepEqual(events, ['scan', 'scan', 'dt', 'sbom', 'sbom', 'report', 'report', 'attachment']);
   assert.ok(!logs.some(message => message.startsWith('##vso[task.logissue ')));
 }));
 

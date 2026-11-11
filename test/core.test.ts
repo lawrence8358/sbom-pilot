@@ -144,7 +144,7 @@ test('real CycloneDX schema rejects wrong structure and invalid component, accep
 }));
 test('workflow validates before publication; publish failure fails stage', () => fixture(async root => {
   let published = 0;
-  const services = { log: () => {}, prepare: async () => tools, installer: { install: async () => {} }, generate: async () => {}, validate: async (path: string) => ({ path, componentCount: 1 }), publish: async () => { published++; throw new Error('upload failed'); } };
+  const services = { log: () => {}, publishTabReport: async () => {}, prepare: async () => tools, installer: { install: async () => {} }, generate: async () => {}, validate: async (path: string) => ({ path, componentCount: 1 }), publish: async () => { published++; throw new Error('upload failed'); } };
   await assert.rejects(runWorkflow(config(root), root, services), /成品發佈/);
   assert.equal(published, 2);
   await assert.rejects(runWorkflow(config(root), root, { ...services, validate: async () => { throw new Error('bad BOM'); } }), /SBOM 驗證/);
@@ -152,7 +152,7 @@ test('workflow validates before publication; publish failure fails stage', () =>
 }));
 test('workflow reports installation failure and publishes no invalid artifact', () => fixture(async root => {
   let published = false;
-  await assert.rejects(runWorkflow(config(root), root, { log: () => {}, prepare: async () => tools, installer: { install: async () => { throw new Error('install failed'); } }, publish: async () => { published = true; } }), /依賴安裝/);
+  await assert.rejects(runWorkflow(config(root), root, { log: () => {}, publishTabReport: async () => {}, prepare: async () => tools, installer: { install: async () => { throw new Error('install failed'); } }, publish: async () => { published = true; } }), /依賴安裝/);
   assert.equal(published, false);
 }));
 test('child runner reports exit and timeout without exposing child output', async () => {

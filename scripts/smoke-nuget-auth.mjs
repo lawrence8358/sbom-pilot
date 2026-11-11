@@ -117,7 +117,7 @@ try {
       if (auth) { assert.ok(restoring, 'Credential entered a non-restore child'); restoreCalls++; }
       return runProcess(command);
     };
-    const services = { log: message => { logs.push(message); console.log(message); }, run, prepare: async () => ({ ...tools, env: { ...env } }), publish: async artifact => { await readFile(artifact.path); published++; } };
+    const services = { log: message => { logs.push(message); console.log(message); }, run, publishTabReport: async () => {}, prepare: async () => ({ ...tools, env: { ...env } }), publish: async artifact => { await readFile(artifact.path); published++; } };
     const start = requests.length;
     const artifact = await runWorkflow(config, join(root, `run-${format}`), services);
     const bytes = await readFile(artifact.path), bom = JSON.parse(bytes);

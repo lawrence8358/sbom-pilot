@@ -31,7 +31,7 @@ test('solution input restores exactly once and scopes scanner to graph members e
   const logs: string[] = [];
   const tools: ToolContext = { node:process.execPath,npmCli:'npm',cdxgenCli:'cdxgen',nodeVersion:'24.22.2',cdxgenVersion:'13.6.0',env:{ ...process.env } };
   await runWorkflow(config(solution), join(root,'temp'), {
-    log: message => logs.push(message),prepare:async()=>tools,
+    log: message => logs.push(message),publishTabReport: async () => {}, prepare:async()=>tools,
     run:async command => {
       commands.push(command);
       const graphArg=command.args.find(value=>value.startsWith('-p:RestoreGraphOutputPath='));
@@ -57,7 +57,7 @@ test('artifact defaults and custom names flow through the output path and publis
   for (const extra of [{}, { artifactName:'CycloneSBOM',sbomFileName:'PrimeX.cdx.json' }]) {
     const generated: string[]=[];let published='';
     await runWorkflow(config(root,extra),join(root,'temp'),{
-      log:()=>{},prepare:async()=>({node:'node',npmCli:'npm',cdxgenCli:'cdxgen',nodeVersion:'24.22.2',cdxgenVersion:'13.6.0',env:{}}),installer:{install:async()=>{}},
+      log:()=>{},publishTabReport: async () => {}, prepare:async()=>({node:'node',npmCli:'npm',cdxgenCli:'cdxgen',nodeVersion:'24.22.2',cdxgenVersion:'13.6.0',env:{}}),installer:{install:async()=>{}},
       generate:async request=>{generated.push(request.outputPath);await writeFile(request.outputPath,JSON.stringify({bomFormat:'CycloneDX',specVersion:'1.6',version:1,components:[]}));},
       publish:async (...values: unknown[])=>{published=String(values[1]);},
     });

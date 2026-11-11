@@ -151,9 +151,9 @@ test('dotnet workflow uses common validation/publication and scan contract', () 
   assert.ok(args.includes('--required-only'));
   assert.ok(args.includes('1.6'));
   let published = false;
-  await runWorkflow(config, root, { log: () => {}, prepare: async () => ({ ...tools }), installer: { install: async () => {} }, generate: async () => {}, validate: async path => ({ path, componentCount: 2 }), publish: async () => { published = true; } });
+  await runWorkflow(config, root, { log: () => {}, publishTabReport: async () => {}, prepare: async () => ({ ...tools }), installer: { install: async () => {} }, generate: async () => {}, validate: async path => ({ path, componentCount: 2 }), publish: async () => { published = true; } });
   assert.equal(published, true);
-  await assert.rejects(runWorkflow(config, root, { log: () => {}, prepare: async () => ({ ...tools }), installer: { install: async () => { throw new Error('SDK incompatible'); } }, publish: async () => {} }), /依賴安裝.*SDK incompatible/);
+  await assert.rejects(runWorkflow(config, root, { log: () => {}, publishTabReport: async () => {}, prepare: async () => ({ ...tools }), installer: { install: async () => { throw new Error('SDK incompatible'); } }, publish: async () => {} }), /依賴安裝.*SDK incompatible/);
 }));
 
 test('dotnet scan retains verified obj assets but rejects custom exclusions hiding dependency inputs', () => fixture(async root => {

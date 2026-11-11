@@ -21,7 +21,7 @@
     "test:smoke:npm-auth": "node scripts/smoke-npm-auth.mjs",
     "test:smoke:framework": "node scripts/smoke-framework.mjs",
     "test:smoke:yarn": "node scripts/smoke-yarn.mjs",
-    "package:dev": "npm run build && node scripts/package.mjs --local",
+    "package:dev": "npm run build -- --local && node scripts/package.mjs --local",
     "package:release": "npm run build && node scripts/package.mjs",
     "packaging:install-tool": "npm ci",
     "packaging:check": "node scripts/packaging.mjs check",

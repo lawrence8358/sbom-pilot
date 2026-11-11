@@ -132,7 +132,7 @@ test('workflow attempts artifact publication after DT error and returns failure;
   const input: TaskConfig = { environment: 'vue', projectPath: root, nodeVersion: '24.x', cdxgenVersion: '13.6.0', specVersion: '1.6', excludes: [], fetchLicense: true, noCache: true, runOsv: false, uploadToDt: true, dt: config('http://127.0.0.1:1') };
   let uploaded = 0, published = 0;
   const logs: string[] = [];
-  const services = { log: (message: string) => { logs.push(message); }, prepare: async () => tools, installer: { install: async () => {} }, generate: async () => {}, validate: async () => sbom,
+  const services = { log: (message: string) => { logs.push(message); }, publishTabReport: async () => {}, prepare: async () => tools, installer: { install: async () => {} }, generate: async () => {}, validate: async () => sbom,
     upload: async (actual: typeof sbom) => { uploaded++; assert.equal(logs.at(-2), '##[section]開始上傳 SBOM 至 Dependency-Track（DT）'); assert.match(logs.at(-1) ?? '', /^DT 上傳版本：/); assert.equal(actual.path, sbom.path); throw new Error('DT rejected'); },
     publish: async (actual: typeof sbom) => { published++; assert.equal(logs.at(-1), '##[section]開始發佈 SBOM 成品（Azure Pipelines）'); assert.equal(await readFile(actual.path, 'utf8'), validContents); },
   };
@@ -143,6 +143,7 @@ test('workflow attempts artifact publication after DT error and returns failure;
     '##[section]開始產生 SBOM（cdxgen）', '##[section]開始驗證 SBOM（CycloneDX，產品 SBOM）',
     '##[section]開始驗證 SBOM（CycloneDX，完整 SBOM）',
     '##[section]開始上傳 SBOM 至 Dependency-Track（DT）', '##[section]開始發佈 SBOM 成品（Azure Pipelines）',
+    '##[section]開始發佈 OSV 弱點報告頁籤資料',
   ]);
   logs.length = 0;
   await runWorkflow({ ...input, runOsv: false, uploadToDt: false }, join(root, 'off'), services);

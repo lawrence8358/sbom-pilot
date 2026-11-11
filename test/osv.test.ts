@@ -368,26 +368,26 @@ test('workflow publishes both SBOMs and the OSV report to custom artifact and pr
     scanOsv: async req => { events.push('scan'); assert.equal(basename(req.sbom.path), req.variant === 'product' ? 'arbitrary.json' : 'arbitrary-dev.json'); return { path: join(root, 'sbom.osv.md'), version: '2.7.1', findings: true, findingList: [{ severity: 'high', ids: ['OSV-1'], cves: [], ecosystem: 'npm', name: 'package', version: '1.0.0', fixed: [] }] }; },
     publish: async (sbom, name) => { events.push('sbom'); assert.equal(name, 'Custom'); assert.ok(['arbitrary.json', 'arbitrary-dev.json'].includes(basename(sbom.path))); },
     publishReport: async (report, name) => { events.push('report'); assert.equal(name, 'Custom'); assert.equal(basename(report.path), 'sbom.osv.md'); },
-    publishSummary: async report => { events.push('summary'); assert.equal(basename(report.path), 'sbom.osv.md'); },
+    publishTabReport: async report => { events.push('attachment'); assert.equal(report.schemaVersion, 1); },
   };
   await runWorkflow(cfg, join(root, 'temp'), services);
-  assert.deepEqual(events, ['scan', 'scan', 'sbom', 'sbom', 'report', 'report', 'summary']);
+  assert.deepEqual(events, ['scan', 'scan', 'sbom', 'sbom', 'report', 'report', 'attachment']);
   events.length = 0;
   await runWorkflow({ ...cfg, runOsv: false }, join(root, 'temp'), services);
-  assert.deepEqual(events, ['sbom', 'sbom']);
+  assert.deepEqual(events, ['sbom', 'sbom', 'attachment']);
   events.length = 0;
   const dt = { apiUrl: 'https://dt.invalid', projectUuid: 'd40ce445-3566-49d5-bd8d-2601d73cf0d4', apiKey: 'test', skipTlsCertificateCheck: false };
   await assert.rejects(runWorkflow({ ...cfg, uploadToDt: true, dt }, join(root, 'temp'), {
     ...services, scanOsv: async () => { events.push('scan'); throw new Error('scanner broken'); },
     upload: async () => { events.push('dt'); throw new Error('DT broken'); },
   }), error => error instanceof Error && /scanner broken/.test(error.message) && /DT broken/.test(error.message));
-  assert.deepEqual(events, ['scan', 'scan', 'dt', 'sbom', 'sbom']);
+  assert.deepEqual(events, ['scan', 'scan', 'dt', 'sbom', 'sbom', 'attachment']);
   events.length = 0;
   await assert.rejects(runWorkflow(cfg, join(root, 'temp'), { ...services, publish: async () => { events.push('sbom'); throw new Error('publication broken'); } }), /publication broken/);
-  assert.deepEqual(events, ['scan', 'scan', 'sbom', 'sbom', 'report', 'report', 'summary']);
+  assert.deepEqual(events, ['scan', 'scan', 'sbom', 'sbom', 'report', 'report', 'attachment']);
   await assert.rejects(runWorkflow(cfg, join(root, 'temp'), { ...services, publishReport: async () => { throw new Error('report upload broken'); } }), /OSV 成品發佈.*report upload broken/);
-  assert.equal(events.at(-1), 'summary', 'summary must still be attempted after artifact error');
-  await assert.rejects(runWorkflow(cfg, join(root, 'temp'), { ...services, publishSummary: async () => { throw new Error('summary upload broken'); } }), /OSV 摘要發佈.*summary upload broken/);
+  assert.equal(events.at(-1), 'attachment', 'summary must still be attempted after artifact error');
+  await assert.rejects(runWorkflow(cfg, join(root, 'temp'), { ...services, publishTabReport: async () => { throw new Error('attachment upload broken'); } }), /OSV 頁籤附件發佈.*attachment upload broken/);
   await assert.rejects(validateConfig({ ...cfg, osvVersion: '../bad' }), /OSV 版本/);
   assert.equal((await validateConfig({ ...cfg, runOsv: false, osvVersion: '../ignored' })).osvVersion, undefined);
 }));

@@ -58,7 +58,7 @@ test('Classic solution filename reaches installation and the actual scanner as a
   const tools: ToolContext = { node: process.execPath, npmCli: 'npm-cli.js', cdxgenCli: 'cdxgen.js', nodeVersion: '24.22.1', cdxgenVersion: '13.6.0', env: process.env };
   const result = await runWorkflow(config(relative(process.cwd(), solution)), join(root, 'temp'), {
     log: message => logs.push(message),
-    prepare: async () => tools,
+    publishTabReport: async () => {}, prepare: async () => tools,
     installer: { install: async directory => { assert.equal(directory, root); installed++; } },
     run: async command => {
       assert.equal(command.cwd, root);

@@ -49,7 +49,7 @@ for (const layout of ['classic', 'modern-pnp', 'modern-node-modules']) {
   const rcPath = join(project, modern ? '.yarnrc.yml' : '.yarnrc');
   if (layout === 'modern-node-modules') await writeFile(rcPath, (await readFile(rcPath, 'utf8')).replace('nodeLinker: pnp', 'nodeLinker: node-modules'));
   const before = await digest(join(project, 'yarn.lock')), rcBefore = await readFile(rcPath, 'utf8');
-  const result = await runWorkflow(config(project), join(base, `${layout}-run`), { log: console.log, prepare: async () => tools, publish: async sbom => console.log(`Local artifact adapter received ${sbom.componentCount} validated components; live Agent publication not tested.`) });
+  const result = await runWorkflow(config(project), join(base, `${layout}-run`), { log: console.log, publishTabReport: async () => {}, prepare: async () => tools, publish: async sbom => console.log(`Local artifact adapter received ${sbom.componentCount} validated components; live Agent publication not tested.`) });
   const bom = JSON.parse(await readFile(result.path, 'utf8'));
   for (const name of ['is-odd', 'is-number']) if (!bom.components.some(component => component.name === name)) throw new Error(`${layout} missing ${name}`);
   for (const name of ['shared', 'web-product']) if (!bom.components.some(component => component.name === name && component.group === '@example')) throw new Error(`${layout} missing workspace ${name}`);
