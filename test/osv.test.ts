@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile, rm, rename, copyFile, readdir, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, basename } from 'node:path';
 import { acquireOsvTool, osvAsset, osvChecksum, resolveOsvVersion, scanOsv, validateOsvVersion, type OsvDependencies, type OsvRequest } from '../src/osv';
@@ -113,6 +113,129 @@ test('concurrent population only leaves a verified usable cache', () => fixture(
   const results = await Promise.all([1, 2].map(() => acquireOsvTool(request(root), runner, () => {}, dependencies)));
   assert.equal(results[0].executable, results[1].executable);
   await acquireOsvTool(request(root), runner, () => {}, { download: async () => { throw new Error('must reuse'); } });
+}));
+
+test('delayed winner metadata is reused after a transient rename failure without republishing', () => fixture(async root => {
+  const asset = osvAsset('win32', 'x64');
+  let metadata: { source: string; target: string } | undefined;
+  let attempts = 0;
+  let downloads = 0;
+  const logs: string[] = [];
+  const tool = await acquireOsvTool(request(root), runner, line => logs.push(line), {
+    platform: 'win32', arch: 'x64',
+    download: async url => { downloads++; return url.endsWith('SHA256SUMS') ? Buffer.from(`${hash}  ${asset}`) : bytes; },
+    rename: async (source, target) => {
+      attempts++;
+      assert.equal(attempts, 1, 'completed winner must be reused without another publication');
+      await copyFile(source, target);
+      metadata = { source: `${source}.json`, target: `${target}.json` };
+      throw Object.assign(new Error('locked'), { code: 'EPERM' });
+    },
+    sleep: async () => { assert.ok(metadata); await copyFile(metadata.source, metadata.target); },
+  });
+  assert.equal(downloads, 2);
+  assert.equal(await readFile(tool.executable, 'utf8'), bytes.toString());
+  assert.ok(logs.some(line => line.includes('重用已驗證')));
+  await acquireOsvTool(request(root), runner, () => {}, {
+    platform: 'win32', arch: 'x64', download: async () => { throw new Error('must reuse'); },
+  });
+}));
+
+test('persistent transient publication failures use a verified private executable and preserve shared files', () => fixture(async root => {
+  for (const platform of ['win32', 'linux']) {
+    for (const code of ['EPERM', 'EACCES', 'EBUSY']) {
+      for (const lockMetadata of [false, true]) {
+        const directory = join(root, `${platform}-${code}-${lockMetadata}`);
+        const req = request(directory);
+        const asset = osvAsset(platform, 'x64');
+        const logs: string[] = [];
+        const waits: number[] = [];
+        let shared: string | undefined;
+        let downloads = 0;
+        const verified: string[] = [];
+        const tool = await acquireOsvTool(req, async command => {
+          assert.equal(await readFile(command.executable, 'utf8'), bytes.toString());
+          if (command.args.includes('--version')) verified.push(command.executable);
+          return runner(command);
+        }, line => logs.push(line), {
+          platform, arch: 'x64',
+          download: async url => { downloads++; return url.endsWith('SHA256SUMS') ? Buffer.from(`${hash}  ${asset}`) : bytes; },
+          rename: async (source, target) => {
+            if (lockMetadata && !String(target).endsWith('.json')) { await rename(source, target); return; }
+            shared = String(target);
+            await writeFile(target, 'other agent still publishing');
+            throw Object.assign(new Error('locked'), { code });
+          },
+          sleep: async milliseconds => { waits.push(milliseconds); },
+        });
+        assert.equal(downloads, 2);
+        assert.ok(waits.length > 1);
+        assert.ok(waits.reduce((sum, value) => sum + value, 0) <= 2000);
+        assert.ok(tool.executable.startsWith(`${req.tempDirectory}\\`) || tool.executable.startsWith(`${req.tempDirectory}/`));
+        assert.ok(!tool.executable.startsWith(req.cacheDirectory));
+        assert.equal(await readFile(tool.executable, 'utf8'), bytes.toString());
+        assert.equal(verified.at(-1), tool.executable, 'returned executable must pass actual version verification');
+        assert.equal(await readFile(shared!, 'utf8'), 'other agent still publishing');
+        assert.ok(logs.some(line => /暫存/.test(line) && /快取/.test(line)));
+        const cacheRoot = join(req.cacheDirectory, 'sbom-pilot-osv', req.version, `${platform}-x64`);
+        assert.equal((await readdir(cacheRoot)).some(name => name.startsWith('.download-')), false);
+        if (process.platform !== 'win32' && platform === 'linux') assert.equal((await stat(tool.executable)).mode & 0o111, 0o111);
+      }
+    }
+  }
+}));
+
+test('temporary binary or metadata locks recover by publishing the cache without another download', () => fixture(async root => {
+  for (const lockMetadata of [false, true]) {
+    const req = request(join(root, String(lockMetadata)));
+    const asset = osvAsset('win32', 'x64');
+    let locked = true;
+    let downloads = 0;
+    const tool = await acquireOsvTool(req, runner, () => {}, {
+      platform: 'win32', arch: 'x64',
+      download: async url => { downloads++; return url.endsWith('SHA256SUMS') ? Buffer.from(`${hash}  ${asset}`) : bytes; },
+      rename: async (source, target) => {
+        if (locked && String(target).endsWith('.json') === lockMetadata) throw Object.assign(new Error('locked'), { code: 'EBUSY' });
+        await rename(source, target);
+      },
+      sleep: async () => { locked = false; },
+    });
+    assert.equal(downloads, 2);
+    assert.ok(tool.executable.startsWith(req.cacheDirectory));
+    await acquireOsvTool(req, runner, () => {}, { platform: 'win32', arch: 'x64', download: async () => { throw new Error('must reuse'); } });
+  }
+}));
+
+test('non-transient publication errors fail immediately even when a winner completed', () => fixture(async root => {
+  for (const code of ['ENOSPC', 'ENOENT', 'EIO']) {
+    const asset = osvAsset('win32', 'x64');
+    const failure = Object.assign(new Error('publication failed'), { code });
+    let waits = 0;
+    await assert.rejects(acquireOsvTool(request(join(root, code)), runner, () => {}, {
+      platform: 'win32', arch: 'x64',
+      download: async url => url.endsWith('SHA256SUMS') ? Buffer.from(`${hash}  ${asset}`) : bytes,
+      rename: async (source, target) => {
+        await copyFile(source, target);
+        await copyFile(`${source}.json`, `${target}.json`);
+        throw failure;
+      },
+      sleep: async () => { waits++; },
+    }), error => error === failure);
+    assert.equal(waits, 0);
+  }
+}));
+
+test('private fallback still rejects an incompatible actual version', () => fixture(async root => {
+  const asset = osvAsset('win32', 'x64');
+  await assert.rejects(acquireOsvTool(request(root), async command => {
+    if (command.executable.includes('osv-tool-')) return { stdout: 'osv-scanner version: 2.7.0', stderr: '' };
+    return runner(command);
+  }, () => {}, {
+    platform: 'win32', arch: 'x64',
+    download: async url => url.endsWith('SHA256SUMS') ? Buffer.from(`${hash}  ${asset}`) : bytes,
+    rename: async () => { throw Object.assign(new Error('locked'), { code: 'EACCES' }); },
+    sleep: async () => {},
+  }), /實際版本/);
 }));
 
 test('single custom-named SBOM produces Markdown for no findings and findings, never hides technical exits', () => fixture(async root => {

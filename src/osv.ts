@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { setTimeout } from 'node:timers/promises';
 import {
   chmod,
   copyFile,
@@ -49,6 +50,8 @@ interface CacheEntry {
 export interface OsvDependencies {
   download?: typeof downloadBytes;
   request?: typeof sendHttpRequest;
+  rename?: typeof rename;
+  sleep?: (milliseconds: number) => Promise<void>;
   platform?: string;
   arch?: string;
 }
@@ -235,18 +238,68 @@ export async function acquireOsvTool(
     const outputFlag = await verifyTool(staged, version, options.tempDirectory, options.env, run);
     await writeFile(`${staged}.json`, JSON.stringify({ ...identity, sha256: expected }));
 
-    try {
-      await rename(staged, executable);
-      await rename(`${staged}.json`, `${executable}.json`);
-    } catch (error) {
-      // 同版本並行工作可能先完成；只接受驗證通過的勝出快取，不刪除對方檔案。
-      if (!(await validCache(executable, identity))) throw error;
+    /** 選用可替換的原子改名操作，正式執行使用 Node 檔案系統。 */
+    const publish = dependencies.rename ?? rename;
+
+    /** 選用可替換的退避等待，測試不必耗費實際等待時間。 */
+    const sleep = dependencies.sleep ?? setTimeout;
+    const delays = [25, 50, 100, 200, 400, 800];
+    let binaryPublished = false;
+
+    /** 勝出者的快取完整且實際版本相符時直接重用，否則回傳 undefined 繼續等待。 */
+    const reuseWinner = async (): Promise<OsvTool | undefined> => {
+      if (!(await validCache(executable, identity))) return;
+      const flag = await verifyTool(executable, version, options.tempDirectory, options.env, run);
+      log('重用已驗證的 OSV 工具快取，略過下載與安裝。');
+
+      return { executable, version, outputFlag: flag };
+    };
+
+    for (let attempt = 0; ; attempt++) {
+      try {
+        if (!binaryPublished) {
+          await publish(staged, executable);
+          binaryPublished = true;
+        }
+        await publish(`${staged}.json`, `${executable}.json`);
+        break;
+      } catch (error) {
+        if (!['EPERM', 'EACCES', 'EBUSY'].includes((error as NodeJS.ErrnoException).code ?? '')) {
+          throw error;
+        }
+        // Windows 並行改名會暫時鎖定；只接受內容與實際版本均通過的勝出快取，不刪除對方檔案。
+        const winner = await reuseWinner();
+        if (winner) return winner;
+        if (attempt === delays.length) break;
+        await sleep(delays[attempt]);
+        const delayedWinner = await reuseWinner();
+        if (delayedWinner) return delayedWinner;
+      }
     }
-    if (!(await validCache(executable, identity))) throw new Error('OSV 工具快取寫入驗證失敗。');
 
-    log('OSV 官方執行檔已下載，SHA-256 與實際版本驗證通過。');
+    if (await validCache(executable, identity)) {
+      log('OSV 官方執行檔已下載，SHA-256 與實際版本驗證通過。');
 
-    return { executable, version, outputFlag };
+      return { executable, version, outputFlag };
+    }
+
+    // 退避後仍無有效共用快取：以記憶體中已驗證的內容建立本次專用複本，不寫入共用快取。
+    const localExecutable = join(await mkdtemp(join(options.tempDirectory, 'osv-tool-')), asset);
+    await writeFile(localExecutable, bytes, { mode: 0o755 });
+    if (platform !== 'win32') await chmod(localExecutable, 0o755);
+    if (sha256(await readFile(localExecutable)) !== expected) {
+      throw new Error('OSV 暫存執行檔的 SHA-256 不符。');
+    }
+    const localFlag = await verifyTool(
+      localExecutable,
+      version,
+      options.tempDirectory,
+      options.env,
+      run,
+    );
+    log('OSV 共用工具快取暫時鎖定，改用本次暫存目錄內已驗證的執行檔，不再寫入共用快取。');
+
+    return { executable: localExecutable, version, outputFlag: localFlag };
   } finally {
     await rm(stage, { recursive: true, force: true });
   }
