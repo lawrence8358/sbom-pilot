@@ -16,4 +16,4 @@ single-context：repo 根目錄一份 `CONTEXT.md`，加上 `docs/adr/`。詳見
 
 接續 SBOM Pilot 實作、重新派工或遇到額度／執行中斷時，先讀 `docs/agents/implementation-resume.md`，執行 `node scripts/resume.mjs`，再讀目標工單在其 worktree 內的 checkpoint；保留並接續既有 WIP。
 
-本次依使用者要求序列執行：同時最多一個子代理，包含實作、合併與審查；每張工單完成提交、整合並核對驗證後才切換下一張。使用原需求的「.NET Core」，不要另創分類名稱。
+完整 SBOM（工單 29–35）依使用者 2026-11-11 要求改為並行：同時最多三個 Codex 實作代理，只派 frontier 上互不阻擋的工單；每次派工前檢查 Codex 5 小時額度，超過 70% 即暫停新派工。合併由協調者依序執行，每次合併後核對驗證才更新 frontier。使用原需求的「.NET Core」，不要另創分類名稱。

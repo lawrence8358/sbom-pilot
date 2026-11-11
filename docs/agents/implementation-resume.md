@@ -1,8 +1,8 @@
 # SBOM Pilot 實作續接
 
-## 使用者最新要求：序列執行
+## 使用者最新要求：有限並行（2026-11-11）
 
-同時最多一個子代理，實作、合併、審查都計入。每張工單先完成提交、整合與驗證，再切換下一張；現有其他 worktree 標為 parked，保留 WIP，不並行啟動。中斷後先核對 Git 和 checkpoint，不能把 WIP 或僅有測試計畫的工單標為完成。
+完整 SBOM（工單 29–35）同時最多三個 Codex 實作代理，只派 frontier 上互不阻擋的工單；每次派工前檢查 Codex 5 小時額度（`~/.codex/sessions` 最新 `rate_limits.primary.used_percent`），超過 70% 即暫停新派工直到重置。Codex sandbox 不能 commit，由協調者提交並依序合併到整合分支，每次合併後核對驗證再重新計算 frontier。中斷後先核對 Git 和 checkpoint，不能把 WIP 或僅有測試計畫的工單標為完成。
 
 用語使用原需求的「.NET Core」。未整合的舊分支在合併前也要核對用語，避免把已修正的文字帶回。
 
