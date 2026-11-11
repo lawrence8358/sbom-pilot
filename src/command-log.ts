@@ -1,11 +1,13 @@
 import { agentNetworkCredentials } from './azure-secret-inputs';
 import type { TaskConfig } from './config';
 import type { ProcessRunner } from './process';
-import { TaskCommand } from 'azure-pipelines-task-lib/taskcommand';
 
-/** 使用 Agent 官方序列化器跳脫訊息資料，固定 issue 屬性以免外部字串注入指令。 */
+/** 依 Agent logging command 資料跳脫規則輸出 issue；屬性固定，外部字串只能出現在訊息資料。 */
 export function taskLogIssue(type: 'error' | 'warning', message: string): string {
-  return new TaskCommand('task.logissue', { type }, message).toString();
+  // 打包後的 SDK 只保留 task.js，不能深層引用 taskcommand；規則與其 escapedata 相同。
+  const data = message.replace(/%/g, '%AZP25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+
+  return `##vso[task.logissue type=${type};]${data}`;
 }
 
 // 三種顯示情境共用秘密旗標名稱，各自保留字串內聯／完整旗標／argv 指派的邊界。
