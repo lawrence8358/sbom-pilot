@@ -1,7 +1,7 @@
 # 28: OSV 工具快取在 Windows 並行寫入時不再讓 Task 失敗
 
 Type: task
-Status: ready-for-agent
+Status: resolved
 Blocked by: 27
 
 ## 背景

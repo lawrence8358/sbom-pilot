@@ -33,11 +33,12 @@
     "24",
     "25",
     "26",
-    "27"
+    "27",
+    "28"
   ],
   "activeWorktrees": [],
   "reviewStatus": "01-16-independent-review-closed; 17-self-checked-and-package-verified; 18-self-checked-and-live-azure-verified; 19-self-checked-and-live-azure-default-custom-verified; 20-independent-standards-spec-reviewed-and-live-azure-verified; 21-independent-standards-spec-reviewed-integrated-github-pushed; 24-27-independent-standards-spec-reviewed-fixes-integrated",
-  "reviewHead": "0cbc5da",
+  "reviewHead": "fbdbd91",
   "externalValidation": [
     "Azure DevOps Server installation, YAML UI and asynchronous failure propagation (Services Classic success/artifact download verified in run2733)",
     "Windows/Linux arm64",
@@ -46,7 +47,7 @@
   "notesDirectory": "../.sbom-pilot-notes",
   "recheckHead": "3c69674fed70adaf3a14255343bf7de57e97dc91",
   "localImplementationStatus": "0.3.0-osv-fail-threshold-integrated-on-feature-branch-not-merged-to-main",
-  "currentCheckpoint": ".scratch/sbom-task/checkpoints/review-fixes.md",
+  "currentCheckpoint": ".scratch/sbom-task/checkpoints/28.md",
   "cleanupStatus": "current-15-16-worktrees-removed; five protected old residual directories retained",
   "cleanupReport": ".scratch/sbom-task/reviews/current-worktree-cleanup.md",
   "releaseIdentity": {
