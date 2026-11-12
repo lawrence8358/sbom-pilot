@@ -15,7 +15,7 @@
 
 ## README 截圖
 
-`screenshots/` 是維護者於 2026-11-12 在 Azure DevOps Services 實際操作時擷取的畫面，供 README 說明使用。
+`screenshots/` 是維護者於 2026-11-12 在 Azure DevOps Services 實際操作時擷取的畫面，供 README 說明使用。組織與專案名稱、管線與建置標題、使用者頭像與名稱、專案路徑，以及實際弱點的套件、版本與編號已打馬賽克。
 
 | 檔案 | 用途 |
 | --- | --- |
