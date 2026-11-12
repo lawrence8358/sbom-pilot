@@ -62,3 +62,10 @@ b790c5d實作0.1.3，122測試、封裝CLI1、Node20/24四入口與四個正式�
 - 提交前136/136測試通過，git diff --check與0.2.0來源／dist建置收據核對通過。
 - 工單21本機實作與GitHub同步完成；差異/保持未追蹤，packages維持忽略。
 - 未上傳市集、未建立GitHub Release、未啟動CI；0.2.0成品仍由使用者手動上傳。
+
+## 完整 SBOM（工單 29–35，0.3.1–0.3.5）— 2026-11-12
+
+- 規格 `.scratch/full-sbom/spec.md`、ADR 0003；整合分支 `feature/full-sbom` 快轉合併回 main（`7144d6e`）。
+- 兩軸 code review 14 項修正已整合；本機 npm test 256/256、test:packaging 2/2、VSIX verify SHIPPED PASS。
+- 實機（primeeagle 管線 85）：2752 發現頁籤元件類型錯誤（0.3.2 修正）；2753 頁籤取不到建置（0.3.3 改用 onBuildChanged）；2755 以 0.3.4 確認頁籤依設計稿顯示。
+- 0.3.5：README 改為使用者導向並加入遮蔽後截圖；VSIX 待使用者手動上傳；尚未推送 GitHub。

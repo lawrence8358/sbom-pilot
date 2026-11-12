@@ -1,7 +1,7 @@
 # 32: Task 上傳頁籤資料並移除 Extensions 摘要
 
 Type: task
-Status: ready-for-agent
+Status: resolved
 Blocked by: 31, 35
 
 ## 規格
@@ -14,7 +14,9 @@ Task 依工單 35 定義的資料契約產生 `OsvTabReport`，以自訂類型 `
 
 ## 驗收
 
-- [ ] Task 移除 `tl.uploadSummary`，改以 `tl.addAttachment` 上傳契約 JSON；附件不出現在成品清單；上傳失敗加入錯誤清單。
-- [ ] JSON 內容與 31 的結果一致：判定、門檻、是否略過 DT、報告產生時間、OSV Scanner 版本、兩份 SBOM 檔名、產品弱點、開發套件額外弱點、各區塊狀態（任一次 OSV 失敗時對應區塊為 failed）。
-- [ ] 日誌與 Task 結果訊息印出 `…/_build/results?buildId=…&view=<publisher>.<extension>.<tab contribution id>`，Team Project 名稱 URL 編碼。
-- [ ] workflow 假服務測試驗證附件上傳一次、內容符合契約、不再呼叫 uploadSummary、上傳失敗被回報。
+- [x] Task 移除 `tl.uploadSummary`，改以 `tl.addAttachment` 上傳契約 JSON；附件不出現在成品清單；上傳失敗加入錯誤清單。
+- [x] JSON 內容與 31 的結果一致：判定、門檻、是否略過 DT、報告產生時間、OSV Scanner 版本、兩份 SBOM 檔名、產品弱點、開發套件額外弱點、各區塊狀態（任一次 OSV 失敗時對應區塊為 failed）。
+- [x] 日誌與 Task 結果訊息印出 `…/_build/results?buildId=…&view=<publisher>.<extension>.<tab contribution id>`，Team Project 名稱 URL 編碼。
+- [x] workflow 假服務測試驗證附件上傳一次、內容符合契約、不再呼叫 uploadSummary、上傳失敗被回報。
+
+- 2026-11-12：已整合到 main（`7144d6e`，由 `feature/full-sbom` 快轉合併）；本機 npm test 256/256、test:packaging 2/2；primeeagle 建置 2752–2755 實機驗證，0.3.4 頁籤依設計稿正常顯示。

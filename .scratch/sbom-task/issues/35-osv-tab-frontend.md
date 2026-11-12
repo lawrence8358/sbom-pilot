@@ -1,7 +1,7 @@
 # 35: 「OSV 弱點報告」頁籤前端（依資料契約）
 
 Type: task
-Status: ready-for-agent
+Status: resolved
 Blocked by: None (can start immediately)
 
 ## 規格
@@ -38,13 +38,15 @@ interface OsvTabReport {
 
 ## 驗收
 
-- [ ] 共用型別定義資料契約，Task 端（32）可直接引用。
-- [ ] `vss-extension.json` 新增建置結果頁籤元件（`supportsTasks` 為 SBOM Pilot Task ID）與 `vso.build` scope；頁籤以 azure-devops-extension-sdk／api 讀取本建置 `sbom-pilot.osv-report` 附件，不使用 React；打包進 VSIX 並通過既有封裝檢查。
-- [ ] 判定行：是否超過門檻與門檻名稱、報告產生時間（UTC+8）、OSV Scanner 版本。
-- [ ] 明細 8 欄：等級、CVSS、套件（名稱與生態系兩行）、目前版本、建議升級、弱點編號（CVE 與 OSV／GHSA ID 同欄各自連結）、發佈日期、最後修改；無 CVE 顯示「（無 CVE，僅 GHSA）」；缺漏顯示「未提供」。
-- [ ] 表格框線、內距、整列 hover；顏色使用 Azure DevOps 主題變數，深色／淺色皆清楚；中文無亂碼。
-- [ ] 外部字串以文字節點輸出；連結只允許 `https://osv.dev/`、`https://www.cve.org/`；惡意套件名稱不被當成 HTML。
-- [ ] DOM 測試（例如 jsdom）以契約 fixture 驗證兩個區塊、無 CVE 標示、跳脫與門檻判定行；封裝測試驗證 tab 元件與 scopes。
-- [ ] 總覽表、篩選、排序與空狀態不在本張（33）。
+- [x] 共用型別定義資料契約，Task 端（32）可直接引用。
+- [x] `vss-extension.json` 新增建置結果頁籤元件（`supportsTasks` 為 SBOM Pilot Task ID）與 `vso.build` scope；頁籤以 azure-devops-extension-sdk／api 讀取本建置 `sbom-pilot.osv-report` 附件，不使用 React；打包進 VSIX 並通過既有封裝檢查。
+- [x] 判定行：是否超過門檻與門檻名稱、報告產生時間（UTC+8）、OSV Scanner 版本。
+- [x] 明細 8 欄：等級、CVSS、套件（名稱與生態系兩行）、目前版本、建議升級、弱點編號（CVE 與 OSV／GHSA ID 同欄各自連結）、發佈日期、最後修改；無 CVE 顯示「（無 CVE，僅 GHSA）」；缺漏顯示「未提供」。
+- [x] 表格框線、內距、整列 hover；顏色使用 Azure DevOps 主題變數，深色／淺色皆清楚；中文無亂碼。
+- [x] 外部字串以文字節點輸出；連結只允許 `https://osv.dev/`、`https://www.cve.org/`；惡意套件名稱不被當成 HTML。
+- [x] DOM 測試（例如 jsdom）以契約 fixture 驗證兩個區塊、無 CVE 標示、跳脫與門檻判定行；封裝測試驗證 tab 元件與 scopes。
+- [x] 總覽表、篩選、排序與空狀態不在本張（33）。
 
 ## Comments
+
+- 2026-11-12：已整合到 main（`7144d6e`，由 `feature/full-sbom` 快轉合併）；本機 npm test 256/256、test:packaging 2/2；primeeagle 建置 2752–2755 實機驗證，0.3.4 頁籤依設計稿正常顯示。

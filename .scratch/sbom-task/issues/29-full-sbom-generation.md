@@ -1,7 +1,7 @@
 # 29: 產生並發佈完整 SBOM
 
 Type: task
-Status: ready-for-agent
+Status: resolved
 Blocked by: None (can start immediately)
 
 ## 規格
@@ -14,13 +14,15 @@ Blocked by: None (can start immediately)
 
 ## 驗收
 
-- [ ] 依賴安裝只執行一次；cdxgen 執行兩次，一次帶 `--required-only`（產品 SBOM），一次不帶（完整 SBOM），其餘參數相同。
-- [ ] 完整 SBOM 檔名推導：`sbom.cdx.json` → `sbom.cdx-full.json`、`PrimeX.json` → `PrimeX-full.json`，`.JSON` 大小寫不分；推導後與產品 SBOM 同名時明確失敗。
-- [ ] 兩份 SBOM 都以既有 validator 驗證，日誌各自寫出組件數；任一份產生或驗證失敗 Task 就失敗。
-- [ ] 兩份 SBOM 都發佈到同一個 Build Artifact。
-- [ ] 掃描設定日誌列出兩份輸出與各自的 requiredOnly。
-- [ ] `artifactName`、`sbomFileName` 移除 task.json 預設值，說明文字改寫；未填時執行保底不變。
-- [ ] DT 上傳與 OSV 掃描行為不變（仍使用產品 SBOM）。
-- [ ] workflow 假服務測試與設定測試涵蓋上述案例；封裝測試同步更新。
+- [x] 依賴安裝只執行一次；cdxgen 執行兩次，一次帶 `--required-only`（產品 SBOM），一次不帶（完整 SBOM），其餘參數相同。
+- [x] 完整 SBOM 檔名推導：`sbom.cdx.json` → `sbom.cdx-full.json`、`PrimeX.json` → `PrimeX-full.json`，`.JSON` 大小寫不分；推導後與產品 SBOM 同名時明確失敗。
+- [x] 兩份 SBOM 都以既有 validator 驗證，日誌各自寫出組件數；任一份產生或驗證失敗 Task 就失敗。
+- [x] 兩份 SBOM 都發佈到同一個 Build Artifact。
+- [x] 掃描設定日誌列出兩份輸出與各自的 requiredOnly。
+- [x] `artifactName`、`sbomFileName` 移除 task.json 預設值，說明文字改寫；未填時執行保底不變。
+- [x] DT 上傳與 OSV 掃描行為不變（仍使用產品 SBOM）。
+- [x] workflow 假服務測試與設定測試涵蓋上述案例；封裝測試同步更新。
 
 ## Comments
+
+- 2026-11-12：已整合到 main（`7144d6e`，由 `feature/full-sbom` 快轉合併）；本機 npm test 256/256、test:packaging 2/2；primeeagle 建置 2752–2755 實機驗證，0.3.4 頁籤依設計稿正常顯示。

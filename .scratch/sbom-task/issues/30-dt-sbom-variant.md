@@ -1,7 +1,7 @@
 # 30: DT 上傳版本開關
 
 Type: task
-Status: ready-for-agent
+Status: resolved
 Blocked by: 29
 
 ## 規格
@@ -14,10 +14,12 @@ Blocked by: 29
 
 ## 驗收
 
-- [ ] task.json 新增 pickList，固定英文值 `full`／`product`，中文標籤，預設 `full`，`visibleRule: uploadToDt = true`。
-- [ ] 只在啟用 DT 時讀取與驗證；不合法值明確失敗；未啟用 DT 時忽略。
-- [ ] 預設上傳完整 SBOM；選產品 SBOM 時上傳產品 SBOM；每次只上傳一份。
-- [ ] DT 日誌寫出上傳的是哪一份。
-- [ ] workflow 假服務測試與設定測試涵蓋預設、兩種選項與不合法值；封裝測試同步更新。
+- [x] task.json 新增 pickList，固定英文值 `full`／`product`，中文標籤，預設 `full`，`visibleRule: uploadToDt = true`。
+- [x] 只在啟用 DT 時讀取與驗證；不合法值明確失敗；未啟用 DT 時忽略。
+- [x] 預設上傳完整 SBOM；選產品 SBOM 時上傳產品 SBOM；每次只上傳一份。
+- [x] DT 日誌寫出上傳的是哪一份。
+- [x] workflow 假服務測試與設定測試涵蓋預設、兩種選項與不合法值；封裝測試同步更新。
 
 ## Comments
+
+- 2026-11-12：已整合到 main（`7144d6e`，由 `feature/full-sbom` 快轉合併）；本機 npm test 256/256、test:packaging 2/2；primeeagle 建置 2752–2755 實機驗證，0.3.4 頁籤依設計稿正常顯示。

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "integrationBranch": "feature/full-sbom",
+  "integrationBranch": "main",
   "reviewBase": "e3a5bf6ed57b74c519d0d64285f2929d0195688b",
   "noRemoteWrites": false,
   "handoffDocument": ".scratch/sbom-task/HANDOFF.md",
@@ -41,20 +41,12 @@
     "31",
     "35",
     "33",
-    "32"
+    "32",
+    "34"
   ],
-  "activeWorktrees": [
-    {
-      "ticket": "34",
-      "branch": "ticket/34-full-sbom-release",
-      "worktree": "../sbom-pilot-wt/34",
-      "checkpoint": ".scratch/sbom-task/checkpoints/34.md",
-      "phase": "docs-version",
-      "implementer": "codex gpt-6-luna medium"
-    }
-  ],
-  "reviewStatus": "01-16-independent-review-closed; 17-self-checked-and-package-verified; 18-self-checked-and-live-azure-verified; 19-self-checked-and-live-azure-default-custom-verified; 20-independent-standards-spec-reviewed-and-live-azure-verified; 21-independent-standards-spec-reviewed-integrated-github-pushed; 24-27-independent-standards-spec-reviewed-fixes-integrated",
-  "reviewHead": "fbdbd91",
+  "activeWorktrees": [],
+  "reviewStatus": "01-16-independent-review-closed; 17-self-checked-and-package-verified; 18-self-checked-and-live-azure-verified; 19-self-checked-and-live-azure-default-custom-verified; 20-independent-standards-spec-reviewed-and-live-azure-verified; 21-independent-standards-spec-reviewed-integrated-github-pushed; 24-27-independent-standards-spec-reviewed-fixes-integrated; 29-35-two-axis-reviewed-14-fixes-integrated",
+  "reviewHead": "7144d6e",
   "externalValidation": [
     "Azure DevOps Server installation, YAML UI and asynchronous failure propagation (Services Classic success/artifact download verified in run2733)",
     "Windows/Linux arm64",
@@ -62,8 +54,8 @@
   ],
   "notesDirectory": "../.sbom-pilot-notes",
   "recheckHead": "3c69674fed70adaf3a14255343bf7de57e97dc91",
-  "localImplementationStatus": "0.3.0-osv-fail-threshold-merged-main-github-pushed-marketplace-manual",
-  "currentCheckpoint": ".scratch/sbom-task/checkpoints/29.md",
+  "localImplementationStatus": "0.3.5-full-sbom-merged-main-local; not pushed; Marketplace manual upload",
+  "currentCheckpoint": ".scratch/sbom-task/checkpoints/34.md",
   "cleanupStatus": "current-15-16-worktrees-removed; five protected old residual directories retained",
   "cleanupReport": ".scratch/sbom-task/reviews/current-worktree-cleanup.md",
   "releaseIdentity": {
@@ -121,6 +113,13 @@
     },
     "dispatchDir": "../.sbom-pilot-notes/full-sbom/dispatch",
     "reviewBase": "55b7046",
-    "mainNodeModulesNote": "tab deps installed into main node_modules with --no-save (sdk 4.2.0, api 5.279.1, jsdom 30.1.3, @types/jsdom 30.0.0); run npm ci after main merges feature/full-sbom"
+    "mainNodeModulesNote": "tab deps installed into main node_modules with --no-save (sdk 4.2.0, api 5.279.1, jsdom 30.1.3, @types/jsdom 30.0.0); run npm ci after main merges feature/full-sbom",
+    "liveVerification": {
+      "0.3.1": "uploaded by user; build 2752: tab missing (wrong contribution type ms.vss-web.tab), artifacts/link/Extensions removal OK",
+      "0.3.2": "uploaded by user; build 2753 tab visible but failed to get build (BuildPageDataService empty) -> fixed in 0.3.3 via onBuildChanged",
+      "prompt": "../.sbom-pilot-notes/full-sbom/dispatch/prompt-live2.md",
+      "0.3.4": "uploaded by user; build 2755 tab renders per design (user screenshot images/screenshots/osv-report-tab.png)",
+      "0.3.5": "README rewrite + mosaicked screenshots; VSIX packages/public/LawrenceShen.sbom-pilot-0.3.5.vsix sha256 E014E1C1BAD33BFBE99C640F33ECCFC8D94B7DF233A4BF8FBD70DDA1989A4110; pending manual upload"
+    }
   }
 }

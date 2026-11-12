@@ -1,7 +1,7 @@
 # 34: 0.3.1 發佈與實機驗收
 
 Type: task
-Status: ready-for-agent
+Status: resolved
 Blocked by: 30, 32, 33
 
 ## 規格
@@ -14,9 +14,11 @@ Blocked by: 30, 32, 33
 
 ## 驗收
 
-- [ ] Task 與擴充套件版本升為 0.3.1，封裝測試通過。
-- [ ] README、README-Dev、task.json 說明更新；release notes 寫明 DT 預設改為完整 SBOM、開發套件弱點也會擋建置、還原方式（DT 上傳版本選產品 SBOM；門檻調整或選「僅警告」），以及新增 `vso.build` 權限需組織管理員重新同意。
-- [ ] 在 primeeagle 以暫時管線實跑：成品含 4 個檔且中文檔名下載解壓正常；頁籤只在 SBOM Pilot 建置出現、深淺主題正常無亂碼；直達連結停在頁籤；Extensions 不再有 OSV 報告。
-- [ ] 驗收後刪除暫時管線與分支，並記錄結果於本工單 Comments。
+- [x] Task 與擴充套件版本升為 0.3.1，封裝測試通過。
+- [x] README、README-Dev、task.json 說明更新；release notes 寫明 DT 預設改為完整 SBOM、開發套件弱點也會擋建置、還原方式（DT 上傳版本選產品 SBOM；門檻調整或選「僅警告」），以及新增 `vso.build` 權限需組織管理員重新同意。
+- [x] 在 primeeagle 以暫時管線實跑：成品含 4 個檔且中文檔名下載解壓正常；頁籤只在 SBOM Pilot 建置出現、深淺主題正常無亂碼；直達連結停在頁籤；Extensions 不再有 OSV 報告。
+- [x] 驗收後刪除暫時管線與分支，並記錄結果於本工單 Comments。
 
 ## Comments
+
+- 2026-11-12：已整合到 main（`7144d6e`，由 `feature/full-sbom` 快轉合併）；本機 npm test 256/256、test:packaging 2/2；primeeagle 建置 2752–2755 實機驗證，0.3.4 頁籤依設計稿正常顯示。
