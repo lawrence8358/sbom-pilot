@@ -1,6 +1,6 @@
 {
   "name": "sbom-pilot",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "private": true,
   "description": "SBOM Pilot Azure Pipelines task",
   "author": "Lawrence Shen",
